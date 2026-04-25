@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Finance",
+    "slug": "personal-finance",
+    "version": "1.0.0",
+    "scheme": "finance",
+    "userInterfaceStyle": "dark",
+    "platforms": ["ios", "android", "web"],
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.personal.finance" },
+    "android": {
+      "package": "com.personal.finance",
+      "adaptiveIcon": { "backgroundColor": "#0b0c14" }
+    },
+    "web": { "bundler": "metro", "output": "static" },
+    "plugins": ["expo-router", "expo-font"],
+    "experiments": { "typedRoutes": true }
+  }
+}
