@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Stack, Redirect, SplashScreen } from 'expo-router';
+import { Stack, SplashScreen, router, useSegments } from 'expo-router';
 import {
   useFonts,
   PlusJakartaSans_400Regular,
@@ -13,9 +13,19 @@ SplashScreen.preventAutoHideAsync();
 
 function AuthGate() {
   const { user, loading } = useFinance();
-  if (loading) return null;
-  if (!user) return <Redirect href="/login" />;
-  return <Stack screenOptions={{ headerShown: false }} />;
+  const segments = useSegments();
+
+  useEffect(() => {
+    if (loading) return;
+    const inTabs = segments[0] === '(tabs)';
+    if (!user && inTabs) {
+      router.replace('/login');
+    } else if (user && !inTabs) {
+      router.replace('/(tabs)');
+    }
+  }, [user, loading, segments]);
+
+  return null;
 }
 
 export default function RootLayout() {
@@ -34,6 +44,7 @@ export default function RootLayout() {
 
   return (
     <FinanceProvider>
+      <Stack screenOptions={{ headerShown: false }} />
       <AuthGate />
     </FinanceProvider>
   );
