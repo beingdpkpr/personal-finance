@@ -1,80 +1,62 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
-import LoginScreen from '../app/login';
-import { FinanceContext } from '../hooks/FinanceContext';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 
+// Mock expo-web-browser
+jest.mock('expo-web-browser', () => ({
+  maybeCompleteAuthSession: jest.fn(),
+}));
+
+// Mock expo-auth-session/providers/google
+const mockPromptAsync = jest.fn();
+jest.mock('expo-auth-session/providers/google', () => ({
+  useAuthRequest: jest.fn(() => [
+    { url: 'https://accounts.google.com/...' }, // request (truthy = ready)
+    null, // response (no response yet)
+    mockPromptAsync,
+  ]),
+}));
+
+// Mock expo-router
 jest.mock('expo-router', () => ({
   router: { replace: jest.fn() },
 }));
 
-const mockLogin    = jest.fn();
-const mockRegister = jest.fn();
+// Mock FinanceContext
+const mockGoogleSignIn = jest.fn();
+jest.mock('../hooks/FinanceContext', () => ({
+  useFinance: () => ({
+    googleSignIn: mockGoogleSignIn,
+    user: null,
+    loading: false,
+    txns: [],
+    budgets: {},
+    goals: [],
+    nw: { assets: [], liabilities: [] },
+    recurring: [],
+    currency: { code: 'INR', symbol: '₹', locale: 'en-IN' },
+  }),
+}));
 
-const mockCtx = {
-  user: null, loading: false,
-  txns: [], budgets: {}, goals: [], nw: { assets: [], liabilities: [] },
-  recurring: [], currency: { code: 'INR', symbol: '₹', locale: 'en-IN' },
-  login: mockLogin, register: mockRegister,
-  logout: jest.fn(), addTxn: jest.fn(), editTxn: jest.fn(), deleteTxn: jest.fn(),
-  setBudgets: jest.fn(), setGoals: jest.fn(), setNw: jest.fn(),
-  setRecurring: jest.fn(), setCurrencyPref: jest.fn(),
-  openAdd: jest.fn(), openEdit: jest.fn(), modalVisible: false, editItem: null, closeModal: jest.fn(),
-};
-
-function renderLogin() {
-  return render(
-    <FinanceContext.Provider value={mockCtx as any}>
-      <LoginScreen />
-    </FinanceContext.Provider>
-  );
-}
+import LoginScreen from '../app/login';
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockLogin.mockResolvedValue(null);
-  mockRegister.mockResolvedValue(null);
 });
 
-it('renders login form by default', () => {
-  renderLogin();
-  expect(screen.getByText('Welcome back')).toBeTruthy();
-  expect(screen.getByPlaceholderText('Username')).toBeTruthy();
-  expect(screen.getByPlaceholderText('Password')).toBeTruthy();
-  expect(screen.getByText('Sign In')).toBeTruthy();
+test('renders Sign in with Google button', () => {
+  const { getByText } = render(<LoginScreen />);
+  expect(getByText('Sign in with Google')).toBeTruthy();
 });
 
-it('shows error when fields are empty', async () => {
-  renderLogin();
-  fireEvent.press(screen.getByText('Sign In'));
-  await waitFor(() => {
-    expect(screen.getByText('Please fill in all fields.')).toBeTruthy();
-  });
+test('renders Finance logo and welcome text', () => {
+  const { getByText } = render(<LoginScreen />);
+  expect(getByText('Finance')).toBeTruthy();
+  expect(getByText('Welcome')).toBeTruthy();
 });
 
-it('calls login with username and password', async () => {
-  renderLogin();
-  fireEvent.changeText(screen.getByPlaceholderText('Username'), 'alice');
-  fireEvent.changeText(screen.getByPlaceholderText('Password'), 'secret');
-  fireEvent.press(screen.getByText('Sign In'));
-  await waitFor(() => {
-    expect(mockLogin).toHaveBeenCalledWith('alice', 'secret');
-  });
-});
-
-it('shows error message returned by login', async () => {
-  mockLogin.mockResolvedValue('Invalid username or password.');
-  renderLogin();
-  fireEvent.changeText(screen.getByPlaceholderText('Username'), 'alice');
-  fireEvent.changeText(screen.getByPlaceholderText('Password'), 'wrong');
-  fireEvent.press(screen.getByText('Sign In'));
-  await waitFor(() => {
-    expect(screen.getByText('Invalid username or password.')).toBeTruthy();
-  });
-});
-
-it('switches to register mode', () => {
-  renderLogin();
-  fireEvent.press(screen.getByText("Don't have an account? Register"));
-  expect(screen.getByText('Create account')).toBeTruthy();
-  expect(screen.getByText('Register')).toBeTruthy();
+test('tapping button calls promptAsync', () => {
+  const { getByText } = render(<LoginScreen />);
+  fireEvent.press(getByText('Sign in with Google'));
+  expect(mockPromptAsync).toHaveBeenCalledTimes(1);
 });
