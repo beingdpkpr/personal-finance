@@ -1,17 +1,76 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, FlatList, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, TextInput, FlatList, Pressable, StyleSheet, useWindowDimensions, Alert } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import { useFinance } from '../../hooks/FinanceContext';
 import { colors, spacing, radius, WIDE_BREAKPOINT } from '../../constants/theme';
 import { fmt } from '../../lib/format';
 import { TrashIcon, EditIcon } from '../../components/icons';
+import { Transaction, uid } from '../../lib/data';
+
+/** Parse a simple CSV string into transactions.
+ * Expected columns (order matters): date,type,amount,category,description[,notes]
+ * First row may be a header.
+ */
+function parseCSV(raw: string): { txns: Transaction[]; errors: string[] } {
+  const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const result: Transaction[] = [];
+  const errors: string[] = [];
+  const start = lines[0]?.toLowerCase().startsWith('date') ? 1 : 0;
+  for (let i = start; i < lines.length; i++) {
+    const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+    const [date, type, amountRaw, category, description, notes] = cols;
+    const amount = parseFloat(amountRaw);
+    if (!date || !type || isNaN(amount) || !category || !description) {
+      errors.push(`Row ${i + 1}: missing fields`);
+      continue;
+    }
+    if (type !== 'expense' && type !== 'income') {
+      errors.push(`Row ${i + 1}: type must be 'expense' or 'income'`);
+      continue;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      errors.push(`Row ${i + 1}: date must be YYYY-MM-DD`);
+      continue;
+    }
+    result.push({ id: uid(), type: type as 'expense' | 'income', amount, category, description, date, notes: notes ?? '' });
+  }
+  return { txns: result, errors };
+}
 
 export default function TransactionsScreen() {
-  const { txns, currency, openEdit, deleteTxn } = useFinance();
+  const { txns, currency, openEdit, deleteTxn, addTxn } = useFinance();
   const { width } = useWindowDimensions();
   const wide = width >= WIDE_BREAKPOINT;
 
   const [search, setSearch]   = useState('');
   const [typeFilter, setType] = useState<'all' | 'income' | 'expense'>('all');
+  const [importing, setImporting] = useState(false);
+
+  async function handleImport() {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: ['text/csv', 'text/comma-separated-values', 'text/plain', '*/*'], copyToCacheDirectory: true });
+      if (result.canceled || !result.assets?.[0]) return;
+      const uri = result.assets[0].uri;
+      let text: string;
+      if (uri.startsWith('data:')) {
+        // web: data URI
+        const base64 = uri.split(',')[1];
+        text = atob(base64);
+      } else {
+        text = await FileSystem.readAsStringAsync(uri);
+      }
+      const { txns: parsed, errors } = parseCSV(text);
+      if (parsed.length === 0) {
+        Alert.alert('Import failed', errors.length ? errors.join('\n') : 'No valid rows found.');
+        return;
+      }
+      parsed.forEach(t => addTxn(t));
+      Alert.alert('Import complete', `${parsed.length} transactions imported.${ errors.length ? `\n\n${errors.length} rows skipped.` : ''}`);
+    } catch (e) {
+      Alert.alert('Error', 'Could not read file.');
+    }
+  }
 
   const filtered = useMemo(() => {
     return txns
@@ -23,7 +82,12 @@ export default function TransactionsScreen() {
 
   return (
     <View style={styles.root}>
-      <Text style={styles.heading}>All Transactions</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.heading}>All Transactions</Text>
+        <Pressable onPress={handleImport} style={styles.importBtn}>
+          <Text style={styles.importBtnText}>⬆ Import CSV</Text>
+        </Pressable>
+      </View>
 
       <TextInput
         style={styles.search}
@@ -78,8 +142,12 @@ export default function TransactionsScreen() {
 
 const styles = StyleSheet.create({
   root:           { flex: 1, backgroundColor: colors.bg },
-  heading:        { fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text,
-                    padding: spacing.md, paddingBottom: spacing.xs },
+  headerRow:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                    paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.xs },
+  heading:        { fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text },
+  importBtn:      { paddingHorizontal: spacing.md, paddingVertical: 7, borderRadius: radius.md,
+                    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  importBtnText:  { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.accent },
   search:         { margin: spacing.md, marginTop: 0, backgroundColor: colors.surface,
                     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
                     color: colors.text, padding: spacing.sm, fontSize: 14,

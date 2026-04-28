@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   BudgetMap, Currency, Goal, NetWorthData,
-  RecurringRule, Transaction, UserStore,
+  RecurringRule, SpendTypeMap, Transaction, UserStore,
 } from './data';
 
 const DEFAULT_CURRENCY: Currency = { code: 'INR', symbol: '₹', locale: 'en-IN' };
@@ -49,4 +49,7 @@ export const storage = {
 
   getCurrency:  (user: string)                 => get<Currency>(`pf_currency_${user}`, DEFAULT_CURRENCY),
   saveCurrency: (user: string, d: Currency)    => set(`pf_currency_${user}`, d),
+
+  getSpendTypeMap:  (user: string)                      => get<SpendTypeMap>(`pf_spendmap_${user}`, {}),
+  saveSpendTypeMap: (user: string, d: SpendTypeMap)     => set(`pf_spendmap_${user}`, d),
 };

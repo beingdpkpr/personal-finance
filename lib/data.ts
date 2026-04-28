@@ -1,5 +1,29 @@
 export type TxnType = 'expense' | 'income';
 
+export type SpendType = 'essentials' | 'wants' | 'investments' | 'family';
+
+export const SPEND_TYPES: { id: SpendType; label: string; color: string }[] = [
+  { id: 'essentials',  label: 'Essentials',  color: '#5a9fff' },
+  { id: 'wants',       label: 'Wants',       color: '#f05060' },
+  { id: 'investments', label: 'Investments', color: '#2ed18a' },
+  { id: 'family',      label: 'Family',      color: '#60d0e0' },
+];
+
+// Default expense category → spend type mapping
+export const DEFAULT_SPEND_MAP: Record<string, SpendType> = {
+  essentials:    'essentials',
+  food:          'essentials',
+  transport:     'essentials',
+  health:        'essentials',
+  entertainment: 'wants',
+  shopping:      'wants',
+  other:         'wants',
+  savings:       'investments',
+  family:        'family',
+};
+
+export type SpendTypeMap = Record<string, SpendType>;
+
 export interface Transaction {
   id: string;
   type: TxnType;

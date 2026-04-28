@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   BudgetMap, Currency, Goal, NetWorthData,
-  RecurringRule, Transaction, uid,
+  RecurringRule, SpendTypeMap, Transaction, uid,
 } from '../lib/data';
 import { storage } from '../lib/storage';
 import { setCurrency } from '../lib/format';
@@ -26,6 +26,7 @@ export interface FinanceState {
   nw:           NetWorthData;
   recurring:    RecurringRule[];
   currency:     Currency;
+  spendTypeMap: SpendTypeMap;
   googleSignIn: (accessToken: string, expiresIn: number) => Promise<string | null>;
   logout:       () => Promise<void>;
   addTxn:       (t: Omit<Transaction, 'id'>) => void;
@@ -36,6 +37,7 @@ export interface FinanceState {
   setNw:        (n: NetWorthData) => void;
   setRecurring: (r: RecurringRule[]) => void;
   setCurrencyPref: (c: Currency) => void;
+  setSpendTypeMap: (m: SpendTypeMap) => void;
 }
 
 export function useFinance(): FinanceState {
@@ -50,6 +52,7 @@ export function useFinance(): FinanceState {
   const [nw, setNwState]              = useState<NetWorthData>({ assets: [], liabilities: [] });
   const [recurring, setRecurringState]= useState<RecurringRule[]>([]);
   const [currency, setCurrencyState]  = useState<Currency>(DEFAULT_CURRENCY);
+  const [spendTypeMap, setSpendTypeMapState] = useState<SpendTypeMap>({});
 
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -73,13 +76,14 @@ export function useFinance(): FinanceState {
   }, []);
 
 async function loadUser(userId: string, userEmail?: string | null, userName?: string | null, userPicture?: string | null) {
-    const [t, b, r, g, n, c] = await Promise.all([
+    const [t, b, r, g, n, c, sm] = await Promise.all([
       storage.getTxns(userId),
       storage.getBudgets(userId),
       storage.getRecurring(userId),
       storage.getGoals(userId),
       storage.getNetWorth(userId),
       storage.getCurrency(userId),
+      storage.getSpendTypeMap(userId),
     ]);
     const applied = applyRecurring(r, t);
     setCurrency(c);
@@ -93,7 +97,7 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
     setGoalsState(g);
     setNwState(n);
     setCurrencyState(c);
-  }
+    setSpendTypeMapState(sm);
 
   useEffect(() => {
     getGoogleSession().then(async session => {
@@ -110,6 +114,7 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
   useEffect(() => { if (user) { storage.saveGoals(user, goals);         scheduleSync(); } }, [goals,     user, scheduleSync]);
   useEffect(() => { if (user) { storage.saveNetWorth(user, nw);         scheduleSync(); } }, [nw,        user, scheduleSync]);
   useEffect(() => { if (user) { storage.saveCurrency(user, currency);   scheduleSync(); } }, [currency,  user, scheduleSync]);
+  useEffect(() => { if (user) { storage.saveSpendTypeMap(user, spendTypeMap); } }, [spendTypeMap, user]);
 
   const googleSignIn = useCallback(async (accessToken: string, expiresIn: number): Promise<string | null> => {
     try {
@@ -189,6 +194,7 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
     setGoalsState([]);
     setNwState({ assets: [], liabilities: [] });
     setCurrencyState(DEFAULT_CURRENCY);
+    setSpendTypeMapState({});
   }, []);
 
   const addTxn      = useCallback((t: Omit<Transaction, 'id'>) => setTxnsState(prev => [...prev, { ...t, id: uid() }]), []);
@@ -199,11 +205,12 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
   const setNw       = useCallback((n: NetWorthData) => setNwState(n), []);
   const setRecurring= useCallback((r: RecurringRule[]) => setRecurringState(r), []);
   const setCurrencyPref = useCallback((c: Currency) => { setCurrency(c); setCurrencyState(c); }, []);
+  const setSpendTypeMap = useCallback((m: SpendTypeMap) => setSpendTypeMapState(m), []);
 
   return {
-    user, email, name, picture, loading, txns, budgets, goals, nw, recurring, currency,
+    user, email, name, picture, loading, txns, budgets, goals, nw, recurring, currency, spendTypeMap,
     googleSignIn, logout,
     addTxn, editTxn, deleteTxn,
-    setBudgets, setGoals, setNw, setRecurring, setCurrencyPref,
+    setBudgets, setGoals, setNw, setRecurring, setCurrencyPref, setSpendTypeMap,
   };
 }
