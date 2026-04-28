@@ -65,12 +65,12 @@ export default function AddModal() {
           <Text style={styles.title}>{editItem ? 'Edit Transaction' : 'Add Transaction'}</Text>
 
           {/* Type toggle */}
-          <View style={styles.typeRow}>
+          <View style={styles.typeToggle}>
             {(['expense', 'income'] as const).map(v => (
               <Pressable key={v} onPress={() => { setType(v); setCat(v === 'expense' ? 'food' : 'salary'); }}
                 style={[styles.typeBtn, type === v && (v === 'expense' ? styles.typeBtnExpense : styles.typeBtnIncome)]}>
-                <Text style={[styles.typeBtnText, type === v && styles.typeBtnTextActive]}>
-                  {v.charAt(0).toUpperCase() + v.slice(1)}
+                <Text style={[styles.typeBtnText, type === v && { color: v === 'expense' ? colors.red : colors.green }]}>
+                  {v === 'expense' ? '↑ Expense' : '↓ Income'}
                 </Text>
               </Pressable>
             ))}
@@ -78,9 +78,17 @@ export default function AddModal() {
 
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* Amount */}
-            <Text style={styles.fieldLabel}>Amount ({currency.symbol})</Text>
-            <TextInput style={styles.input} keyboardType="numeric" value={amount} onChangeText={setAmount}
-              placeholder="0.00" placeholderTextColor={colors.muted} />
+            <View style={styles.amountRow}>
+              <Text style={styles.currencySymbol}>{currency.symbol}</Text>
+              <TextInput
+                style={styles.amountInput}
+                keyboardType="numeric"
+                value={amount}
+                onChangeText={setAmount}
+                placeholder="0.00"
+                placeholderTextColor={colors.muted + '80'}
+              />
+            </View>
 
             {/* Category chips */}
             <Text style={styles.fieldLabel}>Category</Text>
@@ -137,15 +145,19 @@ const styles = StyleSheet.create({
   handle:          { width: 36, height: 4, backgroundColor: colors.border, borderRadius: 2,
                      alignSelf: 'center', marginBottom: spacing.md },
   title:           { fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text, marginBottom: spacing.md },
-  typeRow:         { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  typeBtn:         { flex: 1, paddingVertical: 10, borderRadius: radius.md, backgroundColor: colors.surface2,
-                     borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
-  typeBtnExpense:  { backgroundColor: colors.redDim, borderColor: colors.red },
-  typeBtnIncome:   { backgroundColor: colors.greenDim, borderColor: colors.green },
+  typeToggle:      { flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: radius.pill,
+                     padding: 4, marginBottom: spacing.md },
+  typeBtn:         { flex: 1, paddingVertical: 10, borderRadius: radius.pill, alignItems: 'center' },
+  typeBtnExpense:  { backgroundColor: colors.redDim },
+  typeBtnIncome:   { backgroundColor: colors.greenDim },
   typeBtnText:     { fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.muted },
-  typeBtnTextActive:{ color: colors.text },
-  fieldLabel:      { fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.muted,
-                     textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 4, marginTop: spacing.sm },
+  fieldLabel:      { fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.muted,
+                     textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 4, marginTop: spacing.sm },
+  amountRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                     paddingVertical: spacing.sm, marginBottom: spacing.sm },
+  currencySymbol:  { fontSize: 28, fontFamily: 'PlusJakartaSans_700Bold', color: colors.muted, marginRight: 8 },
+  amountInput:     { fontSize: 44, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text,
+                     minWidth: 120, textAlign: 'center' },
   input:           { backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1,
                      borderColor: colors.border, color: colors.text, padding: spacing.sm, fontSize: 15,
                      fontFamily: 'PlusJakartaSans_400Regular' },

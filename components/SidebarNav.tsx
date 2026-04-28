@@ -13,7 +13,6 @@ const NAV_ITEMS = [
   { href: '/(tabs)',             label: 'Dashboard',     Icon: GridIcon    },
   { href: '/(tabs)/transactions',label: 'Transactions',  Icon: ListIcon    },
   { href: '/(tabs)/budgets',     label: 'Budget Planner',Icon: BudgetIcon  },
-  { href: '/(tabs)/planning',    label: 'Planning',      Icon: ChartIcon   },
   { href: '/(tabs)/monthly',     label: 'Monthly Report',Icon: CalIcon     },
   { href: '/(tabs)/yearly',      label: 'Yearly Report', Icon: ChartIcon   },
   { href: '/(tabs)/goals',       label: 'Savings Goals', Icon: GoalIcon    },

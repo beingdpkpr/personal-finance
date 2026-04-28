@@ -1,13 +1,14 @@
 import React from 'react';
 import {
-  View, Text, Image, Pressable, ScrollView, StyleSheet, Linking,
+  View, Text, Image, Pressable, ScrollView, StyleSheet,
 } from 'react-native';
 import { useFinance } from '../../hooks/FinanceContext';
 import { LogoutIcon } from '../../components/icons';
 import { colors, spacing, radius } from '../../constants/theme';
+import { CURRENCIES } from '../../constants/categories';
 
 export default function ProfileScreen() {
-  const { user, email, name, picture, logout } = useFinance();
+  const { user, email, name, picture, logout, currency, setCurrencyPref } = useFinance();
 
   const initials = name
     ? name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
@@ -36,6 +37,35 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <InfoRow label="Email" value={email ?? '—'} />
         <InfoRow label="User ID" value={user ?? '—'} mono />
+      </View>
+
+      {/* Preferences */}
+      <View style={[styles.section, { marginTop: 0 }]}>
+        <View style={styles.prefHeader}>
+          <Text style={styles.prefTitle}>Preferences</Text>
+        </View>
+        <View style={styles.prefRow}>
+          <Text style={styles.rowLabel}>Currency</Text>
+        </View>
+        <View style={styles.currencyGrid}>
+          {CURRENCIES.map(c => {
+            const active = currency.code === c.code;
+            return (
+              <Pressable
+                key={c.code}
+                onPress={() => setCurrencyPref(c)}
+                style={[styles.currencyChip, active && styles.currencyChipActive]}
+              >
+                <Text style={[styles.currencySymbol, active && styles.currencySymbolActive]}>
+                  {c.symbol}
+                </Text>
+                <Text style={[styles.currencyCode, active && styles.currencyCodeActive]}>
+                  {c.code}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
       {/* Sign out */}
@@ -83,4 +113,18 @@ const styles = StyleSheet.create({
                      backgroundColor: colors.redDim, borderRadius: radius.md, paddingHorizontal: spacing.lg,
                      paddingVertical: spacing.md, borderWidth: 1, borderColor: colors.red },
   logoutText:      { fontSize: 15, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.red },
+  prefHeader:      { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.xs },
+  prefTitle:       { fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', color: colors.muted,
+                     textTransform: 'uppercase', letterSpacing: 0.8 },
+  prefRow:         { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: 4 },
+  currencyGrid:    { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs,
+                     paddingHorizontal: spacing.md, paddingBottom: spacing.md },
+  currencyChip:    { flexDirection: 'row', alignItems: 'center', gap: 4,
+                     paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.pill,
+                     backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
+  currencyChipActive: { backgroundColor: colors.accentDim, borderColor: colors.accent },
+  currencySymbol:  { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.muted },
+  currencySymbolActive: { color: colors.accent },
+  currencyCode:    { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.muted },
+  currencyCodeActive:  { color: colors.accent },
 });

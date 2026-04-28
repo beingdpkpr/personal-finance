@@ -16,7 +16,7 @@ export const colors = {
   yellow:    '#f0b030',
 };
 
-export const radius = { sm: 6, md: 10, lg: 14, xl: 20 };
+export const radius = { sm: 6, md: 10, lg: 14, xl: 20, pill: 100 };
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
 export const SIDEBAR_W = 230;
 export const WIDE_BREAKPOINT = 768;

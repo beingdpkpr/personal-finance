@@ -6,7 +6,6 @@ import { colors, spacing, radius } from '../../constants/theme';
 
 const MORE_ITEMS = [
   { href: '/(tabs)/profile',   label: 'Profile',        sub: 'Your account details',     Icon: UserIcon    },
-  { href: '/(tabs)/planning',  label: 'Planning',       sub: 'Spend type breakdown',     Icon: ChartIcon   },
   { href: '/(tabs)/yearly',    label: 'Yearly Report',  sub: 'Annual income & expenses', Icon: ChartIcon   },
   { href: '/(tabs)/goals',     label: 'Savings Goals',  sub: 'Track your targets',       Icon: GoalIcon    },
   { href: '/(tabs)/networth',  label: 'Net Worth',      sub: 'Assets & liabilities',     Icon: NetWorthIcon },
