@@ -15,6 +15,12 @@ export const lightColors = {
   purple:    '#9b6fff',
   yellow:    '#f0a820',
   navBg:     '#1a1d2e',
+  glass:       'rgba(255,255,255,0.06)',
+  glassBorder: 'rgba(255,255,255,0.10)',
+  glassStrong: 'rgba(255,255,255,0.09)',
+  glowPurple:  'rgba(159,110,255,0.22)',
+  glowBlue:    'rgba(79,136,255,0.18)',
+  glowGreen:   'rgba(46,209,138,0.15)',
 };
 
 export const darkColors = {
@@ -34,6 +40,12 @@ export const darkColors = {
   purple:    '#a07aff',
   yellow:    '#f0b030',
   navBg:     '#252640',
+  glass:       'rgba(255,255,255,0.06)',
+  glassBorder: 'rgba(255,255,255,0.10)',
+  glassStrong: 'rgba(255,255,255,0.09)',
+  glowPurple:  'rgba(159,110,255,0.22)',
+  glowBlue:    'rgba(79,136,255,0.18)',
+  glowGreen:   'rgba(46,209,138,0.15)',
 };
 
 export type Colors = typeof lightColors;

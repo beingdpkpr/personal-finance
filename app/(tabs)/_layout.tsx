@@ -1,30 +1,16 @@
 import React from 'react';
-import { View, StyleSheet, useWindowDimensions } from 'react-native';
-import { Slot } from 'expo-router';
-import SidebarNav from '../../components/SidebarNav';
-import BottomNav from '../../components/BottomNav';
+import { View } from 'react-native';
+import { Stack } from 'expo-router';
+import { colors } from '../../constants/theme';
+import { DockNav } from '../../components/DockNav';
 import AddModal from '../../components/AddModal';
-import { WIDE_BREAKPOINT } from '../../constants/theme';
 
 export default function TabsLayout() {
-  const { width } = useWindowDimensions();
-  const wide = width >= WIDE_BREAKPOINT;
-
   return (
-    <View style={[styles.root, wide ? styles.rootWide : styles.rootNarrow]}>
-      {wide && <SidebarNav />}
-      <View style={styles.content}>
-        <Slot />
-      </View>
-      {!wide && <BottomNav />}
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { paddingBottom: 80, backgroundColor: colors.bg } }} />
+      <DockNav />
       <AddModal />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root:       { flex: 1 },
-  rootWide:   { flexDirection: 'row' },
-  rootNarrow: { flexDirection: 'column' },
-  content:    { flex: 1 },
-});
