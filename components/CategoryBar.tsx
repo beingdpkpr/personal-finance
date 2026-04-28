@@ -61,6 +61,6 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   dot:       { width: 8, height: 8, borderRadius: 4, marginRight: spacing.sm },
   label:     { flex: 1, fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', color: colors.text },
   amounts:   { fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted },
-  track:     { height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: 'hidden' },
-  fill:      { height: 6, borderRadius: 3 },
+  track:     { height: 5, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' },
+  fill:      { height: 5, borderRadius: 3 },
 }); }

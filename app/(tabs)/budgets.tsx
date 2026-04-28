@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Modal } from 'react-native';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Modal, Animated } from 'react-native';
 import { useFinance } from '../../hooks/FinanceContext';
 import CategoryBar from '../../components/CategoryBar';
 import { spacing, radius, Colors } from '../../constants/theme';
@@ -12,11 +12,33 @@ import {
 } from '../../lib/data';
 import { EXPENSE_CATS, INCOME_CATS } from '../../constants/categories';
 
+/** Map spend-type id to a theme left-border accent color */
+function bucketBorderColor(stId: SpendType, colors: Colors): string {
+  switch (stId) {
+    case 'essentials':  return colors.blue;
+    case 'wants':       return colors.purple;
+    case 'investments': return colors.green;
+    case 'family':      return colors.yellow;
+    default:            return colors.muted;
+  }
+}
+
 export default function PlannerScreen() {
   const colors = useColors();
   const { txns, budgets, setBudgets, currency, spendTypeMap, setSpendTypeMap, customCats, setCustomCats } = useFinance();
 
   const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  // Fade-up entrance animation
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(16)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
+    ]).start();
+  }, []);
+  const animStyle = { opacity: fadeAnim, transform: [{ translateY: slideAnim }] };
 
   const now = new Date();
   const ym  = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -118,42 +140,45 @@ export default function PlannerScreen() {
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>Budget Planner</Text>
-      <Text style={styles.income}>
-        Monthly income: <Text style={styles.incomeVal}>{fmtFull(monthIncome)}</Text>
-      </Text>
+      <Animated.View style={animStyle}>
+        <Text style={styles.heading}>Budget Planner</Text>
+        <Text style={styles.income}>
+          Monthly income: <Text style={styles.incomeVal}>{fmtFull(monthIncome)}</Text>
+        </Text>
 
-      {/* Summary */}
-      <View style={styles.summary}>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Budgeted</Text>
-          <Text style={styles.summaryVal}>{fmt(totalBudgeted)}</Text>
+        {/* Summary */}
+        <View style={styles.summary}>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Budgeted</Text>
+            <Text style={styles.summaryVal}>{fmt(totalBudgeted)}</Text>
+          </View>
+          <View style={styles.summaryDivider} />
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Spent</Text>
+            <Text style={[styles.summaryVal, { color: totalSpent > totalBudgeted ? colors.red : colors.text }]}>
+              {fmt(totalSpent)}
+            </Text>
+          </View>
+          <View style={styles.summaryDivider} />
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Over Budget</Text>
+            <Text style={[styles.summaryVal, { color: overCount > 0 ? colors.red : colors.green }]}>
+              {overCount}
+            </Text>
+          </View>
         </View>
-        <View style={styles.summaryDivider} />
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Spent</Text>
-          <Text style={[styles.summaryVal, { color: totalSpent > totalBudgeted ? colors.red : colors.text }]}>
-            {fmt(totalSpent)}
-          </Text>
-        </View>
-        <View style={styles.summaryDivider} />
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Over Budget</Text>
-          <Text style={[styles.summaryVal, { color: overCount > 0 ? colors.red : colors.green }]}>
-            {overCount}
-          </Text>
-        </View>
-      </View>
+      </Animated.View>
 
-      {/* Spend type buckets */}
+      {/* Spend type buckets — glass cards with colored left border */}
       {SPEND_TYPES.map(st => {
         const mainCats   = catData.filter(({ cat }) => effectiveMap[cat.id] === st.id);
         const customInBucket = customExpCats.filter(c => effectiveMap[c.id] === st.id);
         const total = spendTotals[st.id];
         const pct   = totalExpenses > 0 ? Math.round((total / totalExpenses) * 100) : 0;
+        const leftColor = bucketBorderColor(st.id, colors);
 
         return (
-          <View key={st.id} style={[styles.bucket, { borderColor: st.color + '44' }]}>
+          <View key={st.id} style={[styles.bucket, { borderLeftColor: leftColor }]}>
             {/* Bucket header */}
             <View style={styles.bucketHeader}>
               <View style={[styles.bucketDot, { backgroundColor: st.color }]} />
@@ -232,7 +257,7 @@ export default function PlannerScreen() {
       })}
 
       {/* Income categories */}
-      <View style={[styles.bucket, { borderColor: colors.green + '44' }]}>
+      <View style={[styles.bucket, { borderLeftColor: colors.green }]}>
         <View style={styles.bucketHeader}>
           <View style={[styles.bucketDot, { backgroundColor: colors.green }]} />
           <Text style={styles.bucketLabel}>Income Categories</Text>
@@ -313,24 +338,26 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   heading:       { fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text },
   income:        { fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted, marginTop: -spacing.sm },
   incomeVal:     { color: colors.green, fontFamily: 'PlusJakartaSans_600SemiBold' },
-  summary:       { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: radius.lg,
-                   borderWidth: 1, borderColor: colors.border, padding: spacing.md },
+  summary:       { flexDirection: 'row', backgroundColor: colors.glass, borderRadius: radius.lg,
+                   borderWidth: 1, borderColor: colors.glassBorder, padding: spacing.md },
   summaryItem:   { flex: 1, alignItems: 'center' },
-  summaryDivider:{ width: 1, backgroundColor: colors.border },
+  summaryDivider:{ width: 1, backgroundColor: colors.glassBorder },
   summaryLabel:  { fontSize: 11, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted, marginBottom: 4 },
   summaryVal:    { fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text },
-  bucket:        { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1,
-                   padding: spacing.md, gap: spacing.sm },
+  // Glass bucket with colored left border
+  bucket:        { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder,
+                   borderLeftWidth: 3, borderRadius: radius.xl, padding: spacing.md,
+                   marginBottom: spacing.sm, gap: spacing.sm },
   bucketHeader:  { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   bucketDot:     { width: 10, height: 10, borderRadius: 5 },
   bucketLabel:   { fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text },
   bucketAmt:     { fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold' },
   bucketPct:     { fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted,
                    marginLeft: spacing.xs, minWidth: 32, textAlign: 'right' },
-  barTrack:      { height: 4, backgroundColor: colors.surface2, borderRadius: 2, overflow: 'hidden' },
-  barFill:       { height: 4, borderRadius: 2 },
-  catCard:       { backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1,
-                   borderColor: colors.border, padding: spacing.sm, gap: 6 },
+  barTrack:      { height: 5, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' },
+  barFill:       { height: 5, borderRadius: 2 },
+  catCard:       { backgroundColor: colors.glassStrong, borderRadius: radius.md, borderWidth: 1,
+                   borderColor: colors.glassBorder, padding: spacing.sm, gap: 6 },
   catCardTop:    { flexDirection: 'row', alignItems: 'center' },
   catDot:        { width: 8, height: 8, borderRadius: 4, marginRight: spacing.sm },
   catName:       { flex: 1, fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text },
@@ -338,11 +365,11 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
                    backgroundColor: colors.accentDim },
   editBtnText:   { fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.accent },
   editRow:       { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  modeBtn:       { width: 36, height: 36, borderRadius: radius.sm, backgroundColor: colors.surface,
-                   alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border },
+  modeBtn:       { width: 36, height: 36, borderRadius: radius.sm, backgroundColor: colors.glass,
+                   alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.glassBorder },
   modeBtnText:   { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.accent },
-  editInput:     { flex: 1, backgroundColor: colors.surface, borderRadius: radius.sm, borderWidth: 1,
-                   borderColor: colors.border, color: colors.text, padding: spacing.sm, fontSize: 14,
+  editInput:     { flex: 1, backgroundColor: colors.glass, borderRadius: radius.sm, borderWidth: 1,
+                   borderColor: colors.glassBorder, color: colors.text, padding: spacing.sm, fontSize: 14,
                    fontFamily: 'PlusJakartaSans_400Regular' },
   saveBtn:       { paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.sm,
                    backgroundColor: colors.accent },
@@ -356,20 +383,20 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   chipDel:       { marginLeft: 2 },
   chipDelText:   { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', lineHeight: 16 },
   addChip:       { paddingHorizontal: spacing.sm, paddingVertical: 6, borderRadius: radius.sm,
-                   borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed', alignSelf: 'flex-start' },
+                   borderWidth: 1, borderColor: colors.glassBorder, borderStyle: 'dashed', alignSelf: 'flex-start' },
   addChipText:   { fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted },
   overlay:       { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center',
                    alignItems: 'center', padding: spacing.lg },
-  modalCard:     { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg,
-                   width: '100%', maxWidth: 360, gap: spacing.sm, borderWidth: 1, borderColor: colors.border },
+  modalCard:     { backgroundColor: colors.glassStrong, borderRadius: radius.xl, padding: spacing.lg,
+                   width: '100%', maxWidth: 360, gap: spacing.sm, borderWidth: 1, borderColor: colors.glassBorder },
   modalTitle:    { fontSize: 15, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text,
                    marginBottom: spacing.xs },
   modalRow:      { flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
                    padding: spacing.sm, borderRadius: radius.md },
   modalRowText:  { flex: 1, fontSize: 14, fontFamily: 'PlusJakartaSans_400Regular', color: colors.text },
   modalCheck:    { fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold' },
-  modalInput:    { backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1,
-                   borderColor: colors.border, color: colors.text, padding: spacing.sm,
+  modalInput:    { backgroundColor: colors.glass, borderRadius: radius.md, borderWidth: 1,
+                   borderColor: colors.glassBorder, color: colors.text, padding: spacing.sm,
                    fontSize: 14, fontFamily: 'PlusJakartaSans_400Regular' },
   modalActions:  { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm },
 }); }
