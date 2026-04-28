@@ -7,7 +7,6 @@ import {
   GoalIcon, NetWorthIcon, RecurIcon, PlusIcon, LogoutIcon, UserIcon,
 } from './icons';
 import { colors, spacing, radius, SIDEBAR_W } from '../constants/theme';
-import { CURRENCIES } from '../constants/categories';
 
 const NAV_ITEMS = [
   { href: '/(tabs)',             label: 'Dashboard',     Icon: GridIcon    },
@@ -23,7 +22,7 @@ const NAV_ITEMS = [
 export default function SidebarNav() {
   const router   = useRouter();
   const pathname = usePathname();
-  const { user, logout, currency, setCurrencyPref, openAdd } = useFinance();
+  const { user, logout, openAdd } = useFinance();
 
   return (
     <View style={styles.sidebar}>
@@ -46,18 +45,6 @@ export default function SidebarNav() {
           );
         })}
       </ScrollView>
-
-      {/* Currency switcher */}
-      <View style={styles.currencyRow}>
-        {CURRENCIES.map(c => (
-          <Pressable key={c.code} onPress={() => setCurrencyPref(c)}
-            style={[styles.currencyBtn, currency.code === c.code && styles.currencyBtnActive]}>
-            <Text style={[styles.currencyText, currency.code === c.code && styles.currencyTextActive]}>
-              {c.code}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
 
       {/* Add transaction button */}
       <Pressable onPress={openAdd} style={styles.addBtn}>
@@ -91,12 +78,6 @@ const styles = StyleSheet.create({
   navItemActive:    { backgroundColor: colors.accentDim },
   navLabel:         { fontSize: 14, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted },
   navLabelActive:   { fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text },
-  currencyRow:      { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginVertical: spacing.md },
-  currencyBtn:      { paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.sm,
-                      backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
-  currencyBtnActive:{ backgroundColor: colors.accentDim, borderColor: colors.accent },
-  currencyText:     { fontSize: 11, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted },
-  currencyTextActive:{ color: colors.accent, fontFamily: 'PlusJakartaSans_600SemiBold' },
   addBtn:           { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.accent,
                       borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.md, justifyContent: 'center' },
   addBtnText:       { fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#fff' },
