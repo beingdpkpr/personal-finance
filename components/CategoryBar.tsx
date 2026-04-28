@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { spacing, radius, Colors } from '../constants/theme';
 import { useColors } from '../hooks/ThemeContext';
@@ -19,6 +19,22 @@ export default function CategoryBar({ label, color, spent, budget, showBudget }:
     ? (spent > budget ? colors.red : pct >= 0.8 ? colors.yellow : color)
     : color;
 
+  const [fillPct, setFillPct] = useState(0);
+  useEffect(() => {
+    setFillPct(0);
+    let frame = 0;
+    const target = pct * 100;
+    const frames = 40;
+    const timer = setInterval(() => {
+      frame++;
+      const t = frame / frames;
+      const eased = 1 - Math.pow(1 - t, 3);
+      setFillPct(target * eased);
+      if (frame >= frames) { setFillPct(target); clearInterval(timer); }
+    }, 20);
+    return () => clearInterval(timer);
+  }, [pct]);
+
   return (
     <View style={styles.wrap}>
       {label ? (
@@ -33,7 +49,7 @@ export default function CategoryBar({ label, color, spent, budget, showBudget }:
         </View>
       ) : null}
       <View style={styles.track}>
-        <View style={[styles.fill, { width: `${pct * 100}%` as any, backgroundColor: barColor }]} />
+        <View style={[styles.fill, { width: `${fillPct}%` as any, backgroundColor: barColor }]} />
       </View>
     </View>
   );

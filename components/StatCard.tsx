@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { spacing, radius, Colors } from '../constants/theme';
 import { useColors } from '../hooks/ThemeContext';
@@ -8,17 +8,43 @@ interface Props {
   value: string;
   color?: string;
   sub?: string;
+  animateValue?: number;
+  formatValue?: (n: number) => string;
 }
 
-export default function StatCard({ label, value, color, sub }: Props) {
+function useCountUp(target: number | undefined, duration = 900) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (target === undefined) return;
+    setVal(0);
+    const steps = 45;
+    const stepDur = duration / steps;
+    let step = 0;
+    const timer = setInterval(() => {
+      step++;
+      const t = step / steps;
+      const eased = t * (2 - t);
+      setVal(target * eased);
+      if (step >= steps) { setVal(target); clearInterval(timer); }
+    }, stepDur);
+    return () => clearInterval(timer);
+  }, [target]);
+  return val;
+}
+
+export default function StatCard({ label, value, color, sub, animateValue, formatValue }: Props) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const resolvedColor = color ?? colors.text;
+  const animated = useCountUp(animateValue);
+  const displayValue = animateValue !== undefined
+    ? (formatValue ? formatValue(Math.round(animated)) : Math.round(animated).toString())
+    : value;
   return (
     <View style={styles.card}>
       <View style={[styles.strip, { backgroundColor: resolvedColor }]} />
       <Text style={styles.label}>{label}</Text>
-      <Text style={[styles.value, { color: resolvedColor }]}>{value}</Text>
+      <Text style={[styles.value, { color: resolvedColor }]}>{displayValue}</Text>
       {sub ? <Text style={styles.sub}>{sub}</Text> : null}
     </View>
   );

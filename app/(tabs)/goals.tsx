@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Modal, TextInput } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useFinance } from '../../hooks/FinanceContext';
@@ -8,20 +8,44 @@ import { fmtFull } from '../../lib/format';
 import { uid, Goal } from '../../lib/data';
 import { PlusIcon, TrashIcon, EditIcon } from '../../components/icons';
 
-function CircleProgress({ pct, size = 80, stroke = 7 }: { pct: number; size?: number; stroke?: number }) {
+function AnimatedArcGauge({ pct, size = 88, stroke = 8 }: { pct: number; size?: number; stroke?: number }) {
   const colors = useColors();
   const r      = (size - stroke * 2) / 2;
   const circ   = 2 * Math.PI * r;
-  const offset = circ * (1 - Math.min(pct, 1));
   const center = size / 2;
   const color  = pct >= 1 ? colors.green : pct >= 0.7 ? colors.blue : colors.accent;
+
+  const [animPct, setAnimPct] = useState(0);
+  useEffect(() => {
+    setAnimPct(0);
+    let frame = 0;
+    const target = Math.min(pct, 1);
+    const frames = 50;
+    const timer = setInterval(() => {
+      frame++;
+      const t = frame / frames;
+      const eased = 1 - Math.pow(1 - t, 3);
+      setAnimPct(target * eased);
+      if (frame >= frames) { setAnimPct(target); clearInterval(timer); }
+    }, 20);
+    return () => clearInterval(timer);
+  }, [pct]);
+
+  const offset = circ * (1 - animPct);
   return (
-    <Svg width={size} height={size}>
-      <Circle cx={center} cy={center} r={r} fill="none" stroke={colors.border} strokeWidth={stroke} />
-      <Circle cx={center} cy={center} r={r} fill="none" stroke={color} strokeWidth={stroke}
-        strokeDasharray={`${circ}`} strokeDashoffset={offset}
-        strokeLinecap="round" rotation="-90" origin={`${center},${center}`} />
-    </Svg>
+    <View style={{ width: size, height: size }}>
+      <Svg width={size} height={size}>
+        <Circle cx={center} cy={center} r={r} fill="none" stroke={colors.border} strokeWidth={stroke} />
+        <Circle cx={center} cy={center} r={r} fill="none" stroke={color} strokeWidth={stroke}
+          strokeDasharray={`${circ}`} strokeDashoffset={offset}
+          strokeLinecap="round" rotation="-90" origin={`${center},${center}`} />
+      </Svg>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_800ExtraBold', color }}>
+          {(animPct * 100).toFixed(0)}%
+        </Text>
+      </View>
+    </View>
   );
 }
 
@@ -80,7 +104,7 @@ export default function GoalsScreen() {
           return (
             <View key={g.id} style={styles.card}>
               <View style={styles.cardTop}>
-                <CircleProgress pct={pct} />
+                <AnimatedArcGauge pct={pct} />
                 <View style={styles.cardInfo}>
                   <Text style={styles.goalName}>{g.name}</Text>
                   <Text style={styles.goalProgress}>

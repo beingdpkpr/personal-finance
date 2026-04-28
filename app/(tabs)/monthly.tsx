@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { VictoryBar, VictoryChart, VictoryAxis, VictoryGroup } from 'victory-native';
 import { useFinance } from '../../hooks/FinanceContext';
@@ -8,6 +8,67 @@ import { useColors } from '../../hooks/ThemeContext';
 import { fmt, fmtFull } from '../../lib/format';
 import { EXPENSE_CATS, MONTHS } from '../../constants/categories';
 import { ChevronLeftIcon, ChevronRightIcon, EditIcon } from '../../components/icons';
+
+function WaffleChart({ data }: { data: { label: string; color: string; value: number }[] }) {
+  const colors = useColors();
+  const total = useMemo(() => data.reduce((s, d) => s + d.value, 0), [data]);
+
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    setCount(0);
+    let c = 0;
+    const timer = setInterval(() => {
+      c += 2;
+      setCount(Math.min(c, 100));
+      if (c >= 100) clearInterval(timer);
+    }, 24);
+    return () => clearInterval(timer);
+  }, []);
+
+  const dots = useMemo(() => {
+    const arr = new Array(100).fill(colors.border);
+    if (total === 0) return arr;
+    let filled = 0;
+    for (const d of data) {
+      const dotCount = Math.round((d.value / total) * 100);
+      for (let i = 0; i < dotCount && filled < 100; i++, filled++) {
+        arr[filled] = d.color;
+      }
+    }
+    return arr;
+  }, [data, total, colors.border]);
+
+  if (total === 0) return null;
+
+  return (
+    <View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.md }}>
+        {dots.map((dotColor, i) => (
+          <View key={i} style={{ width: '10%', aspectRatio: 1, padding: 2.5 }}>
+            <View style={{
+              flex: 1,
+              borderRadius: 100,
+              backgroundColor: i < count ? dotColor : colors.surface2,
+            }} />
+          </View>
+        ))}
+      </View>
+      <View style={{ gap: 6 }}>
+        {data.map(d => (
+          <View key={d.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: d.color }} />
+            <Text style={{ flex: 1, fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', color: colors.text }}>
+              {d.label}
+            </Text>
+            <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.muted }}>
+              {total > 0 ? ((d.value / total) * 100).toFixed(0) : 0}%
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
 
 export default function MonthlyScreen() {
   const colors = useColors();
@@ -97,9 +158,15 @@ export default function MonthlyScreen() {
 
       {catBreakdown.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Category Breakdown</Text>
+          <Text style={styles.sectionTitle}>Spending by Category</Text>
+          <View style={[styles.card, { marginBottom: spacing.sm }]}>
+            <Text style={styles.waffleTotal}>{fmtFull(expenses)}</Text>
+            <WaffleChart
+              data={catBreakdown.slice(0, 8).map(({ cat, spent }) => ({ label: cat.label, color: cat.color, value: spent }))}
+            />
+          </View>
           {catBreakdown.map(({ cat, spent }) => (
-            <CategoryBar key={cat.id} label={cat.label} color={cat.color} spent={spent} />
+            <CategoryBar key={cat.id} label={cat.label} color={cat.color} spent={spent} budget={expenses} />
           ))}
         </View>
       )}
@@ -138,6 +205,7 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   chartWrap:    { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.md },
   section:      { marginBottom: spacing.md },
   sectionTitle: { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: spacing.sm },
+  waffleTotal:  { fontSize: 28, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text, marginBottom: spacing.md },
   txnRow:       { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.sm, marginBottom: spacing.xs, gap: spacing.xs },
   txnLeft:      { flex: 1 },
   txnDesc:      { fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text },
