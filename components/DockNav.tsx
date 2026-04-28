@@ -1,10 +1,11 @@
 import React from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import { usePathname, router } from 'expo-router';
+import type { Href } from 'expo-router';
 import { colors, radius, spacing } from '../constants/theme';
 import { GridIcon, ListIcon, BudgetIcon, ChartIcon, UserIcon } from './icons';
 
-const ITEMS = [
+const ITEMS: Array<{ Icon: React.ComponentType<{ size?: number; color?: string }>; route: Href; label: string }> = [
   { Icon: GridIcon,   route: '/(tabs)',              label: 'Dashboard'    },
   { Icon: ListIcon,   route: '/(tabs)/transactions', label: 'Transactions' },
   { Icon: BudgetIcon, route: '/(tabs)/budgets',      label: 'Budgets'      },
@@ -20,11 +21,11 @@ export function DockNav() {
         {ITEMS.map(({ Icon, route, label }, i) => {
           const active = pathname === route || (route === '/(tabs)' && pathname === '/');
           return (
-            <React.Fragment key={route}>
+            <React.Fragment key={label}>
               {i === ITEMS.length - 1 && <View style={styles.divider} />}
               <Pressable
                 style={[styles.item, active && styles.itemActive]}
-                onPress={() => router.replace(route as any)}
+                onPress={() => router.replace(route)}
                 accessibilityLabel={label}
               >
                 <Icon size={20} color={active ? colors.accent : colors.muted} />
