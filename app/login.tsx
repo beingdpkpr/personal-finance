@@ -11,7 +11,9 @@ import { colors, spacing, radius } from '../constants/theme';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID!;
+const CLIENT_ID         = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID!;
+const IOS_CLIENT_ID     = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
 
 export default function LoginScreen() {
   const { googleSignIn } = useFinance();
@@ -19,7 +21,9 @@ export default function LoginScreen() {
   const [busy, setBusy]   = useState(false);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: CLIENT_ID,
+    clientId:         CLIENT_ID,
+    iosClientId:      IOS_CLIENT_ID,
+    androidClientId:  ANDROID_CLIENT_ID,
     scopes: [
       'openid',
       'email',

@@ -24,7 +24,7 @@ export default {
       bundler: 'metro',
       output: 'static',
     },
-    plugins: ['expo-router', 'expo-font'],
+    plugins: ['expo-router', 'expo-font', 'expo-auth-session'],
     experiments: {
       typedRoutes: true,
       baseUrl: '/personal-finance',

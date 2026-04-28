@@ -51,7 +51,13 @@ export function useFinance(): FinanceState {
     if (syncTimer.current) clearTimeout(syncTimer.current);
     syncTimer.current = setTimeout(async () => {
       const session = await getGoogleSession();
-      if (!session || !session.spreadsheetId || isTokenExpired(session)) return;
+      if (!session) return;
+      if (isTokenExpired(session)) {
+        await clearGoogleSession();
+        setUser(null);
+        return;
+      }
+      if (!session.spreadsheetId) return;
       try {
         await pushAll(session.accessToken, session.spreadsheetId, session.userId);
       } catch {
