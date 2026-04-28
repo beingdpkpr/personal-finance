@@ -25,7 +25,7 @@ jobs:
       - run: npx expo export --platform web
         env:
           EXPO_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_CLIENT_ID }}
-          EXPO_PUBLIC_REDIRECT_URI: https://beingdpkpr.github.io/personal-finance
+          EXPO_PUBLIC_REDIRECT_URI: https://beingdpkpr.github.io/personal-finance/login
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa  # v3.0.1
         with:
           path: dist
