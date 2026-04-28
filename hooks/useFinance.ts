@@ -104,6 +104,7 @@ export function useFinance(): FinanceState {
       });
       if (!infoRes.ok) return 'Failed to get user info from Google.';
       const info = await infoRes.json() as { email: string; sub: string };
+      if (!info?.sub || !info?.email) return 'Incomplete user info from Google.';
 
       await saveGoogleSession(accessToken, expiresIn, info.email, info.sub);
 

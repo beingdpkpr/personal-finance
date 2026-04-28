@@ -42,11 +42,13 @@ test('saveSpreadsheetId persists and getGoogleSession returns it', async () => {
   expect(session!.spreadsheetId).toBe('sheet123');
 });
 
-test('clearGoogleSession removes all keys', async () => {
+test('clearGoogleSession removes session keys but preserves migration flag', async () => {
   await saveGoogleSession('tok', 3600, 'a@b.com', 'u1');
   await saveSpreadsheetId('sheet123');
+  await setMigrated();
   await clearGoogleSession();
   expect(await getGoogleSession()).toBeNull();
+  expect(await hasMigrated()).toBe(true); // migration flag preserved
 });
 
 test('hasMigrated returns false initially, true after setMigrated', async () => {

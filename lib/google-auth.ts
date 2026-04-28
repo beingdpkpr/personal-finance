@@ -59,7 +59,8 @@ export async function saveSpreadsheetId(id: string): Promise<void> {
 }
 
 export async function clearGoogleSession(): Promise<void> {
-  await Promise.all(Object.values(K).map(k => AsyncStorage.removeItem(k)));
+  const sessionKeys = [K.ACCESS_TOKEN, K.EXPIRY, K.EMAIL, K.USER_ID, K.SPREADSHEET_ID];
+  await Promise.all(sessionKeys.map(k => AsyncStorage.removeItem(k)));
 }
 
 export async function hasMigrated(): Promise<boolean> {
