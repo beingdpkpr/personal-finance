@@ -10,7 +10,7 @@ export default function TabsLayout() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={{ flex: 1, alignItems: 'center' }}>
-        <View style={{ flex: 1, width: '100%', maxWidth: 720 }}>
+        <View style={{ flex: 1, width: '100%', maxWidth: 1140, paddingHorizontal: 24 }}>
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
         </View>
       </View>
