@@ -1,10 +1,11 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ChartIcon, GoalIcon, NetWorthIcon, RecurIcon } from '../../components/icons';
+import { ChartIcon, GoalIcon, NetWorthIcon, RecurIcon, UserIcon } from '../../components/icons';
 import { colors, spacing, radius } from '../../constants/theme';
 
 const MORE_ITEMS = [
+  { href: '/(tabs)/profile',   label: 'Profile',        sub: 'Your account details',     Icon: UserIcon    },
   { href: '/(tabs)/yearly',    label: 'Yearly Report',  sub: 'Annual income & expenses', Icon: ChartIcon   },
   { href: '/(tabs)/goals',     label: 'Savings Goals',  sub: 'Track your targets',       Icon: GoalIcon    },
   { href: '/(tabs)/networth',  label: 'Net Worth',      sub: 'Assets & liabilities',     Icon: NetWorthIcon },

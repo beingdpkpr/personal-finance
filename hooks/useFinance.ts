@@ -16,6 +16,9 @@ const DEFAULT_CURRENCY: Currency = { code: 'INR', symbol: '₹', locale: 'en-IN'
 
 export interface FinanceState {
   user:         string | null;   // Google userId (sub)
+  email:        string | null;
+  name:         string | null;
+  picture:      string | null;
   loading:      boolean;
   txns:         Transaction[];
   budgets:      BudgetMap;
@@ -37,6 +40,9 @@ export interface FinanceState {
 
 export function useFinance(): FinanceState {
   const [user, setUser]               = useState<string | null>(null);
+  const [email, setEmail]             = useState<string | null>(null);
+  const [name, setName]               = useState<string | null>(null);
+  const [picture, setPicture]         = useState<string | null>(null);
   const [loading, setLoading]         = useState(true);
   const [txns, setTxnsState]          = useState<Transaction[]>([]);
   const [budgets, setBudgetsState]    = useState<BudgetMap>({});
@@ -66,7 +72,7 @@ export function useFinance(): FinanceState {
     }, 2000);
   }, []);
 
-  async function loadUser(userId: string) {
+async function loadUser(userId: string, userEmail?: string | null, userName?: string | null, userPicture?: string | null) {
     const [t, b, r, g, n, c] = await Promise.all([
       storage.getTxns(userId),
       storage.getBudgets(userId),
@@ -78,6 +84,9 @@ export function useFinance(): FinanceState {
     const applied = applyRecurring(r, t);
     setCurrency(c);
     setUser(userId);
+    setEmail(userEmail ?? null);
+    setName(userName ?? null);
+    setPicture(userPicture ?? null);
     setTxnsState(applied);
     setBudgetsState(b);
     setRecurringState(r);
@@ -89,7 +98,7 @@ export function useFinance(): FinanceState {
   useEffect(() => {
     getGoogleSession().then(async session => {
       if (session && !isTokenExpired(session)) {
-        await loadUser(session.userId);
+        await loadUser(session.userId, session.email, session.name, session.picture);
       }
       setLoading(false);
     });
@@ -109,10 +118,10 @@ export function useFinance(): FinanceState {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (!infoRes.ok) return 'Failed to get user info from Google.';
-      const info = await infoRes.json() as { email: string; sub: string };
+      const info = await infoRes.json() as { email: string; sub: string; name?: string; picture?: string };
       if (!info?.sub || !info?.email) return 'Incomplete user info from Google.';
 
-      await saveGoogleSession(accessToken, expiresIn, info.email, info.sub);
+      await saveGoogleSession(accessToken, expiresIn, info.email, info.sub, info.name, info.picture);
 
       // Ensure spreadsheet exists
       const existingSession = await getGoogleSession();
@@ -160,7 +169,7 @@ export function useFinance(): FinanceState {
         ]);
       }
 
-      await loadUser(info.sub);
+      await loadUser(info.sub, info.email, info.name, info.picture);
       return null;
     } catch (e) {
       return e instanceof Error ? e.message : 'Sign-in failed.';
@@ -171,6 +180,9 @@ export function useFinance(): FinanceState {
     if (syncTimer.current) clearTimeout(syncTimer.current);
     await clearGoogleSession();
     setUser(null);
+    setEmail(null);
+    setName(null);
+    setPicture(null);
     setTxnsState([]);
     setBudgetsState({});
     setRecurringState([]);
@@ -189,7 +201,7 @@ export function useFinance(): FinanceState {
   const setCurrencyPref = useCallback((c: Currency) => { setCurrency(c); setCurrencyState(c); }, []);
 
   return {
-    user, loading, txns, budgets, goals, nw, recurring, currency,
+    user, email, name, picture, loading, txns, budgets, goals, nw, recurring, currency,
     googleSignIn, logout,
     addTxn, editTxn, deleteTxn,
     setBudgets, setGoals, setNw, setRecurring, setCurrencyPref,

@@ -6,6 +6,8 @@ const K = {
   EMAIL:          'pf_google_email',
   USER_ID:        'pf_google_user_id',
   SPREADSHEET_ID: 'pf_google_spreadsheet_id',
+  NAME:           'pf_google_name',
+  PICTURE:        'pf_google_picture',
   MIGRATED:       'pf_migrated',
 } as const;
 
@@ -15,6 +17,8 @@ export interface GoogleSession {
   email:         string;
   userId:        string;
   spreadsheetId: string | null;
+  name:          string | null;
+  picture:       string | null;
 }
 
 export async function saveGoogleSession(
@@ -22,6 +26,8 @@ export async function saveGoogleSession(
   expiresIn: number,     // seconds
   email: string,
   userId: string,
+  name?: string | null,
+  picture?: string | null,
 ): Promise<void> {
   const expiry = Date.now() + expiresIn * 1000;
   await Promise.all([
@@ -29,16 +35,20 @@ export async function saveGoogleSession(
     AsyncStorage.setItem(K.EXPIRY, String(expiry)),
     AsyncStorage.setItem(K.EMAIL, email),
     AsyncStorage.setItem(K.USER_ID, userId),
+    name    ? AsyncStorage.setItem(K.NAME, name)       : AsyncStorage.removeItem(K.NAME),
+    picture ? AsyncStorage.setItem(K.PICTURE, picture) : AsyncStorage.removeItem(K.PICTURE),
   ]);
 }
 
 export async function getGoogleSession(): Promise<GoogleSession | null> {
-  const [token, expiry, email, userId, spreadsheetId] = await Promise.all([
+  const [token, expiry, email, userId, spreadsheetId, name, picture] = await Promise.all([
     AsyncStorage.getItem(K.ACCESS_TOKEN),
     AsyncStorage.getItem(K.EXPIRY),
     AsyncStorage.getItem(K.EMAIL),
     AsyncStorage.getItem(K.USER_ID),
     AsyncStorage.getItem(K.SPREADSHEET_ID),
+    AsyncStorage.getItem(K.NAME),
+    AsyncStorage.getItem(K.PICTURE),
   ]);
   if (!token || !email || !userId) return null;
   return {
@@ -47,6 +57,8 @@ export async function getGoogleSession(): Promise<GoogleSession | null> {
     email,
     userId,
     spreadsheetId,
+    name,
+    picture,
   };
 }
 

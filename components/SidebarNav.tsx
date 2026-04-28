@@ -4,7 +4,7 @@ import { useRouter, usePathname } from 'expo-router';
 import { useFinance } from '../hooks/FinanceContext';
 import {
   GridIcon, ListIcon, CalIcon, ChartIcon, BudgetIcon,
-  GoalIcon, NetWorthIcon, RecurIcon, PlusIcon, LogoutIcon,
+  GoalIcon, NetWorthIcon, RecurIcon, PlusIcon, LogoutIcon, UserIcon,
 } from './icons';
 import { colors, spacing, radius, SIDEBAR_W } from '../constants/theme';
 import { CURRENCIES } from '../constants/categories';
@@ -66,15 +66,15 @@ export default function SidebarNav() {
       </Pressable>
 
       {/* User + logout */}
-      <View style={styles.userRow}>
+      <Pressable onPress={() => router.push('/(tabs)/profile' as any)} style={styles.userRow}>
         <View style={styles.userAvatar}>
-          <Text style={styles.userAvatarText}>{(user ?? 'U')[0].toUpperCase()}</Text>
+          <UserIcon size={16} color={colors.accent} />
         </View>
         <Text style={styles.userName} numberOfLines={1}>{user}</Text>
         <Pressable onPress={logout} style={styles.logoutBtn}>
           <LogoutIcon size={18} color={colors.muted} />
         </Pressable>
-      </View>
+      </Pressable>
     </View>
   );
 }
@@ -104,7 +104,6 @@ const styles = StyleSheet.create({
                       backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.sm },
   userAvatar:       { width: 30, height: 30, borderRadius: 15, backgroundColor: colors.accentDim,
                       alignItems: 'center', justifyContent: 'center' },
-  userAvatarText:   { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.accent },
   userName:         { flex: 1, fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text },
   logoutBtn:        { padding: 4 },
 });
