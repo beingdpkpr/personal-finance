@@ -8,7 +8,7 @@ import { EXPENSE_CATS, INCOME_CATS } from '../../constants/categories';
 import { PlusIcon, TrashIcon, EditIcon } from '../../components/icons';
 
 export default function RecurringScreen() {
-  const { recurring, setRecurring, currency } = useFinance();
+  const { recurring, setRecurring, currency, customCats } = useFinance();
   const [modalOpen, setModalOpen] = useState(false);
   const [editId,    setEditId]    = useState<string | null>(null);
   const [type,      setType]      = useState<'expense' | 'income'>('expense');
@@ -103,7 +103,10 @@ export default function RecurringScreen() {
 
             <Text style={styles.catLabel}>Category</Text>
             <View style={styles.catGrid}>
-              {(type === 'expense' ? EXPENSE_CATS : INCOME_CATS).map(c => (
+              {[
+                ...(type === 'expense' ? EXPENSE_CATS : INCOME_CATS),
+                ...customCats.filter(c => c.txnType === type),
+              ].map(c => (
                 <Pressable key={c.id} onPress={() => setCategory(c.id)}
                   style={[styles.catChip, category === c.id && { backgroundColor: c.color + '33', borderColor: c.color }]}>
                   <Text style={[styles.catChipText, category === c.id && { color: c.color }]}>{c.label}</Text>

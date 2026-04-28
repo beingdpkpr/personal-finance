@@ -9,7 +9,7 @@ import { EXPENSE_CATS, INCOME_CATS } from '../constants/categories';
 import { Transaction, uid } from '../lib/data';
 
 export default function AddModal() {
-  const { modalVisible, editItem, closeModal, addTxn, editTxn, currency } = useFinance();
+  const { modalVisible, editItem, closeModal, addTxn, editTxn, currency, customCats } = useFinance();
 
   const [type, setType]       = useState<'expense' | 'income'>('expense');
   const [amount, setAmount]   = useState('');
@@ -35,7 +35,11 @@ export default function AddModal() {
     }
   }, [editItem, modalVisible]);
 
-  const cats = type === 'expense' ? EXPENSE_CATS : INCOME_CATS;
+  const defaultCats = type === 'expense' ? EXPENSE_CATS : INCOME_CATS;
+  const cats = [
+    ...defaultCats,
+    ...customCats.filter(c => c.txnType === type),
+  ];
 
   function handleSave() {
     const amt = parseFloat(amount);

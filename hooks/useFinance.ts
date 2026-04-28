@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  BudgetMap, Currency, Goal, NetWorthData,
+  BudgetMap, Currency, CustomCategory, Goal, NetWorthData,
   RecurringRule, SpendTypeMap, Transaction, uid,
 } from '../lib/data';
 import { storage } from '../lib/storage';
@@ -38,6 +38,8 @@ export interface FinanceState {
   setRecurring: (r: RecurringRule[]) => void;
   setCurrencyPref: (c: Currency) => void;
   setSpendTypeMap: (m: SpendTypeMap) => void;
+  customCats:   CustomCategory[];
+  setCustomCats:(c: CustomCategory[]) => void;
 }
 
 export function useFinance(): FinanceState {
@@ -53,6 +55,7 @@ export function useFinance(): FinanceState {
   const [recurring, setRecurringState]= useState<RecurringRule[]>([]);
   const [currency, setCurrencyState]  = useState<Currency>(DEFAULT_CURRENCY);
   const [spendTypeMap, setSpendTypeMapState] = useState<SpendTypeMap>({});
+  const [customCats, setCustomCatsState]     = useState<CustomCategory[]>([]);
 
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -76,7 +79,7 @@ export function useFinance(): FinanceState {
   }, []);
 
 async function loadUser(userId: string, userEmail?: string | null, userName?: string | null, userPicture?: string | null) {
-    const [t, b, r, g, n, c, sm] = await Promise.all([
+    const [t, b, r, g, n, c, sm, cc] = await Promise.all([
       storage.getTxns(userId),
       storage.getBudgets(userId),
       storage.getRecurring(userId),
@@ -84,6 +87,7 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
       storage.getNetWorth(userId),
       storage.getCurrency(userId),
       storage.getSpendTypeMap(userId),
+      storage.getCustomCats(userId),
     ]);
     const applied = applyRecurring(r, t);
     setCurrency(c);
@@ -98,6 +102,8 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
     setNwState(n);
     setCurrencyState(c);
     setSpendTypeMapState(sm);
+    setCustomCatsState(cc);
+  }
 
   useEffect(() => {
     getGoogleSession().then(async session => {
@@ -115,6 +121,7 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
   useEffect(() => { if (user) { storage.saveNetWorth(user, nw);         scheduleSync(); } }, [nw,        user, scheduleSync]);
   useEffect(() => { if (user) { storage.saveCurrency(user, currency);   scheduleSync(); } }, [currency,  user, scheduleSync]);
   useEffect(() => { if (user) { storage.saveSpendTypeMap(user, spendTypeMap); } }, [spendTypeMap, user]);
+  useEffect(() => { if (user) { storage.saveCustomCats(user, customCats); } }, [customCats, user]);
 
   const googleSignIn = useCallback(async (accessToken: string, expiresIn: number): Promise<string | null> => {
     try {
@@ -195,6 +202,7 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
     setNwState({ assets: [], liabilities: [] });
     setCurrencyState(DEFAULT_CURRENCY);
     setSpendTypeMapState({});
+    setCustomCatsState([]);
   }, []);
 
   const addTxn      = useCallback((t: Omit<Transaction, 'id'>) => setTxnsState(prev => [...prev, { ...t, id: uid() }]), []);
@@ -206,11 +214,12 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
   const setRecurring= useCallback((r: RecurringRule[]) => setRecurringState(r), []);
   const setCurrencyPref = useCallback((c: Currency) => { setCurrency(c); setCurrencyState(c); }, []);
   const setSpendTypeMap = useCallback((m: SpendTypeMap) => setSpendTypeMapState(m), []);
+  const setCustomCats   = useCallback((c: CustomCategory[]) => setCustomCatsState(c), []);
 
   return {
-    user, email, name, picture, loading, txns, budgets, goals, nw, recurring, currency, spendTypeMap,
+    user, email, name, picture, loading, txns, budgets, goals, nw, recurring, currency, spendTypeMap, customCats,
     googleSignIn, logout,
     addTxn, editTxn, deleteTxn,
-    setBudgets, setGoals, setNw, setRecurring, setCurrencyPref, setSpendTypeMap,
+    setBudgets, setGoals, setNw, setRecurring, setCurrencyPref, setSpendTypeMap, setCustomCats,
   };
 }

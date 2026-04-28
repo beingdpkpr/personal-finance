@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  BudgetMap, Currency, Goal, NetWorthData,
+  BudgetMap, Currency, CustomCategory, Goal, NetWorthData,
   RecurringRule, SpendTypeMap, Transaction, UserStore,
 } from './data';
 
@@ -52,4 +52,7 @@ export const storage = {
 
   getSpendTypeMap:  (user: string)                      => get<SpendTypeMap>(`pf_spendmap_${user}`, {}),
   saveSpendTypeMap: (user: string, d: SpendTypeMap)     => set(`pf_spendmap_${user}`, d),
+
+  getCustomCats:  (user: string)                          => get<CustomCategory[]>(`pf_customcats_${user}`, []),
+  saveCustomCats: (user: string, d: CustomCategory[])    => set(`pf_customcats_${user}`, d),
 };

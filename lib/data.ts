@@ -3,10 +3,10 @@ export type TxnType = 'expense' | 'income';
 export type SpendType = 'essentials' | 'wants' | 'investments' | 'family';
 
 export const SPEND_TYPES: { id: SpendType; label: string; color: string }[] = [
-  { id: 'essentials',  label: 'Essentials',  color: '#5a9fff' },
-  { id: 'wants',       label: 'Wants',       color: '#f05060' },
-  { id: 'investments', label: 'Investments', color: '#2ed18a' },
-  { id: 'family',      label: 'Family',      color: '#60d0e0' },
+  { id: 'essentials',  label: 'Essentials',          color: '#5a9fff' },
+  { id: 'wants',       label: 'Wants',                color: '#f05060' },
+  { id: 'investments', label: 'Savings & Investments',color: '#2ed18a' },
+  { id: 'family',      label: 'Family',               color: '#60d0e0' },
 ];
 
 // Default expense category → spend type mapping
@@ -23,6 +23,18 @@ export const DEFAULT_SPEND_MAP: Record<string, SpendType> = {
 };
 
 export type SpendTypeMap = Record<string, SpendType>;
+
+export interface CustomCategory {
+  id:      string;
+  label:   string;
+  color:   string;
+  txnType: 'expense' | 'income';
+}
+
+const CAT_COLORS = ['#f0722a','#5a9fff','#2ed18a','#a07aff','#f05060','#f0b030','#60d0e0','#ff7eb3','#8888aa'];
+export function nextCatColor(existing: CustomCategory[]): string {
+  return CAT_COLORS[existing.length % CAT_COLORS.length];
+}
 
 export interface Transaction {
   id: string;
