@@ -101,6 +101,16 @@ export default function RecurringScreen() {
             <TextInput style={styles.input} placeholder="Day of month (1–28)" placeholderTextColor={colors.muted}
               keyboardType="numeric" value={day} onChangeText={setDay} />
 
+            <Text style={styles.catLabel}>Category</Text>
+            <View style={styles.catGrid}>
+              {(type === 'expense' ? EXPENSE_CATS : INCOME_CATS).map(c => (
+                <Pressable key={c.id} onPress={() => setCategory(c.id)}
+                  style={[styles.catChip, category === c.id && { backgroundColor: c.color + '33', borderColor: c.color }]}>
+                  <Text style={[styles.catChipText, category === c.id && { color: c.color }]}>{c.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+
             <View style={styles.modalActions}>
               <Pressable onPress={() => setModalOpen(false)} style={styles.cancelBtn}>
                 <Text style={styles.cancelBtnText}>Cancel</Text>
@@ -144,4 +154,9 @@ const styles = StyleSheet.create({
   cancelBtnText: { fontSize: 14, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted },
   saveBtn:       { paddingHorizontal: spacing.lg, paddingVertical: 10, borderRadius: radius.md, backgroundColor: colors.accent },
   saveBtnText:   { fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#fff' },
+  catLabel:      { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.muted },
+  catGrid:       { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  catChip:       { paddingHorizontal: spacing.sm, paddingVertical: 6, borderRadius: radius.sm,
+                   backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
+  catChipText:   { fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted },
 });
