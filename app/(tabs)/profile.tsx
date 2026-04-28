@@ -39,8 +39,8 @@ export default function ProfileScreen() {
 
       {/* Info cards */}
       <View style={styles.section}>
-        <InfoRow label="Email" value={email ?? '—'} />
-        <InfoRow label="User ID" value={user ?? '—'} mono />
+        <InfoRow label="Email" value={email ?? '—'} styles={styles} />
+        <InfoRow label="User ID" value={user ?? '—'} mono styles={styles} />
       </View>
 
       {/* Preferences */}
@@ -97,7 +97,7 @@ export default function ProfileScreen() {
   );
 }
 
-function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function InfoRow({ label, value, mono, styles }: { label: string; value: string; mono?: boolean; styles: ReturnType<typeof makeStyles> }) {
   return (
     <View style={styles.row}>
       <Text style={styles.rowLabel}>{label}</Text>
