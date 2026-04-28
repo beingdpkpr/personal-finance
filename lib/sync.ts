@@ -1,0 +1,180 @@
+import { storage } from './storage';
+import { writeTab, readTab, createSpreadsheet, verifySpreadsheet } from './sheets';
+import { saveSpreadsheetId } from './google-auth';
+import {
+  Transaction, BudgetMap, BudgetEntry, Goal,
+  RecurringRule, NetWorthItem, Currency,
+} from './data';
+
+// ── Serializers ──────────────────────────────────────────────────────────────
+
+function txnToRow(t: Transaction): string[] {
+  return [
+    t.id, t.type, String(t.amount), t.category, t.description, t.date,
+    t.notes ?? '', JSON.stringify(t.tags ?? []), t.recurringId ?? '', t.auto ? '1' : '0',
+  ];
+}
+
+function rowToTxn(r: Record<string, string>): Transaction {
+  let tags: string[] | undefined;
+  if (r.tags) {
+    try {
+      const parsed = JSON.parse(r.tags);
+      tags = Array.isArray(parsed) && parsed.length > 0 ? parsed : undefined;
+    } catch {
+      tags = undefined;
+    }
+  }
+  return {
+    id: r.id,
+    type: r.type as Transaction['type'],
+    amount: Number(r.amount),
+    category: r.category,
+    description: r.description,
+    date: r.date,
+    notes: r.notes || undefined,
+    tags,
+    recurringId: r.recurringId || undefined,
+    auto: r.auto === '1',
+  };
+}
+
+function budgetToRow(catId: string, entry: BudgetEntry): string[] {
+  return [catId, entry.mode, String(entry.value)];
+}
+
+function rowToBudget(r: Record<string, string>): [string, BudgetEntry] {
+  return [r.catId, { mode: r.mode as BudgetEntry['mode'], value: Number(r.value) }];
+}
+
+function goalToRow(g: Goal): string[] {
+  return [g.id, g.name, String(g.target), String(g.current), g.deadline ?? ''];
+}
+
+function rowToGoal(r: Record<string, string>): Goal {
+  return {
+    id: r.id, name: r.name,
+    target: Number(r.target), current: Number(r.current),
+    deadline: r.deadline || undefined,
+  };
+}
+
+function recurringToRow(r: RecurringRule): string[] {
+  return [r.id, r.type, String(r.amount), r.category, r.description, String(r.dayOfMonth)];
+}
+
+function rowToRecurring(r: Record<string, string>): RecurringRule {
+  return {
+    id: r.id,
+    type: r.type as RecurringRule['type'],
+    amount: Number(r.amount),
+    category: r.category,
+    description: r.description,
+    dayOfMonth: Number(r.dayOfMonth),
+  };
+}
+
+function nwItemToRow(item: NetWorthItem, type: 'asset' | 'liability'): string[] {
+  return [item.id, item.name, type, String(item.value)];
+}
+
+function rowToNwItem(r: Record<string, string>): { item: NetWorthItem; type: 'asset' | 'liability' } {
+  return {
+    item: { id: r.id, name: r.name, value: Number(r.value) },
+    type: r.type as 'asset' | 'liability',
+  };
+}
+
+// ── Public API ────────────────────────────────────────────────────────────────
+
+export async function ensureSpreadsheet(
+  accessToken: string,
+  spreadsheetId: string | null,
+  email: string,
+): Promise<string> {
+  if (spreadsheetId && await verifySpreadsheet(accessToken, spreadsheetId)) {
+    return spreadsheetId;
+  }
+  const newId = await createSpreadsheet(accessToken, email);
+  await saveSpreadsheetId(newId);
+  return newId;
+}
+
+export async function pushAll(
+  accessToken: string,
+  spreadsheetId: string,
+  userId: string,
+): Promise<void> {
+  const [txns, budgets, goals, recurring, nw, currency] = await Promise.all([
+    storage.getTxns(userId),
+    storage.getBudgets(userId),
+    storage.getGoals(userId),
+    storage.getRecurring(userId),
+    storage.getNetWorth(userId),
+    storage.getCurrency(userId),
+  ]);
+
+  const budgetRows = Object.entries(budgets as BudgetMap).map(([catId, entry]) =>
+    budgetToRow(catId, entry),
+  );
+  const nwRows = [
+    ...nw.assets.map(i => nwItemToRow(i, 'asset')),
+    ...nw.liabilities.map(i => nwItemToRow(i, 'liability')),
+  ];
+
+  await Promise.all([
+    writeTab(accessToken, spreadsheetId, 'Transactions', txns.map(txnToRow)),
+    writeTab(accessToken, spreadsheetId, 'Budgets', budgetRows),
+    writeTab(accessToken, spreadsheetId, 'Goals', goals.map(goalToRow)),
+    writeTab(accessToken, spreadsheetId, 'Recurring', recurring.map(recurringToRow)),
+    writeTab(accessToken, spreadsheetId, 'NetWorth', nwRows),
+    writeTab(accessToken, spreadsheetId, 'Settings', [
+      [currency.code, currency.symbol, currency.locale, new Date().toISOString()],
+    ]),
+  ]);
+}
+
+export async function pullAll(
+  accessToken: string,
+  spreadsheetId: string,
+  userId: string,
+): Promise<{
+  txns: Transaction[];
+  budgets: BudgetMap;
+  goals: Goal[];
+  recurring: RecurringRule[];
+  nw: { assets: NetWorthItem[]; liabilities: NetWorthItem[] };
+  currency: Currency;
+}> {
+  const DEFAULT_CURRENCY: Currency = { code: 'INR', symbol: '₹', locale: 'en-IN' };
+
+  const [txnRows, budgetRows, goalRows, recurringRows, nwRows, settingsRows] = await Promise.all([
+    readTab(accessToken, spreadsheetId, 'Transactions'),
+    readTab(accessToken, spreadsheetId, 'Budgets'),
+    readTab(accessToken, spreadsheetId, 'Goals'),
+    readTab(accessToken, spreadsheetId, 'Recurring'),
+    readTab(accessToken, spreadsheetId, 'NetWorth'),
+    readTab(accessToken, spreadsheetId, 'Settings'),
+  ]);
+
+  const nwItems = nwRows.map(rowToNwItem);
+  const currency: Currency = settingsRows[0]
+    ? {
+        code:   settingsRows[0].currency_code   || DEFAULT_CURRENCY.code,
+        symbol: settingsRows[0].currency_symbol || DEFAULT_CURRENCY.symbol,
+        locale: settingsRows[0].currency_locale || DEFAULT_CURRENCY.locale,
+      }
+    : DEFAULT_CURRENCY;
+
+  return {
+    txns:      txnRows.map(rowToTxn),
+    budgets:   Object.fromEntries(budgetRows.map(rowToBudget)),
+    goals:     goalRows.map(rowToGoal),
+    recurring: recurringRows.map(rowToRecurring),
+    nw: {
+      assets:      nwItems.filter(x => x.type === 'asset').map(x => x.item),
+      liabilities: nwItems.filter(x => x.type === 'liability').map(x => x.item),
+    },
+    currency,
+  };
+}
