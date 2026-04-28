@@ -210,7 +210,7 @@ export default function MonthlyScreen() {
 
 function makeStyles(colors: Colors) { return StyleSheet.create({
   root:             { flex: 1, backgroundColor: colors.bg },
-  content:          { padding: spacing.md, paddingBottom: spacing.xl * 2 },
+  content:          { padding: spacing.md, paddingBottom: spacing.md },
   heading:          { fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text, marginBottom: spacing.md },
   picker:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.lg, marginBottom: spacing.md },
   arrow:            { padding: spacing.sm },

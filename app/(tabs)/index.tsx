@@ -1,8 +1,8 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, useWindowDimensions, Animated } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet, Animated } from 'react-native';
 import { useFinance } from '../../hooks/FinanceContext';
 import CategoryBar from '../../components/CategoryBar';
-import { spacing, radius, WIDE_BREAKPOINT, Colors } from '../../constants/theme';
+import { spacing, radius, Colors } from '../../constants/theme';
 import { useColors } from '../../hooks/ThemeContext';
 import { fmt, fmtFull } from '../../lib/format';
 import { resolveLimit } from '../../lib/data';
@@ -54,9 +54,7 @@ function SparklineChart({ data, barColor, width = 120, height = 44 }: { data: nu
 
 export default function DashboardScreen() {
   const colors = useColors();
-  const { txns, budgets, currency, openEdit, deleteTxn, customCats } = useFinance();
-  const { width } = useWindowDimensions();
-  const wide = width >= WIDE_BREAKPOINT;
+  const { txns, budgets, openEdit, deleteTxn, customCats } = useFinance();
 
   // Fade-up entrance animation
   const fadeAnim  = useRef(new Animated.Value(0)).current;
@@ -136,21 +134,21 @@ export default function DashboardScreen() {
             </View>
             <View style={styles.sparkBox}>
               <Text style={styles.sparkLabel}>7-day spend</Text>
-              <SparklineChart data={sparkData} barColor={savings >= 0 ? '#7ee8bc' : '#f8a5ae'} />
+              <SparklineChart data={sparkData} barColor={savings >= 0 ? colors.green : colors.red} />
             </View>
           </View>
-          <Text style={[styles.heroAmount, { color: savings >= 0 ? '#7ee8bc' : '#f8a5ae' }]}>
+          <Text style={[styles.heroAmount, { color: savings >= 0 ? colors.green : colors.red }]}>
             {fmtFull(Math.round(animatedSavings))}
           </Text>
           <View style={styles.heroRow}>
             <View style={styles.heroStat}>
               <Text style={styles.heroStatLabel}>↑  Income</Text>
-              <Text style={[styles.heroStatVal, { color: '#7ee8bc' }]}>{fmtFull(income)}</Text>
+              <Text style={[styles.heroStatVal, { color: colors.green }]}>{fmtFull(income)}</Text>
             </View>
             <View style={styles.heroDiv} />
             <View style={styles.heroStat}>
               <Text style={styles.heroStatLabel}>↓  Expenses</Text>
-              <Text style={[styles.heroStatVal, { color: '#f8a5ae' }]}>{fmtFull(expenses)}</Text>
+              <Text style={[styles.heroStatVal, { color: colors.red }]}>{fmtFull(expenses)}</Text>
             </View>
           </View>
         </View>
@@ -229,7 +227,7 @@ export default function DashboardScreen() {
 
 function makeStyles(colors: Colors) { return StyleSheet.create({
   root:            { flex: 1, backgroundColor: colors.bg },
-  content:         { padding: spacing.md, paddingBottom: spacing.xl * 2 },
+  content:         { padding: spacing.md, paddingBottom: spacing.md },
   greeting:        { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.accent, marginBottom: 2 },
   heading:         { fontSize: 24, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text, marginBottom: spacing.md },
   // Hero card — glass + glow

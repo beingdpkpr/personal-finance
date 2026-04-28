@@ -334,7 +334,7 @@ export default function PlannerScreen() {
 
 function makeStyles(colors: Colors) { return StyleSheet.create({
   root:          { flex: 1, backgroundColor: colors.bg },
-  content:       { padding: spacing.md, paddingBottom: spacing.xl * 2, gap: spacing.md },
+  content:       { padding: spacing.md, paddingBottom: spacing.md, gap: spacing.md },
   heading:       { fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text },
   income:        { fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted, marginTop: -spacing.sm },
   incomeVal:     { color: colors.green, fontFamily: 'PlusJakartaSans_600SemiBold' },

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import { usePathname, router } from 'expo-router';
 import type { Href } from 'expo-router';
-import { colors, radius, spacing } from '../constants/theme';
+import { colors, radius } from '../constants/theme';
 import { GridIcon, ListIcon, BudgetIcon, ChartIcon, UserIcon } from './icons';
 
 const ITEMS: Array<{ Icon: React.ComponentType<{ size?: number; color?: string }>; route: Href; label: string }> = [

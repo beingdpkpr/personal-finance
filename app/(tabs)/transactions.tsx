@@ -41,14 +41,12 @@ function parseCSV(raw: string): { txns: Transaction[]; errors: string[] } {
 
 export default function TransactionsScreen() {
   const colors = useColors();
-  const { txns, currency, openEdit, deleteTxn, addTxn } = useFinance();
+  const { txns, openEdit, deleteTxn, addTxn } = useFinance();
   const { width } = useWindowDimensions();
   const wide = width >= WIDE_BREAKPOINT;
 
   const [search, setSearch]   = useState('');
   const [typeFilter, setType] = useState<'all' | 'income' | 'expense'>('all');
-  const [importing, setImporting] = useState(false);
-
   // Fade-up entrance animation
   const fadeAnim  = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(16)).current;
@@ -132,7 +130,7 @@ export default function TransactionsScreen() {
       <FlatList
         data={filtered}
         keyExtractor={t => t.id}
-        contentContainerStyle={{ padding: spacing.md, paddingBottom: spacing.xl * 2 }}
+        contentContainerStyle={{ padding: spacing.md, paddingBottom: spacing.md }}
         ListEmptyComponent={<Text style={styles.empty}>No transactions found.</Text>}
         renderItem={({ item: t }) => (
           <View style={[styles.txnRow, wide && styles.rowWide]}>
