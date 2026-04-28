@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
+import { makeRedirectUri } from 'expo-auth-session';
 import { router } from 'expo-router';
 import { useFinance } from '../hooks/FinanceContext';
 import { colors, spacing, radius } from '../constants/theme';
@@ -20,10 +21,13 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const [busy, setBusy]   = useState(false);
 
+  const redirectUri = makeRedirectUri({ native: 'finance://login' });
+
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId:         CLIENT_ID,
     iosClientId:      IOS_CLIENT_ID,
     androidClientId:  ANDROID_CLIENT_ID,
+    redirectUri,
     scopes: [
       'openid',
       'email',
