@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, Pressable, StyleSheet,
   ActivityIndicator,
@@ -28,22 +28,22 @@ export default function LoginScreen() {
     ],
   });
 
-  useEffect(() => {
-    if (response?.type !== 'success') return;
-    const token = response.authentication?.accessToken;
-    const expiresIn = response.authentication?.expiresIn ?? 3600;
-    if (!token) { setError('No access token received from Google.'); return; }
-    handleSignIn(token, expiresIn);
-  }, [response]);
-
-  async function handleSignIn(accessToken: string, expiresIn: number) {
+  const handleSignIn = useCallback(async (accessToken: string, expiresIn: number) => {
     setBusy(true);
     setError('');
     const err = await googleSignIn(accessToken, expiresIn);
     setBusy(false);
     if (err) { setError(err); return; }
     router.replace('/(tabs)');
-  }
+  }, [googleSignIn]);
+
+  useEffect(() => {
+    if (response?.type !== 'success') return;
+    const token = response.authentication?.accessToken;
+    const expiresIn = response.authentication?.expiresIn ?? 3600;
+    if (!token) { setError('No access token received from Google.'); return; }
+    handleSignIn(token, expiresIn);
+  }, [response, handleSignIn]);
 
   return (
     <View style={styles.root}>
