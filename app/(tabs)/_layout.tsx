@@ -9,7 +9,9 @@ export default function TabsLayout() {
   const colors = useColors();
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { paddingBottom: 80, backgroundColor: colors.bg } }} />
+      <View style={{ flex: 1 }}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
+      </View>
       <DockNav />
       <AddModal />
     </View>

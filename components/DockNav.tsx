@@ -16,7 +16,7 @@ const ITEMS: Array<{ Icon: React.ComponentType<{ size?: number; color?: string }
 export function DockNav() {
   const pathname = usePathname();
   return (
-    <View style={styles.outer} pointerEvents="box-none">
+    <View style={styles.outer}>
       <View style={styles.dock}>
         {ITEMS.map(({ Icon, route, label }, i) => {
           const active = pathname === route || (route === '/(tabs)' && pathname === '/');
@@ -40,17 +40,10 @@ export function DockNav() {
 }
 
 const styles = StyleSheet.create({
-  outer:      { position: 'absolute', bottom: 16, left: 0, right: 0, alignItems: 'center', zIndex: 100 },
-  dock:       {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(25,26,40,0.88)', borderRadius: 28,
-    paddingHorizontal: 10, paddingVertical: 8,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5, shadowRadius: 20, elevation: 20,
-  },
-  item:       { alignItems: 'center', gap: 3, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  itemActive: { backgroundColor: 'rgba(240,114,42,0.15)' },
+  outer:      { alignItems: 'center', paddingVertical: 10, backgroundColor: 'transparent' },
+  dock:       { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  item:       { alignItems: 'center', gap: 3, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
+  itemActive: { backgroundColor: 'rgba(240,114,42,0.12)' },
   dot:        { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.accent },
-  divider:    { width: 1, height: 24, backgroundColor: 'rgba(255,255,255,0.10)', marginHorizontal: 4 },
+  divider:    { width: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.10)', marginHorizontal: 6 },
 });

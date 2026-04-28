@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, Animated } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet, Animated, useWindowDimensions } from 'react-native';
 import { useFinance } from '../../hooks/FinanceContext';
 import CategoryBar from '../../components/CategoryBar';
 import { spacing, radius, Colors } from '../../constants/theme';
@@ -100,6 +100,11 @@ export default function DashboardScreen() {
 
   const recent = [...txns].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8);
 
+  const { width } = useWindowDimensions();
+  const numCols = width >= 900 ? 4 : width >= 600 ? 3 : 2;
+  const colGap = spacing.sm;
+  const cardW = (width - spacing.md * 2 - colGap * (numCols - 1)) / numCols;
+
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const alerts = useMemo(() => {
@@ -179,17 +184,26 @@ export default function DashboardScreen() {
             <View style={[styles.sectionAccent, { backgroundColor: colors.red }]} />
             <Text style={styles.sectionTitle}>Budget Alerts</Text>
           </View>
-          {alerts.map(({ cat, spent, limit, over }) => (
-            <View key={cat.id} style={styles.alertCard}>
-              <CategoryBar label={cat.label} color={over ? colors.red : colors.yellow}
-                spent={spent} budget={limit} showBudget />
-              <View style={[styles.badge, { backgroundColor: over ? colors.redDim : colors.accentDim }]}>
-                <Text style={[styles.badgeText, { color: over ? colors.red : colors.accent }]}>
-                  {over ? '● Over budget' : '▲ Warning'}
+          <View style={styles.grid}>
+            {alerts.map(({ cat, spent, limit, over }) => (
+              <View key={cat.id} style={[styles.alertCard, { width: cardW }]}>
+                <View style={[styles.alertDot, { backgroundColor: over ? colors.red : colors.yellow }]} />
+                <Text style={styles.alertCat} numberOfLines={1}>{cat.label}</Text>
+                <Text style={[styles.alertAmt, { color: over ? colors.red : colors.yellow }]}>
+                  {fmt(spent)} <Text style={styles.alertOf}>/ {fmt(limit)}</Text>
+                </Text>
+                <View style={styles.alertTrack}>
+                  <View style={[styles.alertFill, {
+                    width: `${Math.min((spent / limit) * 100, 100)}%` as any,
+                    backgroundColor: over ? colors.red : colors.yellow,
+                  }]} />
+                </View>
+                <Text style={[styles.alertBadge, { color: over ? colors.red : colors.accent }]}>
+                  {over ? 'Over budget' : 'Warning'}
                 </Text>
               </View>
-            </View>
-          ))}
+            ))}
+          </View>
         </View>
       )}
 
@@ -198,27 +212,28 @@ export default function DashboardScreen() {
           <View style={[styles.sectionAccent, { backgroundColor: colors.accent }]} />
           <Text style={styles.sectionTitle}>Recent Transactions</Text>
         </View>
-        {recent.map(t => {
-          const cat = allCats[t.category];
-          return (
-            <View key={t.id} style={styles.txnRow}>
-              <View style={[styles.catDot, { backgroundColor: cat?.color ?? colors.muted }]} />
-              <View style={styles.txnLeft}>
-                <Text style={styles.txnDesc}>{t.description}</Text>
-                <Text style={styles.txnMeta}>{cat?.label ?? t.category} · {t.date}</Text>
-              </View>
-              <View style={styles.txnRight}>
+        <View style={styles.grid}>
+          {recent.map(t => {
+            const cat = allCats[t.category];
+            return (
+              <View key={t.id} style={[styles.txnCard, { width: cardW }]}>
+                <View style={styles.txnCardTop}>
+                  <View style={[styles.catDot, { backgroundColor: cat?.color ?? colors.muted }]} />
+                  <View style={styles.txnActions}>
+                    <Pressable onPress={() => openEdit(t)} style={styles.iconBtn}><EditIcon size={13} color={colors.muted} /></Pressable>
+                    <Pressable onPress={() => deleteTxn(t.id)} style={styles.iconBtn}><TrashIcon size={13} color={colors.muted} /></Pressable>
+                  </View>
+                </View>
+                <Text style={styles.txnDesc} numberOfLines={1}>{t.description}</Text>
+                <Text style={styles.txnMeta} numberOfLines={1}>{cat?.label ?? t.category}</Text>
                 <Text style={[styles.txnAmt, { color: t.type === 'income' ? colors.green : colors.red }]}>
                   {t.type === 'income' ? '+' : '-'}{fmt(t.amount)}
                 </Text>
-                <View style={styles.txnActions}>
-                  <Pressable onPress={() => openEdit(t)} style={styles.iconBtn}><EditIcon size={14} color={colors.muted} /></Pressable>
-                  <Pressable onPress={() => deleteTxn(t.id)} style={styles.iconBtn}><TrashIcon size={14} color={colors.muted} /></Pressable>
-                </View>
+                <Text style={styles.txnDate}>{t.date}</Text>
               </View>
-            </View>
-          );
-        })}
+            );
+          })}
+        </View>
         {recent.length === 0 && <Text style={styles.empty}>No transactions yet. Add one to get started!</Text>}
       </View>
     </ScrollView>
@@ -267,20 +282,33 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   sectionAccent:   { width: 3, height: 16, borderRadius: 2 },
   sectionTitle:    { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: colors.muted,
                      textTransform: 'uppercase', letterSpacing: 0.8 },
-  alertCard:       { backgroundColor: colors.glass, borderRadius: radius.md, borderWidth: 1,
-                     borderColor: colors.glassBorder, padding: spacing.sm, marginBottom: spacing.xs },
-  badge:           { alignSelf: 'flex-start', borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 3, marginTop: 4 },
-  badgeText:       { fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', letterSpacing: 0.3 },
-  txnRow:          { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glass,
-                     borderRadius: radius.md, borderWidth: 1, borderColor: colors.glassBorder,
-                     paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginBottom: spacing.xs },
-  catDot:          { width: 8, height: 8, borderRadius: 4, marginRight: spacing.sm },
-  txnLeft:         { flex: 1 },
-  txnDesc:         { fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text },
-  txnMeta:         { fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted, marginTop: 2 },
-  txnRight:        { alignItems: 'flex-end' },
-  txnAmt:          { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold' },
-  txnActions:      { flexDirection: 'row', marginTop: 2 },
-  iconBtn:         { padding: 4 },
+  grid:            { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.xs },
+  // Alert cards
+  alertCard:       { backgroundColor: colors.glass, borderRadius: radius.lg, borderWidth: 1,
+                     borderColor: colors.glassBorder, padding: spacing.sm },
+  alertDot:        { width: 6, height: 6, borderRadius: 3, marginBottom: spacing.xs },
+  alertCat:        { fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text,
+                     marginBottom: 4 },
+  alertAmt:        { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', marginBottom: 6 },
+  alertOf:         { fontSize: 11, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted },
+  alertTrack:      { height: 4, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 2,
+                     overflow: 'hidden', marginBottom: 6 },
+  alertFill:       { height: 4, borderRadius: 2 },
+  alertBadge:      { fontSize: 10, fontFamily: 'PlusJakartaSans_600SemiBold', textTransform: 'uppercase',
+                     letterSpacing: 0.5 },
+  // Transaction cards
+  txnCard:         { backgroundColor: colors.glass, borderRadius: radius.lg, borderWidth: 1,
+                     borderColor: colors.glassBorder, padding: spacing.sm },
+  txnCardTop:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+                     marginBottom: spacing.xs },
+  catDot:          { width: 8, height: 8, borderRadius: 4 },
+  txnDesc:         { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text,
+                     marginBottom: 2 },
+  txnMeta:         { fontSize: 11, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted,
+                     marginBottom: 6 },
+  txnAmt:          { fontSize: 15, fontFamily: 'PlusJakartaSans_800ExtraBold', marginBottom: 2 },
+  txnDate:         { fontSize: 10, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted },
+  txnActions:      { flexDirection: 'row' },
+  iconBtn:         { padding: 3 },
   empty:           { color: colors.muted, fontFamily: 'PlusJakartaSans_400Regular', textAlign: 'center', marginTop: spacing.md },
 }); }
