@@ -29,6 +29,7 @@ export interface FinanceState {
   spendTypeMap: SpendTypeMap;
   googleSignIn: (accessToken: string, expiresIn: number) => Promise<string | null>;
   logout:       () => Promise<void>;
+  loadDemoData: () => Promise<void>;
   addTxn:       (t: Omit<Transaction, 'id'>) => void;
   editTxn:      (t: Transaction) => void;
   deleteTxn:    (id: string) => void;
@@ -216,9 +217,115 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
   const setSpendTypeMap = useCallback((m: SpendTypeMap) => setSpendTypeMapState(m), []);
   const setCustomCats   = useCallback((c: CustomCategory[]) => setCustomCatsState(c), []);
 
+  const loadDemoData = useCallback(async () => {
+    const DEMO_TXNS: Transaction[] = [
+      // April 2026
+      { id: 'dd01', type: 'income',  amount: 85000, category: 'salary',        description: 'Monthly Salary',          date: '2026-04-01' },
+      { id: 'dd02', type: 'income',  amount: 15000, category: 'freelance',     description: 'Freelance Project',        date: '2026-04-15' },
+      { id: 'dd03', type: 'expense', amount: 22000, category: 'essentials',    description: 'Rent',                     date: '2026-04-02' },
+      { id: 'dd04', type: 'expense', amount: 3200,  category: 'essentials',    description: 'Electricity & Internet',   date: '2026-04-05' },
+      { id: 'dd05', type: 'expense', amount: 2800,  category: 'food',          description: 'Grocery Shopping',         date: '2026-04-06' },
+      { id: 'dd06', type: 'expense', amount: 1200,  category: 'food',          description: 'Dinner - Zomato',          date: '2026-04-09' },
+      { id: 'dd07', type: 'expense', amount: 900,   category: 'food',          description: 'Team Lunch',               date: '2026-04-12' },
+      { id: 'dd08', type: 'expense', amount: 2400,  category: 'food',          description: 'Weekend Meals',            date: '2026-04-19' },
+      { id: 'dd09', type: 'expense', amount: 1200,  category: 'food',          description: 'Café & Snacks',            date: '2026-04-24' },
+      { id: 'dd10', type: 'expense', amount: 1800,  category: 'transport',     description: 'Petrol',                   date: '2026-04-07' },
+      { id: 'dd11', type: 'expense', amount: 600,   category: 'transport',     description: 'Cab Rides',                date: '2026-04-14' },
+      { id: 'dd12', type: 'expense', amount: 800,   category: 'transport',     description: 'Metro Pass',               date: '2026-04-01' },
+      { id: 'dd13', type: 'expense', amount: 3500,  category: 'entertainment', description: 'OTT + Cinema',             date: '2026-04-10' },
+      { id: 'dd14', type: 'expense', amount: 2800,  category: 'entertainment', description: 'Weekend Getaway',          date: '2026-04-21' },
+      { id: 'dd15', type: 'expense', amount: 8500,  category: 'shopping',      description: 'Clothing - Myntra',        date: '2026-04-17' },
+      { id: 'dd16', type: 'expense', amount: 3800,  category: 'shopping',      description: 'Electronics - Amazon',     date: '2026-04-22' },
+      { id: 'dd17', type: 'expense', amount: 2500,  category: 'health',        description: 'Health Checkup + Meds',    date: '2026-04-11' },
+      { id: 'dd18', type: 'expense', amount: 10000, category: 'savings',       description: 'SIP Investment',           date: '2026-04-05' },
+      { id: 'dd19', type: 'expense', amount: 5000,  category: 'family',        description: 'Parents Transfer',         date: '2026-04-08' },
+      // 7-day sparkline data
+      { id: 'dd20', type: 'expense', amount: 3200,  category: 'shopping',      description: 'Amazon Order',             date: '2026-04-22' },
+      { id: 'dd21', type: 'expense', amount: 800,   category: 'food',          description: 'Coffee & Snacks',          date: '2026-04-23' },
+      { id: 'dd22', type: 'expense', amount: 1500,  category: 'food',          description: 'Restaurant',               date: '2026-04-24' },
+      { id: 'dd23', type: 'expense', amount: 2100,  category: 'transport',     description: 'Cab - Airport',            date: '2026-04-26' },
+      { id: 'dd24', type: 'expense', amount: 4200,  category: 'entertainment', description: 'Concert Tickets',          date: '2026-04-27' },
+      { id: 'dd25', type: 'expense', amount: 1200,  category: 'food',          description: 'Breakfast - Swiggy',       date: '2026-04-28' },
+      // March 2026
+      { id: 'dd26', type: 'income',  amount: 85000, category: 'salary',        description: 'Monthly Salary',          date: '2026-03-01' },
+      { id: 'dd27', type: 'expense', amount: 22000, category: 'essentials',    description: 'Rent',                     date: '2026-03-02' },
+      { id: 'dd28', type: 'expense', amount: 7800,  category: 'food',          description: 'Food & Dining',            date: '2026-03-15' },
+      { id: 'dd29', type: 'expense', amount: 4200,  category: 'shopping',      description: 'Shopping',                 date: '2026-03-20' },
+      { id: 'dd30', type: 'expense', amount: 3100,  category: 'entertainment', description: 'Entertainment',            date: '2026-03-12' },
+      { id: 'dd31', type: 'expense', amount: 10000, category: 'savings',       description: 'SIP Investment',           date: '2026-03-05' },
+      { id: 'dd32', type: 'expense', amount: 5000,  category: 'family',        description: 'Parents Transfer',         date: '2026-03-08' },
+      { id: 'dd33', type: 'expense', amount: 2800,  category: 'transport',     description: 'Transport',                date: '2026-03-10' },
+      // February 2026
+      { id: 'dd34', type: 'income',  amount: 85000, category: 'salary',        description: 'Monthly Salary',          date: '2026-02-01' },
+      { id: 'dd35', type: 'income',  amount: 8000,  category: 'freelance',     description: 'Freelance - Design',       date: '2026-02-20' },
+      { id: 'dd36', type: 'expense', amount: 22000, category: 'essentials',    description: 'Rent',                     date: '2026-02-02' },
+      { id: 'dd37', type: 'expense', amount: 9200,  category: 'food',          description: 'Food & Dining',            date: '2026-02-14' },
+      { id: 'dd38', type: 'expense', amount: 6500,  category: 'shopping',      description: 'Valentine Shopping',      date: '2026-02-14' },
+      { id: 'dd39', type: 'expense', amount: 5800,  category: 'entertainment', description: 'Entertainment',            date: '2026-02-18' },
+      { id: 'dd40', type: 'expense', amount: 10000, category: 'savings',       description: 'SIP Investment',           date: '2026-02-05' },
+      { id: 'dd41', type: 'expense', amount: 5000,  category: 'family',        description: 'Parents Transfer',         date: '2026-02-08' },
+      // January 2026
+      { id: 'dd42', type: 'income',  amount: 85000, category: 'salary',        description: 'Monthly Salary',          date: '2026-01-01' },
+      { id: 'dd43', type: 'expense', amount: 22000, category: 'essentials',    description: 'Rent',                     date: '2026-01-02' },
+      { id: 'dd44', type: 'expense', amount: 6800,  category: 'food',          description: 'Food & Dining',            date: '2026-01-15' },
+      { id: 'dd45', type: 'expense', amount: 3200,  category: 'shopping',      description: 'Shopping',                 date: '2026-01-22' },
+      { id: 'dd46', type: 'expense', amount: 2800,  category: 'entertainment', description: 'Entertainment',            date: '2026-01-12' },
+      { id: 'dd47', type: 'expense', amount: 10000, category: 'savings',       description: 'SIP Investment',           date: '2026-01-05' },
+      { id: 'dd48', type: 'expense', amount: 5000,  category: 'family',        description: 'Parents Transfer',         date: '2026-01-08' },
+    ];
+    const DEMO_BUDGETS: BudgetMap = {
+      essentials:    { mode: 'fixed', value: 28000 },
+      food:          { mode: 'fixed', value: 10000 },
+      transport:     { mode: 'fixed', value: 5000  },
+      entertainment: { mode: 'fixed', value: 6000  },
+      shopping:      { mode: 'fixed', value: 10000 },
+      health:        { mode: 'fixed', value: 5000  },
+      savings:       { mode: 'fixed', value: 10000 },
+      family:        { mode: 'fixed', value: 6000  },
+    };
+    const DEMO_GOALS: Goal[] = [
+      { id: 'dg1', name: 'Emergency Fund',     target: 300000,  current: 180000, deadline: '2026-12-31' },
+      { id: 'dg2', name: 'Vacation — Bali',    target: 150000,  current: 95000,  deadline: '2026-10-01' },
+      { id: 'dg3', name: 'New Laptop',          target: 120000,  current: 45000,  deadline: '2026-08-15' },
+      { id: 'dg4', name: 'House Down Payment',  target: 2000000, current: 380000, deadline: '2028-01-01' },
+    ];
+    const DEMO_NW: NetWorthData = {
+      assets:      [
+        { id: 'na1', name: 'Savings Account',  value: 250000 },
+        { id: 'na2', name: 'Mutual Funds',      value: 380000 },
+        { id: 'na3', name: 'EPF Balance',       value: 220000 },
+        { id: 'na4', name: 'Fixed Deposit',     value: 100000 },
+      ],
+      liabilities: [
+        { id: 'nl1', name: 'Home Loan',         value: 1800000 },
+        { id: 'nl2', name: 'Personal Loan',     value: 80000  },
+      ],
+    };
+    // Persist so page refresh survives
+    await Promise.all([
+      storage.saveTxns('demo', DEMO_TXNS),
+      storage.saveBudgets('demo', DEMO_BUDGETS),
+      storage.saveGoals('demo', DEMO_GOALS),
+      storage.saveNetWorth('demo', DEMO_NW),
+    ]);
+    await saveGoogleSession('demo_token', 99999999, 'demo@example.com', 'demo', 'Demo User', null);
+    setCurrency(DEFAULT_CURRENCY);
+    setUser('demo');
+    setEmail('demo@example.com');
+    setName('Demo User');
+    setPicture(null);
+    setTxnsState(DEMO_TXNS);
+    setBudgetsState(DEMO_BUDGETS);
+    setGoalsState(DEMO_GOALS);
+    setNwState(DEMO_NW);
+    setCurrencyState(DEFAULT_CURRENCY);
+    setSpendTypeMapState({});
+    setCustomCatsState([]);
+  }, []);
+
   return {
     user, email, name, picture, loading, txns, budgets, goals, nw, recurring, currency, spendTypeMap, customCats,
-    googleSignIn, logout,
+    googleSignIn, logout, loadDemoData,
     addTxn, editTxn, deleteTxn,
     setBudgets, setGoals, setNw, setRecurring, setCurrencyPref, setSpendTypeMap, setCustomCats,
   };

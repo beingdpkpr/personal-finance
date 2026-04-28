@@ -19,9 +19,10 @@ const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
 
 export default function LoginScreen() {
   const colors = useColors();
-  const { googleSignIn } = useFinance();
+  const { googleSignIn, loadDemoData } = useFinance();
   const [error, setError] = useState('');
   const [busy, setBusy]   = useState(false);
+  const [demoBusy, setDemoBusy] = useState(false);
 
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -92,6 +93,22 @@ export default function LoginScreen() {
             )
           }
         </Pressable>
+
+        <Pressable
+          style={[styles.demoBtn, demoBusy && styles.btnDisabled]}
+          onPress={async () => {
+            setDemoBusy(true);
+            await loadDemoData();
+            setDemoBusy(false);
+            router.replace('/(tabs)');
+          }}
+          disabled={demoBusy}
+        >
+          {demoBusy
+            ? <ActivityIndicator color={colors.muted} size="small" />
+            : <Text style={styles.demoBtnText}>Try Demo</Text>
+          }
+        </Pressable>
       </View>
     </View>
   );
@@ -124,4 +141,8 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   btnDisabled: { opacity: 0.6 },
   btnG:       { fontSize: 16, fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#4285f4' },
   btnText:    { fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text },
+  demoBtn:    { borderRadius: radius.pill, paddingVertical: 12, paddingHorizontal: spacing.xl,
+                alignItems: 'center', justifyContent: 'center',
+                borderWidth: 1, borderColor: colors.border },
+  demoBtnText: { fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.muted },
 }); }
