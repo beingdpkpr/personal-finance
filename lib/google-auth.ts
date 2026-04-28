@@ -43,7 +43,7 @@ export async function getGoogleSession(): Promise<GoogleSession | null> {
   if (!token || !email || !userId) return null;
   return {
     accessToken:   token,
-    expiry:        Number(expiry ?? 0),
+    expiry:        expiry ? parseInt(expiry, 10) || 0 : 0,
     email,
     userId,
     spreadsheetId,
