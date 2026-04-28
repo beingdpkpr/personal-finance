@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, FlatList, Pressable, StyleSheet, useWindowDimensions, Alert } from 'react-native';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { View, Text, TextInput, FlatList, Pressable, StyleSheet, useWindowDimensions, Alert, Animated } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { useFinance } from '../../hooks/FinanceContext';
@@ -49,6 +49,17 @@ export default function TransactionsScreen() {
   const [typeFilter, setType] = useState<'all' | 'income' | 'expense'>('all');
   const [importing, setImporting] = useState(false);
 
+  // Fade-up entrance animation
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(16)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
+    ]).start();
+  }, []);
+  const animStyle = { opacity: fadeAnim, transform: [{ translateY: slideAnim }] };
+
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   async function handleImport() {
@@ -86,31 +97,37 @@ export default function TransactionsScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={styles.headerRow}>
-        <Text style={styles.heading}>All Transactions</Text>
-        <Pressable onPress={handleImport} style={styles.importBtn}>
-          <Text style={styles.importBtnText}>⬆ Import CSV</Text>
-        </Pressable>
-      </View>
-
-      <TextInput
-        style={styles.search}
-        placeholder="Search transactions…"
-        placeholderTextColor={colors.muted}
-        value={search}
-        onChangeText={setSearch}
-      />
-
-      <View style={styles.chips}>
-        {(['all', 'income', 'expense'] as const).map(v => (
-          <Pressable key={v} onPress={() => setType(v)}
-            style={[styles.chip, typeFilter === v && styles.chipActive]}>
-            <Text style={[styles.chipText, typeFilter === v && styles.chipTextActive]}>
-              {v.charAt(0).toUpperCase() + v.slice(1)}
-            </Text>
+      <Animated.View style={animStyle}>
+        <View style={styles.headerRow}>
+          <Text style={styles.heading}>All Transactions</Text>
+          <Pressable onPress={handleImport} style={styles.importBtn}>
+            <Text style={styles.importBtnText}>⬆ Import CSV</Text>
           </Pressable>
-        ))}
-      </View>
+        </View>
+
+        {/* Glass pill search bar */}
+        <View style={styles.searchWrap}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search transactions…"
+            placeholderTextColor={colors.muted}
+            value={search}
+            onChangeText={setSearch}
+          />
+        </View>
+
+        {/* Filter chips — pill style */}
+        <View style={styles.chips}>
+          {(['all', 'income', 'expense'] as const).map(v => (
+            <Pressable key={v} onPress={() => setType(v)}
+              style={typeFilter === v ? styles.chipActive : styles.chip}>
+              <Text style={typeFilter === v ? styles.chipActiveText : styles.chipText}>
+                {v.charAt(0).toUpperCase() + v.slice(1)}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </Animated.View>
 
       <FlatList
         data={filtered}
@@ -118,7 +135,7 @@ export default function TransactionsScreen() {
         contentContainerStyle={{ padding: spacing.md, paddingBottom: spacing.xl * 2 }}
         ListEmptyComponent={<Text style={styles.empty}>No transactions found.</Text>}
         renderItem={({ item: t }) => (
-          <View style={[styles.row, wide && styles.rowWide]}>
+          <View style={[styles.txnRow, wide && styles.rowWide]}>
             <View style={styles.rowLeft}>
               <Text style={styles.desc}>{t.description}</Text>
               <Text style={styles.meta}>{t.category} · {t.date}</Text>
@@ -150,21 +167,26 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
                     paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.xs },
   heading:        { fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text },
   importBtn:      { paddingHorizontal: spacing.md, paddingVertical: 7, borderRadius: radius.md,
-                    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+                    backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder },
   importBtnText:  { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.accent },
-  search:         { margin: spacing.md, marginTop: 0, backgroundColor: colors.surface,
-                    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
-                    color: colors.text, padding: spacing.sm, fontSize: 14,
-                    fontFamily: 'PlusJakartaSans_400Regular' },
+  // Glass pill search bar
+  searchWrap:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+                    backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder,
+                    borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 10,
+                    marginBottom: spacing.sm, marginHorizontal: spacing.md, marginTop: spacing.xs },
+  searchInput:    { flex: 1, color: colors.text, fontFamily: 'PlusJakartaSans_400Regular', fontSize: 14 },
+  // Filter chips
   chips:          { flexDirection: 'row', gap: spacing.xs, paddingHorizontal: spacing.md, marginBottom: spacing.sm },
-  chip:           { paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.xl,
-                    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  chipActive:     { backgroundColor: colors.accent, borderColor: colors.accent },
-  chipText:       { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.muted },
-  chipTextActive: { color: '#fff' },
-  row:            { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
-                    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
-                    padding: spacing.sm, marginBottom: spacing.xs, gap: spacing.xs },
+  chip:           { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder,
+                    borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
+  chipText:       { color: colors.muted, fontFamily: 'PlusJakartaSans_400Regular', fontSize: 12 },
+  chipActive:     { backgroundColor: colors.accentDim, borderWidth: 1, borderColor: colors.accent,
+                    borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
+  chipActiveText: { color: colors.accent, fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 12 },
+  // Transaction rows — glass cards
+  txnRow:         { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder,
+                    borderRadius: radius.lg, padding: spacing.md, marginBottom: 6,
+                    flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   rowWide:        { paddingHorizontal: spacing.md },
   rowLeft:        { flex: 1 },
   desc:           { fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text },
