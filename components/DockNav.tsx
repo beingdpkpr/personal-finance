@@ -40,7 +40,8 @@ export function DockNav() {
 }
 
 const styles = StyleSheet.create({
-  outer:      { alignItems: 'center', paddingVertical: 10, backgroundColor: 'transparent' },
+  outer:      { alignItems: 'center', paddingVertical: 10, backgroundColor: 'transparent',
+                borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
   dock:       { flexDirection: 'row', alignItems: 'center', gap: 4 },
   item:       { alignItems: 'center', gap: 3, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
   itemActive: { backgroundColor: 'rgba(240,114,42,0.12)' },
