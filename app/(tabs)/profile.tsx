@@ -1,13 +1,17 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
-  View, Text, Image, Pressable, ScrollView, StyleSheet,
+  View, Text, Image, Pressable, ScrollView, StyleSheet, Switch,
 } from 'react-native';
 import { useFinance } from '../../hooks/FinanceContext';
 import { LogoutIcon } from '../../components/icons';
-import { colors, spacing, radius } from '../../constants/theme';
+import { spacing, radius, Colors } from '../../constants/theme';
+import { useTheme, useColors } from '../../hooks/ThemeContext';
 import { CURRENCIES } from '../../constants/categories';
 
 export default function ProfileScreen() {
+  const colors = useColors();
+  const { darkMode, toggleDarkMode } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user, email, name, picture, logout, currency, setCurrencyPref } = useFinance();
 
   const initials = name
@@ -44,6 +48,22 @@ export default function ProfileScreen() {
         <View style={styles.prefHeader}>
           <Text style={styles.prefTitle}>Preferences</Text>
         </View>
+
+        {/* Dark Mode toggle */}
+        <View style={[styles.row, styles.rowNoBottom]}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rowLabel}>Dark Mode</Text>
+            <Text style={styles.rowSub}>Switch to dark theme</Text>
+          </View>
+          <Switch
+            value={darkMode}
+            onValueChange={toggleDarkMode}
+            trackColor={{ false: colors.border, true: colors.accent }}
+            thumbColor={darkMode ? '#fff' : colors.muted}
+          />
+        </View>
+
+        {/* Currency */}
         <View style={styles.prefRow}>
           <Text style={styles.rowLabel}>Currency</Text>
         </View>
@@ -88,7 +108,7 @@ function InfoRow({ label, value, mono }: { label: string; value: string; mono?: 
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) { return StyleSheet.create({
   root:            { flex: 1, backgroundColor: colors.bg },
   content:         { padding: spacing.md, alignItems: 'center', gap: spacing.md },
   heading:         { fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text,
@@ -105,7 +125,11 @@ const styles = StyleSheet.create({
   row:             { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
                      paddingHorizontal: spacing.md, paddingVertical: 14,
                      borderBottomWidth: 1, borderBottomColor: colors.border },
-  rowLabel:        { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.muted, flex: 1 },
+  rowNoBottom:     { flexDirection: 'row', alignItems: 'center',
+                     paddingHorizontal: spacing.md, paddingVertical: 14,
+                     borderBottomWidth: 1, borderBottomColor: colors.border },
+  rowLabel:        { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text, flex: 1 },
+  rowSub:          { fontSize: 11, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted, marginTop: 2 },
   rowValue:        { fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', color: colors.text,
                      flex: 2, textAlign: 'right' },
   rowValueMono:    { fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted, fontSize: 11 },
@@ -127,4 +151,4 @@ const styles = StyleSheet.create({
   currencySymbolActive: { color: colors.accent },
   currencyCode:    { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.muted },
   currencyCodeActive:  { color: colors.accent },
-});
+}); }

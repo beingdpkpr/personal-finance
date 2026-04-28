@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, Pressable, FlatList, StyleSheet, Modal, TextInput } from 'react-native';
 import { useFinance } from '../../hooks/FinanceContext';
-import { colors, spacing, radius } from '../../constants/theme';
+import { spacing, radius, Colors } from '../../constants/theme';
+import { useColors } from '../../hooks/ThemeContext';
 import { fmt } from '../../lib/format';
 import { uid, RecurringRule } from '../../lib/data';
 import { EXPENSE_CATS, INCOME_CATS } from '../../constants/categories';
 import { PlusIcon, TrashIcon, EditIcon } from '../../components/icons';
 
 export default function RecurringScreen() {
+  const colors = useColors();
   const { recurring, setRecurring, currency, customCats } = useFinance();
   const [modalOpen, setModalOpen] = useState(false);
   const [editId,    setEditId]    = useState<string | null>(null);
@@ -16,6 +18,8 @@ export default function RecurringScreen() {
   const [category,  setCategory]  = useState('food');
   const [desc,      setDesc]      = useState('');
   const [day,       setDay]       = useState('1');
+
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   function openNew() {
     setEditId(null); setType('expense'); setAmount(''); setCategory('food'); setDesc(''); setDay('1');
@@ -129,7 +133,7 @@ export default function RecurringScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) { return StyleSheet.create({
   root:          { flex: 1, backgroundColor: colors.bg },
   header:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.md },
   heading:       { fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text },
@@ -162,4 +166,4 @@ const styles = StyleSheet.create({
   catChip:       { paddingHorizontal: spacing.sm, paddingVertical: 6, borderRadius: radius.sm,
                    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
   catChipText:   { fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted },
-});
+}); }

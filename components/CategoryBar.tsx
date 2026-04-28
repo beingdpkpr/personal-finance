@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, spacing, radius } from '../constants/theme';
+import { spacing, radius, Colors } from '../constants/theme';
+import { useColors } from '../hooks/ThemeContext';
 
 interface Props {
   label: string;
@@ -11,6 +12,8 @@ interface Props {
 }
 
 export default function CategoryBar({ label, color, spent, budget, showBudget }: Props) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const pct    = budget && budget > 0 ? Math.min(spent / budget, 1) : 0;
   const barColor = budget
     ? (spent > budget ? colors.red : pct >= 0.8 ? colors.yellow : color)
@@ -36,7 +39,7 @@ export default function CategoryBar({ label, color, spent, budget, showBudget }:
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) { return StyleSheet.create({
   wrap:      { marginBottom: spacing.sm },
   labelRow:  { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   dot:       { width: 8, height: 8, borderRadius: 4, marginRight: spacing.sm },
@@ -44,4 +47,4 @@ const styles = StyleSheet.create({
   amounts:   { fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted },
   track:     { height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: 'hidden' },
   fill:      { height: 6, borderRadius: 3 },
-});
+}); }

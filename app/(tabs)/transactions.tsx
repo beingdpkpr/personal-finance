@@ -3,7 +3,8 @@ import { View, Text, TextInput, FlatList, Pressable, StyleSheet, useWindowDimens
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { useFinance } from '../../hooks/FinanceContext';
-import { colors, spacing, radius, WIDE_BREAKPOINT } from '../../constants/theme';
+import { spacing, radius, WIDE_BREAKPOINT, Colors } from '../../constants/theme';
+import { useColors } from '../../hooks/ThemeContext';
 import { fmt } from '../../lib/format';
 import { TrashIcon, EditIcon } from '../../components/icons';
 import { Transaction, uid } from '../../lib/data';
@@ -39,6 +40,7 @@ function parseCSV(raw: string): { txns: Transaction[]; errors: string[] } {
 }
 
 export default function TransactionsScreen() {
+  const colors = useColors();
   const { txns, currency, openEdit, deleteTxn, addTxn } = useFinance();
   const { width } = useWindowDimensions();
   const wide = width >= WIDE_BREAKPOINT;
@@ -46,6 +48,8 @@ export default function TransactionsScreen() {
   const [search, setSearch]   = useState('');
   const [typeFilter, setType] = useState<'all' | 'income' | 'expense'>('all');
   const [importing, setImporting] = useState(false);
+
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   async function handleImport() {
     try {
@@ -140,7 +144,7 @@ export default function TransactionsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) { return StyleSheet.create({
   root:           { flex: 1, backgroundColor: colors.bg },
   headerRow:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
                     paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.xs },
@@ -172,4 +176,4 @@ const styles = StyleSheet.create({
   iconBtn:        { padding: 6 },
   empty:          { textAlign: 'center', color: colors.muted, marginTop: spacing.xl,
                     fontFamily: 'PlusJakartaSans_400Regular' },
-});
+}); }

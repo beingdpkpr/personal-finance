@@ -3,7 +3,8 @@ import { View, Text, Pressable, ScrollView, StyleSheet, useWindowDimensions } fr
 import { useFinance } from '../../hooks/FinanceContext';
 import StatCard from '../../components/StatCard';
 import CategoryBar from '../../components/CategoryBar';
-import { colors, spacing, radius, WIDE_BREAKPOINT } from '../../constants/theme';
+import { spacing, radius, WIDE_BREAKPOINT, Colors } from '../../constants/theme';
+import { useColors } from '../../hooks/ThemeContext';
 import { fmt, fmtFull } from '../../lib/format';
 import { resolveLimit } from '../../lib/data';
 import { EXPENSE_CATS, INCOME_CATS } from '../../constants/categories';
@@ -17,6 +18,7 @@ function getGreeting() {
 }
 
 export default function DashboardScreen() {
+  const colors = useColors();
   const { txns, budgets, currency, openEdit, deleteTxn, customCats } = useFinance();
   const { width } = useWindowDimensions();
   const wide = width >= WIDE_BREAKPOINT;
@@ -41,6 +43,8 @@ export default function DashboardScreen() {
   );
 
   const recent = [...txns].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8);
+
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const alerts = useMemo(() => {
     return EXPENSE_CATS.filter(cat => {
@@ -113,7 +117,7 @@ export default function DashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) { return StyleSheet.create({
   root:          { flex: 1, backgroundColor: colors.bg },
   content:       { padding: spacing.md, paddingBottom: spacing.xl * 2 },
   greeting:      { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.accent, marginBottom: 2 },
@@ -140,4 +144,4 @@ const styles = StyleSheet.create({
   txnActions:    { flexDirection: 'row', marginTop: 2 },
   iconBtn:       { padding: 4 },
   empty:         { color: colors.muted, fontFamily: 'PlusJakartaSans_400Regular', textAlign: 'center', marginTop: spacing.md },
-});
+}); }

@@ -8,6 +8,7 @@ import {
   PlusJakartaSans_800ExtraBold,
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { FinanceProvider, useFinance } from '../hooks/FinanceContext';
+import { ThemeProvider } from '../hooks/ThemeContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -43,9 +44,11 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <FinanceProvider>
-      <Stack screenOptions={{ headerShown: false }} />
-      <AuthGate />
-    </FinanceProvider>
+    <ThemeProvider>
+      <FinanceProvider>
+        <Stack screenOptions={{ headerShown: false }} />
+        <AuthGate />
+      </FinanceProvider>
+    </ThemeProvider>
   );
 }

@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet, Modal,
   ScrollView, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useFinance } from '../hooks/FinanceContext';
-import { colors, spacing, radius } from '../constants/theme';
+import { spacing, radius, Colors } from '../constants/theme';
+import { useColors } from '../hooks/ThemeContext';
 import { EXPENSE_CATS, INCOME_CATS } from '../constants/categories';
 import { Transaction, uid } from '../lib/data';
 
 export default function AddModal() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { modalVisible, editItem, closeModal, addTxn, editTxn, currency, customCats } = useFinance();
 
   const [type, setType]       = useState<'expense' | 'income'>('expense');
@@ -138,10 +141,12 @@ export default function AddModal() {
   );
 }
 
-const styles = StyleSheet.create({
-  overlay:         { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+function makeStyles(colors: Colors) { return StyleSheet.create({
+  overlay:         { flex: 1, backgroundColor: 'rgba(13,16,48,0.4)', justifyContent: 'flex-end' },
   sheet:           { backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
-                     padding: spacing.lg, maxHeight: '90%' },
+                     padding: spacing.lg, maxHeight: '90%',
+                     shadowColor: '#000', shadowOffset: { width: 0, height: -4 },
+                     shadowOpacity: 0.08, shadowRadius: 20, elevation: 12 },
   handle:          { width: 36, height: 4, backgroundColor: colors.border, borderRadius: 2,
                      alignSelf: 'center', marginBottom: spacing.md },
   title:           { fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text, marginBottom: spacing.md },
@@ -174,4 +179,4 @@ const styles = StyleSheet.create({
   saveBtn:         { paddingHorizontal: spacing.xl, paddingVertical: 12, borderRadius: radius.md,
                      backgroundColor: colors.accent },
   saveText:        { fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' },
-});
+}); }

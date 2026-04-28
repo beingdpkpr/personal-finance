@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChartIcon, GoalIcon, NetWorthIcon, RecurIcon, UserIcon } from '../../components/icons';
-import { colors, spacing, radius } from '../../constants/theme';
+import { spacing, radius, Colors } from '../../constants/theme';
+import { useColors } from '../../hooks/ThemeContext';
 
 const MORE_ITEMS = [
   { href: '/(tabs)/profile',   label: 'Profile',        sub: 'Your account details',     Icon: UserIcon    },
@@ -13,6 +14,8 @@ const MORE_ITEMS = [
 ] as const;
 
 export default function MoreScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
 
   return (
@@ -33,7 +36,7 @@ export default function MoreScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) { return StyleSheet.create({
   root:     { flex: 1, backgroundColor: colors.bg, padding: spacing.md },
   heading:  { fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text, marginBottom: spacing.lg },
   row:      { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.lg,
@@ -43,4 +46,4 @@ const styles = StyleSheet.create({
   rowText:  { flex: 1 },
   rowLabel: { fontSize: 15, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text },
   rowSub:   { fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted, marginTop: 2 },
-});
+}); }

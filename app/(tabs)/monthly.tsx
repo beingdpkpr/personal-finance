@@ -3,16 +3,20 @@ import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { VictoryBar, VictoryChart, VictoryAxis, VictoryGroup } from 'victory-native';
 import { useFinance } from '../../hooks/FinanceContext';
 import CategoryBar from '../../components/CategoryBar';
-import { colors, spacing, radius } from '../../constants/theme';
+import { spacing, radius, Colors } from '../../constants/theme';
+import { useColors } from '../../hooks/ThemeContext';
 import { fmt, fmtFull } from '../../lib/format';
 import { EXPENSE_CATS, MONTHS } from '../../constants/categories';
 import { ChevronLeftIcon, ChevronRightIcon, EditIcon } from '../../components/icons';
 
 export default function MonthlyScreen() {
+  const colors = useColors();
   const { txns, openEdit } = useFinance();
   const now = new Date();
   const [year,  setYear]  = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
+
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   function prevMonth() {
     if (month === 0) { setYear(y => y - 1); setMonth(11); }
@@ -120,7 +124,7 @@ export default function MonthlyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) { return StyleSheet.create({
   root:         { flex: 1, backgroundColor: colors.bg },
   content:      { padding: spacing.md, paddingBottom: spacing.xl * 2 },
   heading:      { fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text, marginBottom: spacing.md },
@@ -140,4 +144,4 @@ const styles = StyleSheet.create({
   txnMeta:      { fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted, marginTop: 2 },
   txnAmt:       { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', marginHorizontal: spacing.xs },
   empty:        { color: colors.muted, fontFamily: 'PlusJakartaSans_400Regular', textAlign: 'center', marginTop: spacing.md },
-});
+}); }

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, Pressable, FlatList, StyleSheet, Modal, TextInput } from 'react-native';
 import { useFinance } from '../../hooks/FinanceContext';
-import { colors, spacing, radius } from '../../constants/theme';
+import { spacing, radius, Colors } from '../../constants/theme';
+import { useColors } from '../../hooks/ThemeContext';
 import { fmtFull } from '../../lib/format';
 import { uid, NetWorthItem, NetWorthData } from '../../lib/data';
 import { PlusIcon, TrashIcon, EditIcon } from '../../components/icons';
@@ -9,12 +10,15 @@ import { PlusIcon, TrashIcon, EditIcon } from '../../components/icons';
 type ItemMode = 'asset' | 'liability';
 
 export default function NetWorthScreen() {
+  const colors = useColors();
   const { nw, setNw } = useFinance();
   const [modalOpen, setModalOpen] = useState(false);
   const [mode,      setMode]      = useState<ItemMode>('asset');
   const [editId,    setEditId]    = useState<string | null>(null);
   const [name,      setName]      = useState('');
   const [value,     setValue]     = useState('');
+
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const totalAssets      = nw.assets.reduce((s, a) => s + a.value, 0);
   const totalLiabilities = nw.liabilities.reduce((s, l) => s + l.value, 0);
@@ -136,7 +140,7 @@ export default function NetWorthScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) { return StyleSheet.create({
   root:          { flex: 1, backgroundColor: colors.bg },
   netCard:       { margin: spacing.md, backgroundColor: colors.surface, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, alignItems: 'center' },
   netLabel:      { fontSize: 14, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted, marginBottom: 4 },
@@ -163,4 +167,4 @@ const styles = StyleSheet.create({
   cancelBtnText: { fontSize: 14, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted },
   saveBtn:       { paddingHorizontal: spacing.lg, paddingVertical: 10, borderRadius: radius.md, backgroundColor: colors.accent },
   saveBtnText:   { fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#fff' },
-});
+}); }

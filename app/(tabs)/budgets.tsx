@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Modal } from 'react-native';
 import { useFinance } from '../../hooks/FinanceContext';
 import CategoryBar from '../../components/CategoryBar';
-import { colors, spacing, radius } from '../../constants/theme';
+import { spacing, radius, Colors } from '../../constants/theme';
+import { useColors } from '../../hooks/ThemeContext';
 import { fmt, fmtFull } from '../../lib/format';
 import {
   resolveLimit, BudgetMap,
@@ -12,7 +13,10 @@ import {
 import { EXPENSE_CATS, INCOME_CATS } from '../../constants/categories';
 
 export default function PlannerScreen() {
+  const colors = useColors();
   const { txns, budgets, setBudgets, currency, spendTypeMap, setSpendTypeMap, customCats, setCustomCats } = useFinance();
+
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const now = new Date();
   const ym  = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -303,7 +307,7 @@ export default function PlannerScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) { return StyleSheet.create({
   root:          { flex: 1, backgroundColor: colors.bg },
   content:       { padding: spacing.md, paddingBottom: spacing.xl * 2, gap: spacing.md },
   heading:       { fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text },
@@ -368,4 +372,4 @@ const styles = StyleSheet.create({
                    borderColor: colors.border, color: colors.text, padding: spacing.sm,
                    fontSize: 14, fontFamily: 'PlusJakartaSans_400Regular' },
   modalActions:  { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm },
-});
+}); }

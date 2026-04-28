@@ -4,14 +4,18 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useFinance } from '../../hooks/FinanceContext';
 import StatCard from '../../components/StatCard';
-import { colors, spacing, radius } from '../../constants/theme';
+import { spacing, radius, Colors } from '../../constants/theme';
+import { useColors } from '../../hooks/ThemeContext';
 import { fmt, fmtFull } from '../../lib/format';
 import { MONTHS } from '../../constants/categories';
 import { ChevronLeftIcon, ChevronRightIcon } from '../../components/icons';
 
 export default function YearlyScreen() {
+  const colors = useColors();
   const { txns } = useFinance();
   const [year, setYear] = useState(new Date().getFullYear());
+
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const monthlyData = useMemo(() => {
     return MONTHS.map((label, idx) => {
@@ -94,7 +98,7 @@ export default function YearlyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) { return StyleSheet.create({
   root:           { flex: 1, backgroundColor: colors.bg },
   content:        { padding: spacing.md, paddingBottom: spacing.xl * 2 },
   headerRow:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
@@ -114,4 +118,4 @@ const styles = StyleSheet.create({
   tableMonthCell: { fontFamily: 'PlusJakartaSans_600SemiBold' },
   tableTotal:     { backgroundColor: colors.surface2 },
   tableTotalText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 13 },
-});
+}); }

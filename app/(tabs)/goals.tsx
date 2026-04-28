@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Modal, TextInput } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useFinance } from '../../hooks/FinanceContext';
-import { colors, spacing, radius } from '../../constants/theme';
+import { spacing, radius, Colors } from '../../constants/theme';
+import { useColors } from '../../hooks/ThemeContext';
 import { fmtFull } from '../../lib/format';
 import { uid, Goal } from '../../lib/data';
 import { PlusIcon, TrashIcon, EditIcon } from '../../components/icons';
 
 function CircleProgress({ pct, size = 80, stroke = 7 }: { pct: number; size?: number; stroke?: number }) {
+  const colors = useColors();
   const r      = (size - stroke * 2) / 2;
   const circ   = 2 * Math.PI * r;
   const offset = circ * (1 - Math.min(pct, 1));
@@ -24,6 +26,7 @@ function CircleProgress({ pct, size = 80, stroke = 7 }: { pct: number; size?: nu
 }
 
 export default function GoalsScreen() {
+  const colors = useColors();
   const { goals, setGoals } = useFinance();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing,   setEditing]   = useState<Goal | null>(null);
@@ -31,6 +34,8 @@ export default function GoalsScreen() {
   const [target,    setTarget]    = useState('');
   const [current,   setCurrent]   = useState('');
   const [deadline,  setDeadline]  = useState('');
+
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   function openNew() {
     setEditing(null); setName(''); setTarget(''); setCurrent(''); setDeadline('');
@@ -127,7 +132,7 @@ export default function GoalsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) { return StyleSheet.create({
   root:          { flex: 1, backgroundColor: colors.bg },
   header:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.md },
   heading:       { fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text },
@@ -156,4 +161,4 @@ const styles = StyleSheet.create({
   cancelBtnText: { fontSize: 14, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted },
   saveBtn:       { paddingHorizontal: spacing.lg, paddingVertical: 10, borderRadius: radius.md, backgroundColor: colors.accent },
   saveBtnText:   { fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#fff' },
-});
+}); }

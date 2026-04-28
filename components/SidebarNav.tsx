@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { useFinance } from '../hooks/FinanceContext';
@@ -6,7 +6,8 @@ import {
   GridIcon, ListIcon, CalIcon, ChartIcon, BudgetIcon,
   GoalIcon, NetWorthIcon, RecurIcon, PlusIcon, LogoutIcon, UserIcon,
 } from './icons';
-import { colors, spacing, radius, SIDEBAR_W } from '../constants/theme';
+import { spacing, radius, SIDEBAR_W, Colors } from '../constants/theme';
+import { useColors } from '../hooks/ThemeContext';
 
 const NAV_ITEMS = [
   { href: '/(tabs)',             label: 'Dashboard',     Icon: GridIcon    },
@@ -20,6 +21,8 @@ const NAV_ITEMS = [
 ] as const;
 
 export default function SidebarNav() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const router   = useRouter();
   const pathname = usePathname();
   const { user, logout, openAdd } = useFinance();
@@ -66,9 +69,11 @@ export default function SidebarNav() {
   );
 }
 
-const styles = StyleSheet.create({
-  sidebar:          { width: SIDEBAR_W, backgroundColor: colors.surface, borderRightWidth: 1,
-                      borderRightColor: colors.border, paddingVertical: spacing.lg, paddingHorizontal: spacing.md },
+function makeStyles(colors: Colors) { return StyleSheet.create({
+  sidebar:          { width: SIDEBAR_W, backgroundColor: colors.surface, paddingVertical: spacing.lg,
+                      paddingHorizontal: spacing.md,
+                      shadowColor: '#000', shadowOffset: { width: 2, height: 0 },
+                      shadowOpacity: 0.06, shadowRadius: 12, elevation: 4 },
   brand:            { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg },
   brandDot:         { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.accent },
   brandText:        { fontSize: 18, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text },
@@ -87,4 +92,4 @@ const styles = StyleSheet.create({
                       alignItems: 'center', justifyContent: 'center' },
   userName:         { flex: 1, fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text },
   logoutBtn:        { padding: 4 },
-});
+}); }
