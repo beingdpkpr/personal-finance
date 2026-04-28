@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, Pressable, StyleSheet,
-  ActivityIndicator,
+  ActivityIndicator, Platform,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
@@ -21,7 +21,9 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const [busy, setBusy]   = useState(false);
 
-  const redirectUri = makeRedirectUri({ native: 'finance://login' });
+  const redirectUri = Platform.OS === 'web' && process.env.EXPO_PUBLIC_REDIRECT_URI
+    ? process.env.EXPO_PUBLIC_REDIRECT_URI
+    : makeRedirectUri({ native: 'finance://login' });
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId:         CLIENT_ID,
