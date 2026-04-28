@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { View, Text, Pressable, ScrollView, StyleSheet, Animated } from 'react-native';
 import { VictoryBar, VictoryChart, VictoryAxis, VictoryGroup } from 'victory-native';
 import { useFinance } from '../../hooks/FinanceContext';
 import CategoryBar from '../../components/CategoryBar';
@@ -48,7 +48,7 @@ function WaffleChart({ data }: { data: { label: string; color: string; value: nu
             <View style={{
               flex: 1,
               borderRadius: 100,
-              backgroundColor: i < count ? dotColor : colors.surface2,
+              backgroundColor: i < count ? dotColor : 'rgba(255,255,255,0.06)',
             }} />
           </View>
         ))}
@@ -76,6 +76,17 @@ export default function MonthlyScreen() {
   const now = new Date();
   const [year,  setYear]  = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
+
+  // Fade-up entrance animation
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(16)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
+    ]).start();
+  }, []);
+  const animStyle = { opacity: fadeAnim, transform: [{ translateY: slideAnim }] };
 
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -117,41 +128,46 @@ export default function MonthlyScreen() {
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>Monthly Report</Text>
+      <Animated.View style={animStyle}>
+        <Text style={styles.heading}>Monthly Report</Text>
 
-      <View style={styles.picker}>
-        <Pressable onPress={prevMonth} style={styles.arrow}><ChevronLeftIcon size={20} color={colors.text} /></Pressable>
-        <Text style={styles.pickerLabel}>{MONTHS[month]} {year}</Text>
-        <Pressable onPress={nextMonth} style={styles.arrow}><ChevronRightIcon size={20} color={colors.text} /></Pressable>
-      </View>
-
-      <View style={styles.row2}>
-        <View style={[styles.card, { flex: 1 }]}>
-          <Text style={styles.cardLabel}>Income</Text>
-          <Text style={[styles.cardVal, { color: colors.green }]}>{fmtFull(income)}</Text>
+        <View style={styles.picker}>
+          <Pressable onPress={prevMonth} style={styles.arrow}><ChevronLeftIcon size={20} color={colors.text} /></Pressable>
+          <Text style={styles.pickerLabel}>{MONTHS[month]} {year}</Text>
+          <Pressable onPress={nextMonth} style={styles.arrow}><ChevronRightIcon size={20} color={colors.text} /></Pressable>
         </View>
-        <View style={[styles.card, { flex: 1 }]}>
-          <Text style={styles.cardLabel}>Expenses</Text>
-          <Text style={[styles.cardVal, { color: colors.red }]}>{fmtFull(expenses)}</Text>
-        </View>
-      </View>
 
-      <View style={styles.chartWrap}>
+        {/* Glass summary cards */}
+        <View style={styles.row2}>
+          <View style={styles.summaryCard}>
+            <Text style={styles.cardLabel}>Income</Text>
+            <Text style={[styles.cardVal, { color: colors.green }]}>{fmtFull(income)}</Text>
+          </View>
+          <View style={styles.summaryCard}>
+            <Text style={styles.cardLabel}>Expenses</Text>
+            <Text style={[styles.cardVal, { color: colors.red }]}>{fmtFull(expenses)}</Text>
+          </View>
+        </View>
+      </Animated.View>
+
+      {/* Chart wrapped in glass card */}
+      <View style={styles.chartCard}>
         <Text style={styles.sectionTitle}>6-Month Trend</Text>
-        <VictoryChart height={200} padding={{ top: 10, bottom: 40, left: 50, right: 20 }}>
+        <VictoryChart height={200} padding={{ top: 10, bottom: 40, left: 50, right: 20 }}
+          style={{ parent: { backgroundColor: 'transparent' } }}>
           <VictoryAxis
-            style={{ tickLabels: { fill: colors.muted, fontSize: 10 }, axis: { stroke: colors.border } }}
+            style={{ tickLabels: { fill: colors.muted, fontSize: 10 }, axis: { stroke: colors.glassBorder } }}
           />
           <VictoryAxis dependentAxis
-            style={{ tickLabels: { fill: colors.muted, fontSize: 10 }, axis: { stroke: colors.border },
-                     grid: { stroke: colors.border, strokeDasharray: '4,4' } }}
+            style={{ tickLabels: { fill: colors.muted, fontSize: 10 }, axis: { stroke: colors.glassBorder },
+                     grid: { stroke: colors.glassBorder, strokeDasharray: '4,4' } }}
             tickFormat={(v: number) => fmt(v)}
           />
           <VictoryGroup offset={12}>
             <VictoryBar data={chartData} x="x" y="inc"
               style={{ data: { fill: colors.green, width: 10 } }} cornerRadius={{ top: 3 }} />
             <VictoryBar data={chartData} x="x" y="exp"
-              style={{ data: { fill: colors.red, width: 10 } }} cornerRadius={{ top: 3 }} />
+              style={{ data: { fill: colors.accent, width: 10 } }} cornerRadius={{ top: 3 }} />
           </VictoryGroup>
         </VictoryChart>
       </View>
@@ -159,7 +175,8 @@ export default function MonthlyScreen() {
       {catBreakdown.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Spending by Category</Text>
-          <View style={[styles.card, { marginBottom: spacing.sm }]}>
+          {/* Glass wrapper around waffle + bars */}
+          <View style={styles.catBreakdownCard}>
             <Text style={styles.waffleTotal}>{fmtFull(expenses)}</Text>
             <WaffleChart
               data={catBreakdown.slice(0, 8).map(({ cat, spent }) => ({ label: cat.label, color: cat.color, value: spent }))}
@@ -192,24 +209,34 @@ export default function MonthlyScreen() {
 }
 
 function makeStyles(colors: Colors) { return StyleSheet.create({
-  root:         { flex: 1, backgroundColor: colors.bg },
-  content:      { padding: spacing.md, paddingBottom: spacing.xl * 2 },
-  heading:      { fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text, marginBottom: spacing.md },
-  picker:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.lg, marginBottom: spacing.md },
-  arrow:        { padding: spacing.sm },
-  pickerLabel:  { fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text, minWidth: 110, textAlign: 'center' },
-  row2:         { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  card:         { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md },
-  cardLabel:    { fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted, marginBottom: 4 },
-  cardVal:      { fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold' },
-  chartWrap:    { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.md },
-  section:      { marginBottom: spacing.md },
-  sectionTitle: { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: spacing.sm },
-  waffleTotal:  { fontSize: 28, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text, marginBottom: spacing.md },
-  txnRow:       { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.sm, marginBottom: spacing.xs, gap: spacing.xs },
-  txnLeft:      { flex: 1 },
-  txnDesc:      { fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text },
-  txnMeta:      { fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted, marginTop: 2 },
-  txnAmt:       { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', marginHorizontal: spacing.xs },
-  empty:        { color: colors.muted, fontFamily: 'PlusJakartaSans_400Regular', textAlign: 'center', marginTop: spacing.md },
+  root:             { flex: 1, backgroundColor: colors.bg },
+  content:          { padding: spacing.md, paddingBottom: spacing.xl * 2 },
+  heading:          { fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text, marginBottom: spacing.md },
+  picker:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.lg, marginBottom: spacing.md },
+  arrow:            { padding: spacing.sm },
+  pickerLabel:      { fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text, minWidth: 110, textAlign: 'center' },
+  row2:             { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  // Glass summary cards
+  summaryCard:      { flex: 1, backgroundColor: colors.glass, borderWidth: 1,
+                      borderColor: colors.glassBorder, borderRadius: radius.xl, padding: spacing.md },
+  cardLabel:        { fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted, marginBottom: 4 },
+  cardVal:          { fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold' },
+  // Glass chart card
+  chartCard:        { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder,
+                      borderRadius: radius.xl, padding: spacing.md, marginBottom: spacing.sm },
+  section:          { marginBottom: spacing.md },
+  sectionTitle:     { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: colors.muted,
+                      textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: spacing.sm },
+  // Glass category breakdown card
+  catBreakdownCard: { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder,
+                      borderRadius: radius.xl, padding: spacing.md, marginBottom: spacing.sm },
+  waffleTotal:      { fontSize: 28, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text, marginBottom: spacing.md },
+  txnRow:           { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glass,
+                      borderRadius: radius.md, borderWidth: 1, borderColor: colors.glassBorder,
+                      padding: spacing.sm, marginBottom: spacing.xs, gap: spacing.xs },
+  txnLeft:          { flex: 1 },
+  txnDesc:          { fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text },
+  txnMeta:          { fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', color: colors.muted, marginTop: 2 },
+  txnAmt:           { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', marginHorizontal: spacing.xs },
+  empty:            { color: colors.muted, fontFamily: 'PlusJakartaSans_400Regular', textAlign: 'center', marginTop: spacing.md },
 }); }
