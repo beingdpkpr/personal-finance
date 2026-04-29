@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { width: 100%; height: 100%; font-family: 'DM Sans', sans-serif; }
+
+/* Violet theme (default dark) */
+:root {
+  --accent: oklch(0.66 0.22 268);
+  --accent-hex: #7c6ef5;
+  --accent-mid: oklch(0.52 0.24 268);
+  --accent-dim: oklch(0.28 0.12 268);
+  --accent-glow: oklch(0.66 0.22 268 / 0.22);
+  --positive: oklch(0.66 0.19 145);
+  --positive-hex: #22c55e;
+  --positive-dim: oklch(0.22 0.08 145);
+  --negative: oklch(0.64 0.2 25);
+  --negative-hex: #f87171;
+  --negative-dim: oklch(0.22 0.08 25);
+  --warning: oklch(0.75 0.18 70);
+  --warning-hex: #f59e0b;
+  --bg: #0c0d14;
+  --sidebar: #0e0f18;
+  --surface: oklch(0.14 0.025 268);
+  --surface2: oklch(0.17 0.02 268);
+  --surface3: oklch(0.21 0.02 268);
+  --border: oklch(0.23 0.03 268);
+  --border-light: oklch(0.28 0.04 268);
+  --text: oklch(0.95 0.01 268);
+  --text-mid: oklch(0.62 0.05 268);
+  --text-dim: oklch(0.40 0.04 268);
+}
+
+/* Slate theme */
+:root[data-theme="slate"] {
+  --accent: oklch(0.66 0.19 220);
+  --accent-hex: #38bdf8;
+  --accent-mid: oklch(0.50 0.2 220);
+  --accent-dim: oklch(0.24 0.1 220);
+  --accent-glow: oklch(0.66 0.19 220 / 0.22);
+  --bg: #0a0e14; --sidebar: #0c1018;
+  --surface: oklch(0.14 0.02 220); --surface2: oklch(0.17 0.02 220); --surface3: oklch(0.21 0.02 220);
+  --border: oklch(0.23 0.03 220); --border-light: oklch(0.28 0.04 220);
+  --text: oklch(0.95 0.01 220); --text-mid: oklch(0.62 0.05 220); --text-dim: oklch(0.40 0.04 220);
+}
+
+/* Rose theme */
+:root[data-theme="rose"] {
+  --accent: oklch(0.66 0.22 350);
+  --accent-hex: #f472b6;
+  --accent-mid: oklch(0.50 0.24 350);
+  --accent-dim: oklch(0.26 0.12 350);
+  --accent-glow: oklch(0.66 0.22 350 / 0.22);
+  --bg: #130c10; --sidebar: #160e13;
+  --surface: oklch(0.16 0.03 350); --surface2: oklch(0.19 0.025 350); --surface3: oklch(0.23 0.02 350);
+  --border: oklch(0.25 0.04 350); --border-light: oklch(0.30 0.05 350);
+  --text: oklch(0.95 0.01 350); --text-mid: oklch(0.62 0.05 350); --text-dim: oklch(0.40 0.04 350);
+}
+
+/* Light mode override (any theme) */
+:root[data-light="true"] {
+  --bg: #f5f5fc; --sidebar: #ededf6;
+  --surface: #ffffff; --surface2: #f0f0f8; --surface3: #e6e6f0;
+  --border: #dcdce8; --border-light: #c8c8da;
+  --text: oklch(0.16 0.02 268); --text-mid: oklch(0.38 0.04 268); --text-dim: oklch(0.55 0.03 268);
+}
+
+/* Animations */
+@keyframes slideUp    { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+@keyframes slideRight { from { opacity:0; transform:translateX(-16px); } to { opacity:1; transform:translateX(0); } }
+@keyframes scaleIn    { from { opacity:0; transform:scale(0.96); } to { opacity:1; transform:scale(1); } }
+@keyframes fadeIn     { from { opacity:0; } to { opacity:1; } }
+@keyframes countUp    { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
