@@ -7,6 +7,15 @@ import StatCard from '../components/ui/StatCard'
 import AreaChart from '../components/charts/AreaChart'
 import DonutChart from '../components/charts/DonutChart'
 
+const CAT_ICONS: Record<string, string> = {
+  essentials: '🧾', food: '🍽', transport: '🚗', entertainment: '🎬',
+  shopping: '🛍', health: '💊', savings: '📈', family: '👨‍👩‍👧', other: '📌',
+  salary: '💰', freelance: '💻',
+}
+
+const ACC_PALETTE = ['#7c6ef5','#22c55e','#f59e0b','#ec4899','#3b82f6','#f97316']
+const ACC_ICONS   = ['🏦','💰','📈','💵','🏛','📊']
+
 function pctChange(curr: number, prev: number): number {
   if (prev === 0) return 0
   return Math.round(Math.abs((curr - prev) / Math.abs(prev)) * 1000) / 10
@@ -84,29 +93,30 @@ export default function Dashboard() {
         <Card>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
             <div>
-              <div style={{ fontSize:14, fontWeight:600, color:'var(--text)' }}>Income vs Expenses</div>
-              <div style={{ fontSize:12, color:'var(--text-dim)' }}>Last 6 months</div>
+              <div style={{ fontSize:14, fontWeight:600, color:'var(--text)' }}>Cash Flow</div>
+              <div style={{ fontSize:12, color:'var(--text-dim)' }}>Income vs Expenses · Last 6 months</div>
             </div>
-            <div style={{ display:'flex', gap:12, fontSize:11 }}>
-              <span style={{ color:'var(--text-dim)' }}><span style={{ color:'#7c6ef5' }}>●</span> Income</span>
-              <span style={{ color:'var(--text-dim)' }}><span style={{ color:'#f87171' }}>●</span> Expenses</span>
+            <div style={{ display:'flex', gap:14, alignItems:'center' }}>
+              <span style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'var(--text-mid)' }}><span style={{ width:10, height:3, borderRadius:2, background:'var(--accent)', display:'inline-block' }}></span>Income</span>
+              <span style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'var(--text-mid)' }}><span style={{ width:10, height:3, borderRadius:2, background:'#f87171', display:'inline-block' }}></span>Expenses</span>
             </div>
           </div>
           <AreaChart data={areaData} />
         </Card>
         <Card>
-          <div style={{ fontSize:14, fontWeight:600, color:'var(--text)', marginBottom:4 }}>Spending</div>
+          <div style={{ fontSize:14, fontWeight:600, color:'var(--text)', marginBottom:4 }}>Spending Breakdown</div>
           <div style={{ fontSize:12, color:'var(--text-dim)', marginBottom:16 }}>By category</div>
-          <div style={{ display:'flex', justifyContent:'center' }}>
-            <DonutChart segments={donutSegs} size={130} centerLabel={fmt(totalCatSpend)} centerSub="spent" />
-          </div>
-          <div style={{ display:'flex', flexDirection:'column', gap:6, marginTop:12 }}>
-            {catSpend.slice(0,4).map(c => (
-              <div key={c.label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:11 }}>
-                <span style={{ color:'var(--text-dim)', display:'flex', gap:6, alignItems:'center' }}><span style={{ color:c.color }}>●</span>{c.label}</span>
-                <span style={{ color:'var(--text)', fontFamily:'DM Mono', fontWeight:500 }}>{fmt(c.amount)}</span>
-              </div>
-            ))}
+          <div style={{ display:'flex', gap:14, alignItems:'center' }}>
+            <DonutChart segments={donutSegs} size={110} centerLabel={fmt(totalCatSpend)} centerSub={`${MONTHS[now.getMonth()]} spend`} />
+            <div style={{ flex:1, display:'flex', flexDirection:'column', gap:7 }}>
+              {catSpend.slice(0,5).map(c => (
+                <div key={c.label} style={{ display:'flex', alignItems:'center', gap:7 }}>
+                  <span style={{ width:8, height:8, borderRadius:'50%', background:c.color, flexShrink:0 }}></span>
+                  <span style={{ fontSize:12, color:'var(--text-mid)', flex:1 }}>{c.label}</span>
+                  <span style={{ fontSize:12, fontFamily:'DM Mono', color:'var(--text)' }}>{Math.round(c.pct)}%</span>
+                </div>
+              ))}
+            </div>
           </div>
         </Card>
       </div>
@@ -130,10 +140,13 @@ export default function Dashboard() {
                   ? INCOME_CATS.find(c => c.id === t.category)
                   : EXPENSE_CATS.find(c => c.id === t.category)
                 const color = cat?.color ?? '#888'
+                const icon = CAT_ICONS[t.category] ?? (t.type==='income' ? '↑' : '↓')
                 return (
-                  <div key={t.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 0', borderBottom: i < recentTxns.length-1 ? '1px solid var(--border)' : 'none' }}>
-                    <div style={{ width:38, height:38, borderRadius:10, background:`${color}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, flexShrink:0, color }}>
-                      {t.type==='income' ? '↑' : '↓'}
+                  <div key={t.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'8px 10px', borderRadius:10, cursor:'pointer', transition:'background 0.15s' }}
+                    onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background='var(--surface3)'}
+                    onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background='transparent'}>
+                    <div style={{ width:36, height:36, borderRadius:10, background:`${color}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>
+                      {icon}
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:13, fontWeight:500, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.description}</div>
@@ -161,20 +174,28 @@ export default function Dashboard() {
             <div style={{ color:'var(--text-dim)', fontSize:13, textAlign:'center', padding:'20px 0' }}>No accounts yet</div>
           ) : (
             <div style={{ display:'flex', flexDirection:'column' }}>
-              {allAccounts.slice(0, 6).map((acc, i) => (
-                <div key={acc.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 0', borderBottom: i < Math.min(allAccounts.length, 6)-1 ? '1px solid var(--border)' : 'none' }}>
-                  <div style={{ width:38, height:38, borderRadius:10, background: acc.isLiability ? 'oklch(0.22 0.08 25)' : 'oklch(0.22 0.08 145)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>
-                    {acc.isLiability ? '💳' : '🏦'}
+              {allAccounts.slice(0, 6).map((acc, i) => {
+                const accColor = ACC_PALETTE[i % ACC_PALETTE.length]
+                const accIcon  = acc.isLiability ? '💳' : ACC_ICONS[i % ACC_ICONS.length]
+                return (
+                  <div key={acc.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'8px 10px', borderRadius:10, cursor:'pointer', transition:'background 0.15s' }}
+                    onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background='var(--surface3)'}
+                    onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background='transparent'}>
+                    <div style={{ width:36, height:36, borderRadius:10, background:`${accColor}20`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0, border:`1px solid ${accColor}30` }}>
+                      {accIcon}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:500, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{acc.name}</div>
+                      <div style={{ fontSize:11, color:'var(--text-dim)', marginTop:2 }}>{acc.isLiability ? 'Liability' : 'Asset'}</div>
+                    </div>
+                    <div style={{ textAlign:'right', flexShrink:0 }}>
+                      <div style={{ fontSize:13, fontWeight:700, fontFamily:'DM Mono', color: acc.isLiability ? 'var(--negative)' : 'var(--text)' }}>
+                        {acc.isLiability ? '-' : ''}{fmt(acc.value)}
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontSize:13, fontWeight:500, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{acc.name}</div>
-                    <div style={{ fontSize:11, color:'var(--text-dim)', marginTop:2 }}>{acc.isLiability ? 'Liability' : 'Asset'}</div>
-                  </div>
-                  <div style={{ fontSize:13, fontWeight:600, fontFamily:'DM Mono', color: acc.isLiability ? 'var(--negative)' : 'var(--text)', flexShrink:0 }}>
-                    {acc.isLiability ? '-' : ''}{fmt(acc.value)}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </Card>
