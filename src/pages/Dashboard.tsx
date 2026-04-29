@@ -1,26 +1,45 @@
+import { useNavigate } from 'react-router-dom'
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { fmt } from '../lib/format'
-import { resolveLimit } from '../lib/data'
-import { EXPENSE_CATS, MONTHS } from '../constants/categories'
+import { EXPENSE_CATS, INCOME_CATS, MONTHS } from '../constants/categories'
 import Card from '../components/ui/Card'
 import StatCard from '../components/ui/StatCard'
-import ProgressBar from '../components/ui/ProgressBar'
 import AreaChart from '../components/charts/AreaChart'
 import DonutChart from '../components/charts/DonutChart'
 
+function pctChange(curr: number, prev: number): number {
+  if (prev === 0) return 0
+  return Math.round(Math.abs((curr - prev) / Math.abs(prev)) * 1000) / 10
+}
+
+function fmtShortDate(d: string): string {
+  const date = new Date(d + 'T00:00:00')
+  return `${MONTHS[date.getMonth()]} ${date.getDate()}`
+}
+
 export default function Dashboard() {
-  const { txns, budgets, nw, openAdd } = useFinanceContext()
+  const navigate = useNavigate()
+  const { txns, nw } = useFinanceContext()
 
   const now = new Date()
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
+  const prevD = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const lastMonth = `${prevD.getFullYear()}-${String(prevD.getMonth()+1).padStart(2,'0')}`
+
   const monthTxns = txns.filter(t => t.date.startsWith(thisMonth))
-  const monthIncome  = monthTxns.filter(t => t.type==='income').reduce((s,t) => s+t.amount, 0)
-  const monthExpense = monthTxns.filter(t => t.type==='expense').reduce((s,t) => s+t.amount, 0)
-  const netSavings   = monthIncome - monthExpense
-  const savingsRate  = monthIncome > 0 ? Math.round((netSavings/monthIncome)*100) : 0
-  const totalAssets  = nw.assets.reduce((s,a) => s+a.value, 0)
-  const totalLiab    = nw.liabilities.reduce((s,l) => s+l.value, 0)
-  const netWorth     = totalAssets - totalLiab
+  const lastTxns  = txns.filter(t => t.date.startsWith(lastMonth))
+
+  const monthIncome   = monthTxns.filter(t => t.type==='income').reduce((s,t) => s+t.amount, 0)
+  const monthExpense  = monthTxns.filter(t => t.type==='expense').reduce((s,t) => s+t.amount, 0)
+  const lastIncome    = lastTxns.filter(t => t.type==='income').reduce((s,t) => s+t.amount, 0)
+  const lastExpense   = lastTxns.filter(t => t.type==='expense').reduce((s,t) => s+t.amount, 0)
+  const netSavings    = monthIncome - monthExpense
+  const lastNetSavings = lastIncome - lastExpense
+
+  const totalAssets = nw.assets.reduce((s,a) => s+a.value, 0)
+  const totalLiab   = nw.liabilities.reduce((s,l) => s+l.value, 0)
+  const netWorth    = totalAssets - totalLiab
+  const lastNW      = netWorth - netSavings
 
   const areaData = Array.from({length:6}, (_,i) => {
     const d = new Date(now.getFullYear(), now.getMonth()-5+i, 1)
@@ -40,23 +59,24 @@ export default function Dashboard() {
   const totalCatSpend = catSpend.reduce((s,c)=>s+c.amount,0)
   const donutSegs = catSpend.map(c=>({ label:c.label, color:c.color, pct: totalCatSpend>0?(c.amount/totalCatSpend)*100:0 }))
 
-  const budgetAlerts = EXPENSE_CATS.map(c => {
-    const spent = monthTxns.filter(t=>t.type==='expense'&&t.category===c.id).reduce((s,t)=>s+t.amount,0)
-    const limit = resolveLimit(budgets[c.id], monthIncome)
-    const pct   = limit > 0 ? (spent/limit)*100 : 0
-    return { ...c, spent, limit, pct }
-  }).filter(c => c.pct >= 80 && c.limit > 0)
-
-  const recentTxns = [...txns].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8)
+  const recentTxns = [...txns].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6)
+  const allAccounts = [
+    ...nw.assets.map(a => ({ ...a, isLiability: false })),
+    ...nw.liabilities.map(l => ({ ...l, isLiability: true })),
+  ]
 
   return (
     <div style={{ padding:28, display:'flex', flexDirection:'column', gap:22 }}>
       {/* Stat cards */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16 }}>
-        <StatCard label="Net Worth"      value={fmt(netWorth)}     icon="💼" color="#7c6ef5" delay={0}   />
-        <StatCard label="Monthly Income" value={fmt(monthIncome)}  icon="↑"  color="#22c55e" delay={0.05}/>
-        <StatCard label="Monthly Expenses" value={fmt(monthExpense)} icon="↓" color="#f87171" delay={0.1} />
-        <StatCard label="Savings Rate"   value={`${savingsRate}%`} icon="💰" color="#f59e0b" delay={0.15}/>
+        <StatCard label="Net Worth"        value={fmt(netWorth)}    icon="💎" color="#7c6ef5" delay={0}
+          sub={String(pctChange(netWorth, lastNW))} positive={netWorth >= lastNW} />
+        <StatCard label="Monthly Income"   value={fmt(monthIncome)} icon="↑"  color="#22c55e" delay={0.05}
+          sub={String(pctChange(monthIncome, lastIncome))} positive={monthIncome >= lastIncome} />
+        <StatCard label="Monthly Spend"    value={fmt(monthExpense)} icon="↓" color="#f87171" delay={0.1}
+          sub={String(pctChange(monthExpense, lastExpense))} positive={monthExpense <= lastExpense} />
+        <StatCard label="Total Savings"    value={fmt(netSavings)}  icon="🏦" color="#f59e0b" delay={0.15}
+          sub={String(pctChange(netSavings, lastNetSavings))} positive={netSavings >= lastNetSavings} />
       </div>
 
       {/* Charts row */}
@@ -91,56 +111,74 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Budget alerts */}
-      {budgetAlerts.length > 0 && (
+      {/* Recent transactions + Accounts */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+        {/* Recent Transactions */}
         <Card>
-          <div style={{ fontSize:14, fontWeight:600, color:'var(--text)', marginBottom:14 }}>Budget Alerts</div>
-          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-            {budgetAlerts.map(a => (
-              <div key={a.id}>
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
-                  <span style={{ fontSize:13, color:'var(--text)' }}>{a.label}</span>
-                  <span style={{ fontSize:12, fontFamily:'DM Mono', color: a.pct >= 100 ? 'var(--negative)' : 'var(--warning)' }}>
-                    {fmt(a.spent)} / {fmt(a.limit)}
-                  </span>
-                </div>
-                <ProgressBar pct={a.pct} />
-              </div>
-            ))}
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+            <div style={{ fontSize:14, fontWeight:600, color:'var(--text)' }}>Recent Transactions</div>
+            <button onClick={() => navigate('/transactions')} style={{ background:'none', border:'none', color:'var(--accent)', cursor:'pointer', fontSize:12, fontWeight:500 }}>
+              View all →
+            </button>
           </div>
+          {recentTxns.length === 0 ? (
+            <div style={{ color:'var(--text-dim)', fontSize:13, textAlign:'center', padding:'20px 0' }}>No transactions yet</div>
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column' }}>
+              {recentTxns.map((t, i) => {
+                const cat = t.type === 'income'
+                  ? INCOME_CATS.find(c => c.id === t.category)
+                  : EXPENSE_CATS.find(c => c.id === t.category)
+                const color = cat?.color ?? '#888'
+                return (
+                  <div key={t.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 0', borderBottom: i < recentTxns.length-1 ? '1px solid var(--border)' : 'none' }}>
+                    <div style={{ width:38, height:38, borderRadius:10, background:`${color}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, flexShrink:0, color }}>
+                      {t.type==='income' ? '↑' : '↓'}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:500, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.description}</div>
+                      <div style={{ fontSize:11, color:'var(--text-dim)', marginTop:2 }}>{cat?.label ?? t.category} · {fmtShortDate(t.date)}</div>
+                    </div>
+                    <div style={{ fontSize:13, fontWeight:600, fontFamily:'DM Mono', color: t.type==='income' ? 'var(--positive)' : 'var(--text)', flexShrink:0 }}>
+                      {t.type==='income' ? '+' : '-'}{fmt(t.amount)}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </Card>
-      )}
 
-      {/* Recent transactions */}
-      <Card>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
-          <div style={{ fontSize:14, fontWeight:600, color:'var(--text)' }}>Recent Transactions</div>
-          <button onClick={openAdd} style={{ padding:'6px 14px', borderRadius:20, border:'1px solid var(--accent)', background:'var(--accent-dim)', color:'var(--accent)', cursor:'pointer', fontSize:12, fontWeight:600 }}>+ Add</button>
-        </div>
-        {recentTxns.length === 0 ? (
-          <div style={{ color:'var(--text-dim)', fontSize:13, textAlign:'center', padding:'20px 0' }}>No transactions yet</div>
-        ) : (
-          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-            {recentTxns.map(t => {
-              const cat = EXPENSE_CATS.find(c=>c.id===t.category)
-              return (
-                <div key={t.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'8px 0', borderBottom:'1px solid var(--border)' }}>
-                  <div style={{ width:36, height:36, borderRadius:10, background:`${cat?.color ?? '#888'}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0 }}>
-                    {t.type==='income' ? '↑' : '↓'}
+        {/* Accounts */}
+        <Card>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+            <div style={{ fontSize:14, fontWeight:600, color:'var(--text)' }}>Accounts</div>
+            <button onClick={() => navigate('/accounts')} style={{ background:'none', border:'none', color:'var(--accent)', cursor:'pointer', fontSize:12, fontWeight:500 }}>
+              Manage →
+            </button>
+          </div>
+          {allAccounts.length === 0 ? (
+            <div style={{ color:'var(--text-dim)', fontSize:13, textAlign:'center', padding:'20px 0' }}>No accounts yet</div>
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column' }}>
+              {allAccounts.slice(0, 6).map((acc, i) => (
+                <div key={acc.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 0', borderBottom: i < Math.min(allAccounts.length, 6)-1 ? '1px solid var(--border)' : 'none' }}>
+                  <div style={{ width:38, height:38, borderRadius:10, background: acc.isLiability ? 'oklch(0.22 0.08 25)' : 'oklch(0.22 0.08 145)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>
+                    {acc.isLiability ? '💳' : '🏦'}
                   </div>
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontSize:13, fontWeight:500, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.description}</div>
-                    <div style={{ fontSize:11, color:'var(--text-dim)' }}>{t.date} · {cat?.label ?? t.category}</div>
+                    <div style={{ fontSize:13, fontWeight:500, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{acc.name}</div>
+                    <div style={{ fontSize:11, color:'var(--text-dim)', marginTop:2 }}>{acc.isLiability ? 'Liability' : 'Asset'}</div>
                   </div>
-                  <div style={{ fontSize:14, fontWeight:600, fontFamily:'DM Mono', color: t.type==='income'?'var(--positive)':'var(--negative)', flexShrink:0 }}>
-                    {t.type==='income'?'+':'-'}{fmt(t.amount)}
+                  <div style={{ fontSize:13, fontWeight:600, fontFamily:'DM Mono', color: acc.isLiability ? 'var(--negative)' : 'var(--text)', flexShrink:0 }}>
+                    {acc.isLiability ? '-' : ''}{fmt(acc.value)}
                   </div>
                 </div>
-              )
-            })}
-          </div>
-        )}
-      </Card>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
     </div>
   )
 }
