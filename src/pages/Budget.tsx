@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { fmt } from '../lib/format'
-import { resolveLimit } from '../lib/data'
-import { EXPENSE_CATS } from '../constants/categories'
+import { CatGroup, GROUP_LABELS, resolveLimit } from '../lib/data'
 import Card from '../components/ui/Card'
 import ProgressBar from '../components/ui/ProgressBar'
 
 export default function Budget() {
-  const { txns, budgets, setBudgets } = useFinanceContext()
+  const { txns, budgets, setBudgets, expenseCats } = useFinanceContext()
+  const GROUP_ORDER: CatGroup[] = ['essentials', 'family', 'savings', 'wants']
   const [editing, setEditing] = useState<string | null>(null)
   const [editMode, setEditMode] = useState<'fixed'|'pct'>('fixed')
   const [editValue, setEditValue] = useState('')
@@ -50,8 +50,14 @@ export default function Budget() {
         </div>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16 }}>
-        {EXPENSE_CATS.map((cat, i) => {
+      {GROUP_ORDER.map(group => {
+        const groupCats = expenseCats.filter(c => c.group === group)
+        if (groupCats.length === 0) return null
+        return (
+          <div key={group}>
+            <div style={{ fontSize:11, fontWeight:700, color:'var(--text-dim)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:10, marginTop:4 }}>{GROUP_LABELS[group]}</div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16 }}>
+        {groupCats.map((cat, i) => {
           const spent = monthTxns.filter(t=>t.type==='expense'&&t.category===cat.id).reduce((s,t)=>s+t.amount,0)
           const limit = resolveLimit(budgets[cat.id], monthIncome)
           const pct   = limit > 0 ? (spent/limit)*100 : 0
@@ -116,7 +122,10 @@ export default function Budget() {
             </Card>
           )
         })}
-      </div>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }

@@ -2,7 +2,7 @@ const SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
 const DRIVE_BASE  = 'https://www.googleapis.com/drive/v3/files';
 const FOLDER_NAME = 'Artha';
 
-export type TabName = 'Transactions' | 'Budgets' | 'Goals' | 'Recurring' | 'NetWorth' | 'Settings';
+export type TabName = 'Transactions' | 'Budgets' | 'Goals' | 'Recurring' | 'NetWorth' | 'Settings' | 'CustomCategories';
 
 export const TAB_HEADERS: Record<TabName, string[]> = {
   Transactions: ['id', 'type', 'amount', 'category', 'description', 'date', 'notes', 'tags', 'recurringId', 'auto'],
@@ -10,7 +10,8 @@ export const TAB_HEADERS: Record<TabName, string[]> = {
   Goals:        ['id', 'name', 'target', 'current', 'deadline'],
   Recurring:    ['id', 'type', 'amount', 'category', 'description', 'dayOfMonth'],
   NetWorth:     ['id', 'name', 'type', 'value'],
-  Settings:     ['currency_code', 'currency_symbol', 'currency_locale', 'lastSyncedAt', 'dark_mode', 'theme_name'],
+  Settings:          ['currency_code', 'currency_symbol', 'currency_locale', 'lastSyncedAt', 'dark_mode', 'theme_name'],
+  CustomCategories:  ['id', 'label', 'color', 'txnType', 'group'],
 };
 
 async function sheetsRequest(
@@ -124,6 +125,9 @@ export async function writeTab(
   tab: TabName,
   rows: string[][],
 ): Promise<void> {
+  // Ensure the tab exists (handles spreadsheets created before this tab was added)
+  await ensureTab(accessToken, spreadsheetId, tab);
+
   const allRows = [TAB_HEADERS[tab], ...rows];
   const range = `${tab}!A1`;
   await sheetsRequest(
@@ -139,16 +143,41 @@ export async function writeTab(
   );
 }
 
+async function ensureTab(accessToken: string, spreadsheetId: string, tab: TabName): Promise<void> {
+  // Check if tab exists by trying a lightweight metadata read
+  const res = await fetch(
+    `${SHEETS_BASE}/${spreadsheetId}?fields=sheets.properties.title`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) return;
+  const meta = await res.json() as { sheets?: { properties: { title: string } }[] };
+  const exists = (meta.sheets ?? []).some(s => s.properties.title === tab);
+  if (exists) return;
+  // Add the missing sheet
+  await sheetsRequest(
+    'POST',
+    `${SHEETS_BASE}/${spreadsheetId}:batchUpdate`,
+    accessToken,
+    { requests: [{ addSheet: { properties: { title: tab } } }] },
+  );
+}
+
 export async function readTab(
   accessToken: string,
   spreadsheetId: string,
   tab: TabName,
 ): Promise<Record<string, string>[]> {
-  const data = await sheetsRequest(
-    'GET',
-    `${SHEETS_BASE}/${spreadsheetId}/values/${encodeURIComponent(tab)}`,
-    accessToken,
-  ) as { values?: string[][] };
+  let data: { values?: string[][] };
+  try {
+    data = await sheetsRequest(
+      'GET',
+      `${SHEETS_BASE}/${spreadsheetId}/values/${encodeURIComponent(tab)}`,
+      accessToken,
+    ) as { values?: string[][] };
+  } catch {
+    // Tab doesn't exist yet in this spreadsheet (e.g. added after initial creation)
+    return [];
+  }
   const rows = data.values ?? [];
   if (rows.length < 2) return [];
   const headers = rows[0];

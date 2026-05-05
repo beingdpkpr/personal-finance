@@ -5,16 +5,16 @@ export const MONTHS_FULL = [
 ];
 
 export const EXPENSE_CATS = [
-  { id: 'essentials',    label: 'Essentials',           color: '#5a9fff' },
-  { id: 'food',          label: 'Food & Dining',         color: '#f0b030' },
-  { id: 'transport',     label: 'Transport',             color: '#a07aff' },
-  { id: 'entertainment', label: 'Entertainment',         color: '#f05060' },
-  { id: 'shopping',      label: 'Shopping',              color: '#ff7eb3' },
-  { id: 'health',        label: 'Health',                color: '#2ed18a' },
-  { id: 'savings',       label: 'Savings & Investments', color: '#f0722a' },
-  { id: 'family',        label: 'Family & Commitments',  color: '#60d0e0' },
-  { id: 'other',         label: 'Other',                 color: '#8888aa' },
-] as const;
+  { id: 'essentials',    label: 'Essentials',           color: '#5a9fff', group: 'essentials' as const },
+  { id: 'food',          label: 'Food & Dining',         color: '#f0b030', group: 'essentials' as const },
+  { id: 'transport',     label: 'Transport',             color: '#a07aff', group: 'essentials' as const },
+  { id: 'health',        label: 'Health',                color: '#2ed18a', group: 'essentials' as const },
+  { id: 'family',        label: 'Family & Commitments',  color: '#60d0e0', group: 'family'     as const },
+  { id: 'savings',       label: 'Savings & Investments', color: '#f0722a', group: 'savings'    as const },
+  { id: 'entertainment', label: 'Entertainment',         color: '#f05060', group: 'wants'      as const },
+  { id: 'shopping',      label: 'Shopping',              color: '#ff7eb3', group: 'wants'      as const },
+  { id: 'other',         label: 'Other',                 color: '#8888aa', group: 'wants'      as const },
+];
 
 export const INCOME_CATS = [
   { id: 'salary',    label: 'Salary / Wages', color: '#2ed18a' },

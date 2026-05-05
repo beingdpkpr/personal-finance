@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { fmt } from '../lib/format'
-import { EXPENSE_CATS, INCOME_CATS, MONTHS } from '../constants/categories'
+import { MONTHS } from '../constants/categories'
 import Card from '../components/ui/Card'
 import StatCard from '../components/ui/StatCard'
 import AreaChart from '../components/charts/AreaChart'
@@ -21,7 +21,7 @@ function fmtShortDate(d: string): string {
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { txns, nw } = useFinanceContext()
+  const { txns, nw, expenseCats, incomeCats } = useFinanceContext()
 
   const now = new Date()
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
@@ -59,7 +59,7 @@ export default function Dashboard() {
     }
   })
 
-  const catSpend = EXPENSE_CATS.map(c => ({
+  const catSpend = expenseCats.map(c => ({
     label: c.label, color: c.color,
     amount: monthTxns.filter(t=>t.type==='expense'&&t.category===c.id).reduce((s,t)=>s+t.amount,0),
   })).filter(c => c.amount > 0)
@@ -139,8 +139,8 @@ export default function Dashboard() {
             <div style={{ display:'flex', flexDirection:'column' }}>
               {recentTxns.map((t) => {
                 const cat = t.type === 'income'
-                  ? INCOME_CATS.find(c => c.id === t.category)
-                  : EXPENSE_CATS.find(c => c.id === t.category)
+                  ? incomeCats.find(c => c.id === t.category)
+                  : expenseCats.find(c => c.id === t.category)
                 const color = cat?.color ?? '#888'
                 const initial = (cat?.label ?? t.category).slice(0,1).toUpperCase()
                 return (

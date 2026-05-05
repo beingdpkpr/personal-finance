@@ -1,6 +1,6 @@
 import {
   BudgetMap, Currency, CustomCategory, Goal, NetWorthData,
-  RecurringRule, SpendTypeMap, Transaction, UserStore,
+  RecurringRule, Transaction, UserStore,
 } from './data';
 
 const DEFAULT_CURRENCY: Currency = { code: 'INR', symbol: '₹', locale: 'en-IN' };
@@ -43,8 +43,6 @@ export const storage = {
   saveNetWorth: (user: string, d: NetWorthData) => p(set(`pf_nw_${user}`, d)),
   getCurrency:  (user: string)              => p(get<Currency>(`pf_currency_${user}`, DEFAULT_CURRENCY)),
   saveCurrency: (user: string, d: Currency) => p(set(`pf_currency_${user}`, d)),
-  getSpendTypeMap:  (user: string)                   => p(get<SpendTypeMap>(`pf_spendmap_${user}`, {})),
-  saveSpendTypeMap: (user: string, d: SpendTypeMap)  => p(set(`pf_spendmap_${user}`, d)),
   getCustomCats:  (user: string)                       => p(get<CustomCategory[]>(`pf_customcats_${user}`, [])),
   saveCustomCats: (user: string, d: CustomCategory[]) => p(set(`pf_customcats_${user}`, d)),
 };

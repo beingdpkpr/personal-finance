@@ -1,13 +1,13 @@
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { fmt } from '../lib/format'
-import { EXPENSE_CATS, MONTHS } from '../constants/categories'
+import { MONTHS } from '../constants/categories'
 import Card from '../components/ui/Card'
 import ProgressBar from '../components/ui/ProgressBar'
 import AreaChart from '../components/charts/AreaChart'
 import BarChart from '../components/charts/BarChart'
 
 export default function Analytics() {
-  const { txns } = useFinanceContext()
+  const { txns, expenseCats } = useFinanceContext()
   const now = new Date()
 
   // Last 6 months for area chart
@@ -33,7 +33,7 @@ export default function Analytics() {
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
   const monthExpTxns = txns.filter(t=>t.date.startsWith(thisMonth)&&t.type==='expense')
   const totalExp = monthExpTxns.reduce((s,t)=>s+t.amount,0)
-  const catBreakdown = EXPENSE_CATS.map(c => ({
+  const catBreakdown = expenseCats.map(c => ({
     ...c,
     amount: monthExpTxns.filter(t=>t.category===c.id).reduce((s,t)=>s+t.amount,0),
   })).filter(c=>c.amount>0).sort((a,b)=>b.amount-a.amount)

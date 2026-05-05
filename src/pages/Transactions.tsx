@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react'
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { useSearchParams } from 'react-router-dom'
 import { fmt } from '../lib/format'
-import { EXPENSE_CATS, INCOME_CATS } from '../constants/categories'
 import Card from '../components/ui/Card'
 import GooglePayImportModal from '../components/modals/GooglePayImportModal'
 
@@ -33,7 +32,7 @@ function Checkbox({ checked, indeterminate, onChange }: { checked: boolean; inde
 }
 
 export default function Transactions() {
-  const { txns, deleteTxn, deleteTxns, openAdd, openEdit, addTxn } = useFinanceContext()
+  const { txns, deleteTxn, deleteTxns, openAdd, openEdit, addTxn, expenseCats, incomeCats } = useFinanceContext()
   const [searchParams] = useSearchParams()
   const [search, setSearch] = useState(searchParams.get('q') ?? '')
   const [filter, setFilter] = useState<Filter>('all')
@@ -49,7 +48,7 @@ export default function Transactions() {
   useEffect(() => { setSelected(new Set()) }, [search, filter])
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const allCats = [...EXPENSE_CATS, ...INCOME_CATS]
+  const allCats = [...expenseCats, ...incomeCats]
   const getCatLabel = (id: string) => allCats.find(c => c.id === id)?.label ?? id
   const getCatColor = (id: string) => allCats.find(c => c.id === id)?.color ?? '#888'
 

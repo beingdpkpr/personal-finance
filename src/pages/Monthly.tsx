@@ -1,7 +1,7 @@
 ﻿import { useState } from 'react'
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { fmt } from '../lib/format'
-import { EXPENSE_CATS, INCOME_CATS, MONTHS, MONTHS_FULL } from '../constants/categories'
+import { MONTHS, MONTHS_FULL } from '../constants/categories'
 import Card from '../components/ui/Card'
 import ProgressBar from '../components/ui/ProgressBar'
 import BarChart from '../components/charts/BarChart'
@@ -34,7 +34,7 @@ function SavingsGauge({ rate }: { rate: number }) {
 }
 
 export default function Monthly() {
-  const { txns } = useFinanceContext()
+  const { txns, expenseCats, incomeCats } = useFinanceContext()
   const now = new Date()
   const [view, setView]         = useState<ViewMode>('monthly')
   const [selMonth, setSelMonth] = useState(now.getMonth())
@@ -48,11 +48,11 @@ export default function Monthly() {
   const savings   = income - expense
   const savingsRate = income > 0 ? Math.round((savings/income)*100) : 0
 
-  const incomeSources = INCOME_CATS.map(c => ({
+  const incomeSources = incomeCats.map(c => ({
     ...c, amount: monthTxns.filter(t=>t.type==='income'&&t.category===c.id).reduce((s,t)=>s+t.amount,0)
   })).filter(c=>c.amount>0)
 
-  const expenseBycat = EXPENSE_CATS.map(c => ({
+  const expenseBycat = expenseCats.map(c => ({
     ...c, amount: monthTxns.filter(t=>t.type==='expense'&&t.category===c.id).reduce((s,t)=>s+t.amount,0)
   })).filter(c=>c.amount>0).sort((a,b)=>b.amount-a.amount)
 

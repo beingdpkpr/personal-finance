@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useFinanceContext } from '../../hooks/FinanceContext'
-import { EXPENSE_CATS, INCOME_CATS } from '../../constants/categories'
-import { TxnType } from '../../lib/data'
+import { CatGroup, GROUP_LABELS, TxnType } from '../../lib/data'
 
 export default function AddTransactionModal() {
-  const { modalVisible, editItem, closeModal, addTxn, editTxn } = useFinanceContext()
+  const { modalVisible, editItem, closeModal, addTxn, editTxn, expenseCats, incomeCats } = useFinanceContext()
   const [type, setType]     = useState<TxnType>('expense')
   const [amount, setAmount] = useState('')
   const [cat, setCat]       = useState('')
@@ -26,7 +25,8 @@ export default function AddTransactionModal() {
 
   if (!modalVisible) return null
 
-  const cats = type === 'expense' ? EXPENSE_CATS : INCOME_CATS
+  const cats = type === 'expense' ? expenseCats : incomeCats
+  const GROUP_ORDER: CatGroup[] = ['essentials', 'family', 'savings', 'wants']
 
   function handleSave() {
     const amt = parseFloat(amount)
@@ -72,20 +72,45 @@ export default function AddTransactionModal() {
         <input value={amount} onChange={e => setAmount(e.target.value)} placeholder="Amount *" type="number" min="0" step="0.01" style={inputStyle} />
         <input value={date} onChange={e => setDate(e.target.value)} type="date" style={inputStyle} />
 
-        {/* Category grid */}
+        {/* Category picker */}
         <div>
           <div style={{ fontSize:12, color:'var(--text-dim)', marginBottom:8 }}>Category *</div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:6 }}>
-            {cats.map(c => (
-              <button key={c.id} onClick={() => setCat(c.id)} style={{
-                padding:'7px 4px', borderRadius:10, cursor:'pointer', fontSize:11, fontWeight: cat===c.id?600:400,
-                border: cat===c.id?`1px solid ${c.color}`:'1px solid var(--border)',
-                background: cat===c.id?`${c.color}22`:'var(--surface2)',
-                color: cat===c.id?c.color:'var(--text-dim)',
-                transition:'all 0.15s',
-              }}>{c.label}</button>
-            ))}
-          </div>
+          {type === 'expense' ? (
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {GROUP_ORDER.map(group => {
+                const groupCats = expenseCats.filter(c => c.group === group)
+                if (groupCats.length === 0) return null
+                return (
+                  <div key={group}>
+                    <div style={{ fontSize:10, fontWeight:600, color:'var(--text-dim)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:5 }}>{GROUP_LABELS[group]}</div>
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
+                      {groupCats.map(c => (
+                        <button key={c.id} onClick={() => setCat(c.id)} style={{
+                          padding:'5px 11px', borderRadius:20, cursor:'pointer', fontSize:11, fontWeight: cat===c.id?600:400,
+                          border: cat===c.id?`1px solid ${c.color}`:'1px solid var(--border)',
+                          background: cat===c.id?`${c.color}22`:'var(--surface2)',
+                          color: cat===c.id?c.color:'var(--text-dim)',
+                          transition:'all 0.12s',
+                        }}>{c.label}</button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
+              {cats.map(c => (
+                <button key={c.id} onClick={() => setCat(c.id)} style={{
+                  padding:'5px 11px', borderRadius:20, cursor:'pointer', fontSize:11, fontWeight: cat===c.id?600:400,
+                  border: cat===c.id?`1px solid ${c.color}`:'1px solid var(--border)',
+                  background: cat===c.id?`${c.color}22`:'var(--surface2)',
+                  color: cat===c.id?c.color:'var(--text-dim)',
+                  transition:'all 0.12s',
+                }}>{c.label}</button>
+              ))}
+            </div>
+          )}
         </div>
 
         <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes (optional)" style={inputStyle} />

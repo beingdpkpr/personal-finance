@@ -3,7 +3,7 @@ import { writeTab, readTab, createSpreadsheet, verifySpreadsheet, findSpreadshee
 import { saveSpreadsheetId } from './google-auth';
 import {
   Transaction, BudgetMap, BudgetEntry, Goal,
-  RecurringRule, NetWorthItem, Currency,
+  RecurringRule, NetWorthItem, Currency, CustomCategory, CatGroup,
 } from './data';
 
 // ── Serializers ──────────────────────────────────────────────────────────────
@@ -85,6 +85,21 @@ function rowToNwItem(r: Record<string, string>): { item: NetWorthItem; type: 'as
   };
 }
 
+function customCatToRow(c: CustomCategory): string[] {
+  return [c.id, c.label, c.color, c.txnType, c.group];
+}
+
+function rowToCustomCat(r: Record<string, string>): CustomCategory | null {
+  if (!r.id || !r.label || !r.txnType || !r.group) return null;
+  return {
+    id:      r.id,
+    label:   r.label,
+    color:   r.color || '#8888aa',
+    txnType: r.txnType as CustomCategory['txnType'],
+    group:   r.group as CatGroup,
+  };
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export async function ensureSpreadsheet(
@@ -115,13 +130,14 @@ export async function pushAll(
   spreadsheetId: string,
   userId: string,
 ): Promise<void> {
-  const [txns, budgets, goals, recurring, nw, currency] = await Promise.all([
+  const [txns, budgets, goals, recurring, nw, currency, customCats] = await Promise.all([
     storage.getTxns(userId),
     storage.getBudgets(userId),
     storage.getGoals(userId),
     storage.getRecurring(userId),
     storage.getNetWorth(userId),
     storage.getCurrency(userId),
+    storage.getCustomCats(userId),
   ]);
 
   const budgetRows = Object.entries(budgets as BudgetMap).map(([catId, entry]) =>
@@ -138,6 +154,7 @@ export async function pushAll(
     writeTab(accessToken, spreadsheetId, 'Goals', goals.map(goalToRow)),
     writeTab(accessToken, spreadsheetId, 'Recurring', recurring.map(recurringToRow)),
     writeTab(accessToken, spreadsheetId, 'NetWorth', nwRows),
+    writeTab(accessToken, spreadsheetId, 'CustomCategories', customCats.map(customCatToRow)),
     writeTab(accessToken, spreadsheetId, 'Settings', [
       [
         currency.code, currency.symbol, currency.locale, new Date().toISOString(),
@@ -159,16 +176,18 @@ export async function pullAll(
   recurring: RecurringRule[];
   nw: { assets: NetWorthItem[]; liabilities: NetWorthItem[] };
   currency: Currency;
+  customCats: CustomCategory[];
   prefs: { darkMode: boolean; themeName: string };
 }> {
   const DEFAULT_CURRENCY: Currency = { code: 'INR', symbol: '₹', locale: 'en-IN' };
 
-  const [txnRows, budgetRows, goalRows, recurringRows, nwRows, settingsRows] = await Promise.all([
+  const [txnRows, budgetRows, goalRows, recurringRows, nwRows, customCatRows, settingsRows] = await Promise.all([
     readTab(accessToken, spreadsheetId, 'Transactions'),
     readTab(accessToken, spreadsheetId, 'Budgets'),
     readTab(accessToken, spreadsheetId, 'Goals'),
     readTab(accessToken, spreadsheetId, 'Recurring'),
     readTab(accessToken, spreadsheetId, 'NetWorth'),
+    readTab(accessToken, spreadsheetId, 'CustomCategories'),
     readTab(accessToken, spreadsheetId, 'Settings'),
   ]);
 
@@ -195,6 +214,7 @@ export async function pullAll(
       liabilities: nwItems.filter(x => x.type === 'liability').map(x => x.item),
     },
     currency,
+    customCats: customCatRows.map(rowToCustomCat).filter((c): c is CustomCategory => c !== null),
     prefs: {
       darkMode:  (s0?.dark_mode ?? 'true') !== 'false',
       themeName,

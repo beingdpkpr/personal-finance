@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  BudgetMap, Currency, CustomCategory, Goal, NetWorthData,
-  RecurringRule, SpendTypeMap, Transaction, uid,
+  BudgetMap, Currency, CustomCategory, ExpenseCat, Goal, IncomeCat, NetWorthData,
+  RecurringRule, Transaction, uid,
 } from '../lib/data';
+import { EXPENSE_CATS, INCOME_CATS } from '../constants/categories';
 import { storage } from '../lib/storage';
 import { setCurrency } from '../lib/format';
 import { applyRecurring } from '../lib/recurring';
@@ -28,7 +29,6 @@ export interface FinanceState {
   nw:           NetWorthData;
   recurring:    RecurringRule[];
   currency:     Currency;
-  spendTypeMap: SpendTypeMap;
   googleSignIn: (accessToken: string, expiresIn: number) => Promise<string | null>;
   logout:       () => Promise<void>;
   loadDemoData: () => Promise<void>;
@@ -41,9 +41,10 @@ export interface FinanceState {
   setNw:        (n: NetWorthData) => void;
   setRecurring: (r: RecurringRule[]) => void;
   setCurrencyPref: (c: Currency) => void;
-  setSpendTypeMap: (m: SpendTypeMap) => void;
   customCats:   CustomCategory[];
   setCustomCats:(c: CustomCategory[]) => void;
+  expenseCats:  ExpenseCat[];
+  incomeCats:   IncomeCat[];
 }
 
 export function useFinance(): FinanceState {
@@ -58,7 +59,6 @@ export function useFinance(): FinanceState {
   const [nw, setNwState]              = useState<NetWorthData>({ assets: [], liabilities: [] });
   const [recurring, setRecurringState]= useState<RecurringRule[]>([]);
   const [currency, setCurrencyState]  = useState<Currency>(DEFAULT_CURRENCY);
-  const [spendTypeMap, setSpendTypeMapState] = useState<SpendTypeMap>({});
   const [customCats, setCustomCatsState]     = useState<CustomCategory[]>([]);
   const [syncError, setSyncError]            = useState<string | null>(null);
   const [sessionNote, setSessionNote]        = useState<string | null>(null);
@@ -87,14 +87,13 @@ export function useFinance(): FinanceState {
   }, []);
 
 async function loadUser(userId: string, userEmail?: string | null, userName?: string | null, userPicture?: string | null) {
-    const [t, b, r, g, n, c, sm, cc] = await Promise.all([
+    const [t, b, r, g, n, c, cc] = await Promise.all([
       storage.getTxns(userId),
       storage.getBudgets(userId),
       storage.getRecurring(userId),
       storage.getGoals(userId),
       storage.getNetWorth(userId),
       storage.getCurrency(userId),
-      storage.getSpendTypeMap(userId),
       storage.getCustomCats(userId),
     ]);
     const applied = applyRecurring(r, t);
@@ -109,7 +108,6 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
     setGoalsState(g);
     setNwState(n);
     setCurrencyState(c);
-    setSpendTypeMapState(sm);
     setCustomCatsState(cc);
   }
 
@@ -128,7 +126,6 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
   useEffect(() => { if (user) { storage.saveGoals(user, goals);         scheduleSync(); } }, [goals,     user, scheduleSync]);
   useEffect(() => { if (user) { storage.saveNetWorth(user, nw);         scheduleSync(); } }, [nw,        user, scheduleSync]);
   useEffect(() => { if (user) { storage.saveCurrency(user, currency);   scheduleSync(); } }, [currency,  user, scheduleSync]);
-  useEffect(() => { if (user) { storage.saveSpendTypeMap(user, spendTypeMap); } }, [spendTypeMap, user]);
   useEffect(() => { if (user) { storage.saveCustomCats(user, customCats); } }, [customCats, user]);
 
   const googleSignIn = useCallback(async (accessToken: string, expiresIn: number): Promise<string | null> => {
@@ -180,6 +177,7 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
           storage.saveRecurring(info.sub, data.recurring),
           storage.saveNetWorth(info.sub, data.nw),
           storage.saveCurrency(info.sub, data.currency),
+          storage.saveCustomCats(info.sub, data.customCats),
         ]);
         // Restore theme preferences and notify ThemeContext
         localStorage.setItem('pf_dark_mode', String(data.prefs.darkMode));
@@ -208,7 +206,6 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
     setGoalsState([]);
     setNwState({ assets: [], liabilities: [] });
     setCurrencyState(DEFAULT_CURRENCY);
-    setSpendTypeMapState({});
     setCustomCatsState([]);
   }, []);
 
@@ -221,7 +218,6 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
   const setNw       = useCallback((n: NetWorthData) => setNwState(n), []);
   const setRecurring= useCallback((r: RecurringRule[]) => setRecurringState(r), []);
   const setCurrencyPref = useCallback((c: Currency) => { setCurrency(c); setCurrencyState(c); }, []);
-  const setSpendTypeMap = useCallback((m: SpendTypeMap) => setSpendTypeMapState(m), []);
   const setCustomCats   = useCallback((c: CustomCategory[]) => setCustomCatsState(c), []);
 
   const loadDemoData = useCallback(async () => {
@@ -326,15 +322,25 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
     setGoalsState(DEMO_GOALS);
     setNwState(DEMO_NW);
     setCurrencyState(DEFAULT_CURRENCY);
-    setSpendTypeMapState({});
     setCustomCatsState([]);
   }, []);
 
+  const expenseCats = useMemo<ExpenseCat[]>(() => [
+    ...EXPENSE_CATS.map(c => ({ ...c, isCustom: false })),
+    ...customCats.filter(c => c.txnType === 'expense').map(c => ({ id: c.id, label: c.label, color: c.color, group: c.group, isCustom: true })),
+  ], [customCats]);
+
+  const incomeCats = useMemo<IncomeCat[]>(() => [
+    ...INCOME_CATS.map(c => ({ ...c, isCustom: false })),
+    ...customCats.filter(c => c.txnType === 'income').map(c => ({ id: c.id, label: c.label, color: c.color, isCustom: true })),
+  ], [customCats]);
+
   return {
-    user, email, name, picture, loading, txns, budgets, goals, nw, recurring, currency, spendTypeMap, customCats,
+    user, email, name, picture, loading, txns, budgets, goals, nw, recurring, currency, customCats,
     syncError, sessionNote,
     googleSignIn, logout, loadDemoData,
     addTxn, editTxn, deleteTxn, deleteTxns,
-    setBudgets, setGoals, setNw, setRecurring, setCurrencyPref, setSpendTypeMap, setCustomCats,
+    setBudgets, setGoals, setNw, setRecurring, setCurrencyPref, setCustomCats,
+    expenseCats, incomeCats,
   };
 }

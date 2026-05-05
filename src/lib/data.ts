@@ -1,34 +1,35 @@
 export type TxnType = 'expense' | 'income';
 
-export type SpendType = 'essentials' | 'wants' | 'investments' | 'family';
+export type CatGroup = 'essentials' | 'family' | 'savings' | 'wants';
 
-export const SPEND_TYPES: { id: SpendType; label: string; color: string }[] = [
-  { id: 'essentials',  label: 'Essentials',          color: '#5a9fff' },
-  { id: 'wants',       label: 'Wants',                color: '#f05060' },
-  { id: 'investments', label: 'Savings & Investments',color: '#2ed18a' },
-  { id: 'family',      label: 'Family',               color: '#60d0e0' },
-];
-
-// Default expense category → spend type mapping
-export const DEFAULT_SPEND_MAP: Record<string, SpendType> = {
-  essentials:    'essentials',
-  food:          'essentials',
-  transport:     'essentials',
-  health:        'essentials',
-  entertainment: 'wants',
-  shopping:      'wants',
-  other:         'wants',
-  savings:       'investments',
-  family:        'family',
+export const GROUP_LABELS: Record<CatGroup, string> = {
+  essentials: 'Essentials',
+  family:     'Family',
+  savings:    'Savings',
+  wants:      'Wants',
 };
 
-export type SpendTypeMap = Record<string, SpendType>;
+export interface ExpenseCat {
+  id:       string;
+  label:    string;
+  color:    string;
+  group:    CatGroup;
+  isCustom?: boolean;
+}
+
+export interface IncomeCat {
+  id:       string;
+  label:    string;
+  color:    string;
+  isCustom?: boolean;
+}
 
 export interface CustomCategory {
   id:      string;
   label:   string;
   color:   string;
   txnType: 'expense' | 'income';
+  group:   CatGroup;
 }
 
 const CAT_COLORS = ['#f0722a','#5a9fff','#2ed18a','#a07aff','#f05060','#f0b030','#60d0e0','#ff7eb3','#8888aa'];

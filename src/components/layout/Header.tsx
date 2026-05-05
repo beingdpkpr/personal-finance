@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useFinanceContext } from '../../hooks/FinanceContext'
 import { fmt } from '../../lib/format'
 import { resolveLimit } from '../../lib/data'
-import { EXPENSE_CATS } from '../../constants/categories'
 import SettingsModal from './SettingsModal'
 
 const TITLES: Record<string, string> = {
@@ -17,7 +16,7 @@ interface Props { onToggleSidebar: () => void }
 export default function Header({ onToggleSidebar }: Props) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const { name, picture, txns, budgets } = useFinanceContext()
+  const { name, picture, txns, budgets, expenseCats } = useFinanceContext()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [searchVal, setSearchVal] = useState('')
   const [notifOpen, setNotifOpen] = useState(false)
@@ -32,7 +31,7 @@ export default function Header({ onToggleSidebar }: Props) {
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const monthTxns = txns.filter(t => t.date.startsWith(thisMonth))
   const monthIncome = monthTxns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-  const alerts = EXPENSE_CATS.map(c => {
+  const alerts = expenseCats.map(c => {
     const spent = monthTxns.filter(t => t.type === 'expense' && t.category === c.id).reduce((s, t) => s + t.amount, 0)
     const limit = resolveLimit(budgets[c.id], monthIncome)
     const pct = limit > 0 ? (spent / limit) * 100 : 0
