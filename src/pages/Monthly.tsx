@@ -1,7 +1,8 @@
-﻿import { useState } from 'react'
+﻿import { useState, useMemo } from 'react'
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { fmt } from '../lib/format'
 import { MONTHS, MONTHS_FULL } from '../constants/categories'
+import { CatGroup, GROUP_LABELS } from '../lib/data'
 import Card from '../components/ui/Card'
 import ProgressBar from '../components/ui/ProgressBar'
 import BarChart from '../components/charts/BarChart'
@@ -36,9 +37,18 @@ function SavingsGauge({ rate }: { rate: number }) {
 export default function Monthly() {
   const { txns, expenseCats, incomeCats } = useFinanceContext()
   const now = new Date()
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
+
+  // Default to most recent month that has transactions, capped at current month
+  const latestTxnMonth = useMemo(() => {
+    const months = [...new Set(txns.map(t => t.date.slice(0,7)))].filter(m => m <= currentMonthKey).sort()
+    return months.length > 0 ? months[months.length - 1] : currentMonthKey
+  }, [txns, currentMonthKey])
+  const [latestYear, latestMonthIdx] = latestTxnMonth.split('-').map(Number)
+
   const [view, setView]         = useState<ViewMode>('monthly')
-  const [selMonth, setSelMonth] = useState(now.getMonth())
-  const [selYear, setSelYear]   = useState(now.getFullYear())
+  const [selMonth, setSelMonth] = useState(latestMonthIdx - 1)
+  const [selYear, setSelYear]   = useState(latestYear)
 
   /* â”€â”€â”€â”€â”€â”€â”€â”€ MONTHLY view data â”€â”€â”€â”€â”€â”€â”€â”€ */
   const monthKey  = `${selYear}-${String(selMonth+1).padStart(2,'0')}`
@@ -55,6 +65,18 @@ export default function Monthly() {
   const expenseBycat = expenseCats.map(c => ({
     ...c, amount: monthTxns.filter(t=>t.type==='expense'&&t.category===c.id).reduce((s,t)=>s+t.amount,0)
   })).filter(c=>c.amount>0).sort((a,b)=>b.amount-a.amount)
+
+  const GROUP_ORDER: CatGroup[] = ['essentials', 'family', 'savings', 'wants']
+  const GROUP_COLORS: Record<CatGroup, string> = {
+    essentials: '#5a9fff', family: '#60d0e0', savings: '#2ed18a', wants: '#f05060',
+  }
+  const spendingByGroup = GROUP_ORDER.map(group => {
+    const cats = expenseCats.filter(c => c.group === group)
+    const amount = cats.reduce((s, c) => {
+      return s + monthTxns.filter(t => t.type==='expense' && t.category===c.id).reduce((ss,t)=>ss+t.amount,0)
+    }, 0)
+    return { group, label: GROUP_LABELS[group], color: GROUP_COLORS[group], amount, cats }
+  }).filter(g => g.amount > 0)
 
   /* 6-month summary (last 6 months ending at selected month) */
   const sixMonths = Array.from({length:6}, (_,i) => {
@@ -176,24 +198,48 @@ export default function Monthly() {
             </Card>
 
             <Card>
-              <div style={{ fontSize:14, fontWeight:600, color:'var(--text)', marginBottom:14 }}>Spending Breakdown</div>
-              {expenseBycat.length === 0 ? (
+              <div style={{ fontSize:14, fontWeight:600, color:'var(--text)', marginBottom:14 }}>Spending by Group</div>
+              {spendingByGroup.length === 0 ? (
                 <div style={{ color:'var(--text-dim)', fontSize:13 }}>No expenses in {MONTHS_FULL[selMonth]}</div>
               ) : (
-                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                  {expenseBycat.map(c => {
-                    const pct = expense > 0 ? (c.amount/expense)*100 : 0
+                <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                  {spendingByGroup.map(g => {
+                    const groupPct = expense > 0 ? (g.amount / expense) * 100 : 0
+                    const catRows = expenseBycat.filter(c => c.group === g.group)
                     return (
-                      <div key={c.id} style={{ display:'grid', gridTemplateColumns:'130px 1fr 70px 44px', gap:10, alignItems:'center' }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:7 }}>
-                          <span style={{ width:9, height:9, borderRadius:'50%', background:c.color, flexShrink:0 }}></span>
-                          <span style={{ fontSize:12, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.label}</span>
+                      <div key={g.group}>
+                        {/* Group header row */}
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:5 }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:7 }}>
+                            <span style={{ width:10, height:10, borderRadius:3, background:g.color, flexShrink:0 }}></span>
+                            <span style={{ fontSize:13, fontWeight:700, color:'var(--text)' }}>{g.label}</span>
+                          </div>
+                          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                            <span style={{ fontSize:12, fontFamily:'DM Mono', color:'var(--text)' }}>{fmt(g.amount)}</span>
+                            <span style={{ fontSize:11, color:'var(--text-dim)', minWidth:28, textAlign:'right' }}>{Math.round(groupPct)}%</span>
+                          </div>
                         </div>
-                        <div style={{ height:7, borderRadius:4, background:'var(--border)', overflow:'hidden' }}>
-                          <div style={{ height:'100%', borderRadius:4, background:c.color, width:`${pct}%`, transition:'width 0.8s ease' }}></div>
-                        </div>
-                        <span style={{ fontSize:12, fontFamily:'DM Mono', color:'var(--text)', textAlign:'right' }}>{fmt(c.amount)}</span>
-                        <span style={{ fontSize:11, color:'var(--text-dim)', textAlign:'right' }}>{Math.round(pct)}%</span>
+                        <ProgressBar pct={groupPct} color={g.color} height={6} />
+                        {/* Sub-category rows */}
+                        {catRows.length > 0 && (
+                          <div style={{ display:'flex', flexDirection:'column', gap:4, marginTop:7, paddingLeft:17 }}>
+                            {catRows.map(c => {
+                              const pct = expense > 0 ? (c.amount/expense)*100 : 0
+                              return (
+                                <div key={c.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                                    <span style={{ width:6, height:6, borderRadius:'50%', background:c.color, flexShrink:0 }}></span>
+                                    <span style={{ fontSize:11, color:'var(--text-dim)' }}>{c.label}</span>
+                                  </div>
+                                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                                    <span style={{ fontSize:11, fontFamily:'DM Mono', color:'var(--text-dim)' }}>{fmt(c.amount)}</span>
+                                    <span style={{ fontSize:10, color:'var(--text-dim)', minWidth:28, textAlign:'right' }}>{Math.round(pct)}%</span>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
                       </div>
                     )
                   })}

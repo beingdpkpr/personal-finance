@@ -10,7 +10,7 @@ import {
 
 function txnToRow(t: Transaction): string[] {
   return [
-    t.id, t.type, String(t.amount), t.category, t.description, t.date,
+    t.id, t.type, String(t.amount), t.category, t.subCategory ?? '', t.description, t.date,
     t.notes ?? '', JSON.stringify(t.tags ?? []), t.recurringId ?? '', t.auto ? '1' : '0',
   ];
 }
@@ -30,6 +30,7 @@ function rowToTxn(r: Record<string, string>): Transaction {
     type: r.type as Transaction['type'],
     amount: Number(r.amount),
     category: r.category,
+    subCategory: r.subCategory || undefined,
     description: r.description,
     date: r.date,
     notes: r.notes || undefined,

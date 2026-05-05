@@ -101,9 +101,21 @@ export default function Transactions() {
       const lines = text.trim().split('\n').slice(1)
       lines.forEach(line => {
         const cols = line.split(',').map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"'))
-        const [date, description, category, type, amount] = cols
+        const [date, description, category, type, amount, rawNotes] = cols
         if (date && description && category && type && amount) {
-          addTxn({ date, description, category, type: type as 'expense' | 'income', amount: parseFloat(amount) || 0 })
+          let subCategory: string | undefined
+          let notes: string | undefined
+          if (rawNotes) {
+            const match = rawNotes.match(/subcat:([^|;]+)/)
+            if (match) {
+              subCategory = match[1].trim() || undefined
+              const rest = rawNotes.replace(/subcat:[^|;]*/, '').replace(/^[|;\s]+/, '').trim()
+              notes = rest || undefined
+            } else {
+              notes = rawNotes || undefined
+            }
+          }
+          addTxn({ date, description, category, type: type as 'expense' | 'income', amount: parseFloat(amount) || 0, subCategory, notes })
         }
       })
     }
@@ -253,6 +265,7 @@ export default function Transactions() {
                   <Checkbox checked={isSel} onChange={() => toggleRow(t.id)} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.description}</div>
+                    {t.subCategory && <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 1 }}>{t.subCategory}</div>}
                     {t.tags?.length ? <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 1 }}>{t.tags.join(' · ')}</div> : null}
                   </div>
                   <div style={{ fontSize: 11, padding: '3px 8px', borderRadius: 20, background: `${getCatColor(t.category)}22`, color: getCatColor(t.category), fontWeight: 600, width: 'fit-content', whiteSpace: 'nowrap' }}>

@@ -4,21 +4,23 @@ import { CatGroup, GROUP_LABELS, TxnType } from '../../lib/data'
 
 export default function AddTransactionModal() {
   const { modalVisible, editItem, closeModal, addTxn, editTxn, expenseCats, incomeCats } = useFinanceContext()
-  const [type, setType]     = useState<TxnType>('expense')
-  const [amount, setAmount] = useState('')
-  const [cat, setCat]       = useState('')
-  const [desc, setDesc]     = useState('')
-  const [date, setDate]     = useState(new Date().toISOString().slice(0, 10))
-  const [notes, setNotes]   = useState('')
-  const [tags, setTags]     = useState('')
+  const [type, setType]         = useState<TxnType>('expense')
+  const [amount, setAmount]     = useState('')
+  const [cat, setCat]           = useState('')
+  const [subCat, setSubCat]     = useState('')
+  const [desc, setDesc]         = useState('')
+  const [date, setDate]         = useState(new Date().toISOString().slice(0, 10))
+  const [notes, setNotes]       = useState('')
+  const [tags, setTags]         = useState('')
 
   useEffect(() => {
     if (editItem) {
       setType(editItem.type); setAmount(String(editItem.amount)); setCat(editItem.category)
+      setSubCat(editItem.subCategory ?? '')
       setDesc(editItem.description); setDate(editItem.date)
       setNotes(editItem.notes ?? ''); setTags((editItem.tags ?? []).join(', '))
     } else {
-      setType('expense'); setAmount(''); setCat(''); setDesc('')
+      setType('expense'); setAmount(''); setCat(''); setSubCat(''); setDesc('')
       setDate(new Date().toISOString().slice(0, 10)); setNotes(''); setTags('')
     }
   }, [editItem, modalVisible])
@@ -32,7 +34,8 @@ export default function AddTransactionModal() {
     const amt = parseFloat(amount)
     if (!amt || !cat || !desc) return
     const txn = {
-      type, amount: amt, category: cat, description: desc, date,
+      type, amount: amt, category: cat, subCategory: subCat.trim() || undefined,
+      description: desc, date,
       notes: notes || undefined,
       tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
     }
@@ -114,6 +117,7 @@ export default function AddTransactionModal() {
         </div>
 
         <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes (optional)" style={inputStyle} />
+        <input value={subCat} onChange={e => setSubCat(e.target.value)} placeholder="Sub-category (optional, e.g. SIP, Rent, Groceries)" style={inputStyle} />
         <input value={tags} onChange={e => setTags(e.target.value)} placeholder="Tags, comma separated" style={inputStyle} />
 
         <div style={{ display:'flex', gap:8, justifyContent:'flex-end', marginTop:4 }}>

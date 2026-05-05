@@ -5,7 +5,7 @@ const FOLDER_NAME = 'Artha';
 export type TabName = 'Transactions' | 'Budgets' | 'Goals' | 'Recurring' | 'NetWorth' | 'Settings' | 'CustomCategories';
 
 export const TAB_HEADERS: Record<TabName, string[]> = {
-  Transactions: ['id', 'type', 'amount', 'category', 'description', 'date', 'notes', 'tags', 'recurringId', 'auto'],
+  Transactions: ['id', 'type', 'amount', 'category', 'subCategory', 'description', 'date', 'notes', 'tags', 'recurringId', 'auto'],
   Budgets:      ['catId', 'mode', 'value'],
   Goals:        ['id', 'name', 'target', 'current', 'deadline'],
   Recurring:    ['id', 'type', 'amount', 'category', 'description', 'dayOfMonth'],

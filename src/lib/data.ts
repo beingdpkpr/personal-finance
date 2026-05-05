@@ -42,6 +42,7 @@ export interface Transaction {
   type: TxnType;
   amount: number;
   category: string;
+  subCategory?: string;
   description: string;
   date: string;         // 'YYYY-MM-DD'
   notes?: string;
