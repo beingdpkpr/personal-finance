@@ -29,8 +29,8 @@ export default function Sidebar({ collapsed }: Props) {
       flexShrink: 0,
     }}>
       <div style={{ padding: collapsed ? '20px 0' : '20px 16px', display:'flex', alignItems:'center', gap:10, justifyContent: collapsed?'center':'flex-start', borderBottom:'1px solid var(--border)' }}>
-        <div style={{ width:34, height:34, borderRadius:10, background:'linear-gradient(135deg, var(--accent-mid), var(--accent))', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, color:'#fff', fontWeight:700, flexShrink:0, boxShadow:'0 4px 16px var(--accent-glow)' }}>₿</div>
-        {!collapsed && <span style={{ fontSize:16, fontWeight:700, color:'var(--text)', whiteSpace:'nowrap' }}>Fintrack</span>}
+        <div style={{ width:34, height:34, borderRadius:10, background:'linear-gradient(135deg, var(--accent-mid), var(--accent))', display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, color:'#fff', fontWeight:800, flexShrink:0, boxShadow:'0 4px 16px var(--accent-glow)', fontFamily:'DM Sans, sans-serif', letterSpacing:'-0.02em' }}>A</div>
+        {!collapsed && <span style={{ fontSize:16, fontWeight:700, color:'var(--text)', whiteSpace:'nowrap', letterSpacing:'-0.01em' }}>Artha</span>}
       </div>
 
       <nav style={{ flex:1, padding:'12px 8px', display:'flex', flexDirection:'column', gap:2 }}>

@@ -34,7 +34,7 @@ async function sheetsRequest(
 
 export async function createSpreadsheet(accessToken: string, email: string): Promise<string> {
   const body = {
-    properties: { title: `Personal Finance - ${email}` },
+    properties: { title: `Artha - ${email}` },
     sheets: (Object.keys(TAB_HEADERS) as TabName[]).map(title => ({
       properties: { title },
     })),

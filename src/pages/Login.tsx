@@ -41,13 +41,13 @@ export default function Login() {
 
       <div style={{ position:'relative', width:'100%', maxWidth:400, background:'rgba(255,255,255,0.84)', borderRadius:24, padding:32, display:'flex', flexDirection:'column', gap:20, boxShadow:'0 8px 32px rgba(0,0,0,0.12)' }}>
         {/* Logo */}
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <div style={{ width:10, height:10, borderRadius:5, background:'#7c6ef5' }} />
-          <span style={{ fontSize:18, fontWeight:800, color:'#0d1030' }}>Finance</span>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <div style={{ width:32, height:32, borderRadius:9, background:'linear-gradient(135deg, #6d5ce6, #7c6ef5)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, color:'#fff', fontWeight:800, fontFamily:'DM Sans, sans-serif', letterSpacing:'-0.02em', boxShadow:'0 4px 12px #7c6ef540' }}>A</div>
+          <span style={{ fontSize:20, fontWeight:800, color:'#0d1030', letterSpacing:'-0.02em' }}>Artha</span>
         </div>
 
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-          <h1 style={{ fontSize:30, fontWeight:800, color:'#0d1030', lineHeight:1.2 }}>Take control<br/>of your finances</h1>
+          <h1 style={{ fontSize:30, fontWeight:800, color:'#0d1030', lineHeight:1.2 }}>Your wealth,<br/>your purpose</h1>
           <p style={{ fontSize:14, color:'#8891b0', lineHeight:1.6 }}>Track expenses, plan budgets, and stay on top of every transaction.</p>
         </div>
 
