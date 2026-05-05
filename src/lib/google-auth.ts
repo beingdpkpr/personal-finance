@@ -77,8 +77,8 @@ const SCOPES = [
 
 export function openGoogleOAuthPopup(): Promise<{ accessToken: string; expiresIn: number }> {
   return new Promise((resolve, reject) => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
-    const redirectUri = import.meta.env.VITE_REDIRECT_URI as string;
+    const clientId   = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
+    const redirectUri = `${window.location.origin}/auth/callback`;
     const url = `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${encodeURIComponent(clientId)}&` +
       `redirect_uri=${encodeURIComponent(redirectUri)}&` +
@@ -89,23 +89,26 @@ export function openGoogleOAuthPopup(): Promise<{ accessToken: string; expiresIn
     const popup = window.open(url, 'google-auth', 'width=500,height=620,left=200,top=100');
     if (!popup) { reject(new Error('Popup blocked. Allow popups for this site.')); return; }
 
-    const timer = setInterval(() => {
-      try {
-        const href = popup.location.href;
-        if (href.includes('access_token')) {
-          clearInterval(timer);
-          popup.close();
-          const hash = new URL(href).hash.slice(1);
-          const params = new URLSearchParams(hash);
-          const accessToken = params.get('access_token');
-          const expiresIn   = parseInt(params.get('expires_in') ?? '3600', 10);
-          if (accessToken) resolve({ accessToken, expiresIn });
-          else reject(new Error('No access token in redirect'));
-        }
-        if (popup.closed) { clearInterval(timer); reject(new Error('Auth popup closed')); }
-      } catch {
-        // cross-origin — still on Google's page, keep polling
+    function onMessage(e: MessageEvent) {
+      if (e.origin !== window.location.origin) return;
+      if (e.data?.type === 'google-oauth') {
+        cleanup();
+        resolve({ accessToken: e.data.accessToken, expiresIn: e.data.expiresIn });
+      } else if (e.data?.type === 'google-oauth-error') {
+        cleanup();
+        reject(new Error(e.data.error ?? 'Google sign-in failed'));
       }
-    }, 300);
+    }
+
+    const closedTimer = setInterval(() => {
+      if (popup.closed) { cleanup(); reject(new Error('Auth popup closed')); }
+    }, 500);
+
+    function cleanup() {
+      clearInterval(closedTimer);
+      window.removeEventListener('message', onMessage);
+    }
+
+    window.addEventListener('message', onMessage);
   });
 }
