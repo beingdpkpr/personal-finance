@@ -175,6 +175,10 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
           storage.saveNetWorth(info.sub, data.nw),
           storage.saveCurrency(info.sub, data.currency),
         ]);
+        // Restore theme preferences and notify ThemeContext
+        localStorage.setItem('pf_dark_mode', String(data.prefs.darkMode));
+        localStorage.setItem('pf_theme_name', data.prefs.themeName);
+        window.dispatchEvent(new CustomEvent('artha:theme-restored'));
         if (!migrated) await setMigrated();
       }
 

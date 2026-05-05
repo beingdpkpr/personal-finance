@@ -139,7 +139,11 @@ export async function pushAll(
     writeTab(accessToken, spreadsheetId, 'Recurring', recurring.map(recurringToRow)),
     writeTab(accessToken, spreadsheetId, 'NetWorth', nwRows),
     writeTab(accessToken, spreadsheetId, 'Settings', [
-      [currency.code, currency.symbol, currency.locale, new Date().toISOString()],
+      [
+        currency.code, currency.symbol, currency.locale, new Date().toISOString(),
+        localStorage.getItem('pf_dark_mode') ?? 'true',
+        localStorage.getItem('pf_theme_name') ?? 'violet',
+      ],
     ]),
   ]);
 }
@@ -155,6 +159,7 @@ export async function pullAll(
   recurring: RecurringRule[];
   nw: { assets: NetWorthItem[]; liabilities: NetWorthItem[] };
   currency: Currency;
+  prefs: { darkMode: boolean; themeName: string };
 }> {
   const DEFAULT_CURRENCY: Currency = { code: 'INR', symbol: '₹', locale: 'en-IN' };
 
@@ -167,14 +172,18 @@ export async function pullAll(
     readTab(accessToken, spreadsheetId, 'Settings'),
   ]);
 
+  const s0 = settingsRows[0];
   const nwItems = nwRows.map(rowToNwItem);
-  const currency: Currency = settingsRows[0]
+  const currency: Currency = s0
     ? {
-        code:   settingsRows[0].currency_code   || DEFAULT_CURRENCY.code,
-        symbol: settingsRows[0].currency_symbol || DEFAULT_CURRENCY.symbol,
-        locale: settingsRows[0].currency_locale || DEFAULT_CURRENCY.locale,
+        code:   s0.currency_code   || DEFAULT_CURRENCY.code,
+        symbol: s0.currency_symbol || DEFAULT_CURRENCY.symbol,
+        locale: s0.currency_locale || DEFAULT_CURRENCY.locale,
       }
     : DEFAULT_CURRENCY;
+
+  const validThemes = ['violet', 'slate', 'rose'];
+  const themeName = validThemes.includes(s0?.theme_name ?? '') ? s0!.theme_name : 'violet';
 
   return {
     txns:      txnRows.map(rowToTxn),
@@ -186,5 +195,9 @@ export async function pullAll(
       liabilities: nwItems.filter(x => x.type === 'liability').map(x => x.item),
     },
     currency,
+    prefs: {
+      darkMode:  (s0?.dark_mode ?? 'true') !== 'false',
+      themeName,
+    },
   };
 }

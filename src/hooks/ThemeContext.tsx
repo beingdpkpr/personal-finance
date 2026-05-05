@@ -27,6 +27,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (tn) setThemeName(tn);
   }, []);
 
+  // Restore theme when Drive sync pulls updated preferences
+  useEffect(() => {
+    const handler = () => {
+      const dm = localStorage.getItem('pf_dark_mode');
+      const tn = localStorage.getItem('pf_theme_name') as ThemeName | null;
+      if (dm !== null) setDarkMode(dm !== 'false');
+      if (tn && ['violet', 'slate', 'rose'].includes(tn)) setThemeName(tn);
+    };
+    window.addEventListener('artha:theme-restored', handler);
+    return () => window.removeEventListener('artha:theme-restored', handler);
+  }, []);
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', themeName);
     document.documentElement.setAttribute('data-light', String(!darkMode));

@@ -10,7 +10,7 @@ export const TAB_HEADERS: Record<TabName, string[]> = {
   Goals:        ['id', 'name', 'target', 'current', 'deadline'],
   Recurring:    ['id', 'type', 'amount', 'category', 'description', 'dayOfMonth'],
   NetWorth:     ['id', 'name', 'type', 'value'],
-  Settings:     ['currency_code', 'currency_symbol', 'currency_locale', 'lastSyncedAt'],
+  Settings:     ['currency_code', 'currency_symbol', 'currency_locale', 'lastSyncedAt', 'dark_mode', 'theme_name'],
 };
 
 async function sheetsRequest(
