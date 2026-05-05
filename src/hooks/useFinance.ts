@@ -33,6 +33,7 @@ export interface FinanceState {
   addTxn:       (t: Omit<Transaction, 'id'>) => void;
   editTxn:      (t: Transaction) => void;
   deleteTxn:    (id: string) => void;
+  deleteTxns:   (ids: string[]) => void;
   setBudgets:   (b: BudgetMap) => void;
   setGoals:     (g: Goal[]) => void;
   setNw:        (n: NetWorthData) => void;
@@ -209,6 +210,7 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
   const addTxn      = useCallback((t: Omit<Transaction, 'id'>) => setTxnsState(prev => [...prev, { ...t, id: uid() }]), []);
   const editTxn     = useCallback((t: Transaction) => setTxnsState(prev => prev.map(x => x.id === t.id ? t : x)), []);
   const deleteTxn   = useCallback((id: string) => setTxnsState(prev => prev.filter(x => x.id !== id)), []);
+  const deleteTxns  = useCallback((ids: string[]) => { const set = new Set(ids); setTxnsState(prev => prev.filter(x => !set.has(x.id))); }, []);
   const setBudgets  = useCallback((b: BudgetMap) => setBudgetsState(b), []);
   const setGoals    = useCallback((g: Goal[]) => setGoalsState(g), []);
   const setNw       = useCallback((n: NetWorthData) => setNwState(n), []);
@@ -326,7 +328,7 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
   return {
     user, email, name, picture, loading, txns, budgets, goals, nw, recurring, currency, spendTypeMap, customCats,
     googleSignIn, logout, loadDemoData,
-    addTxn, editTxn, deleteTxn,
+    addTxn, editTxn, deleteTxn, deleteTxns,
     setBudgets, setGoals, setNw, setRecurring, setCurrencyPref, setSpendTypeMap, setCustomCats,
   };
 }

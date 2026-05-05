@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { useFinanceContext } from '../../hooks/FinanceContext'
 import { parseGooglePayFile, deduplicateRows, ParsedRow } from '../../lib/gpay-parser'
+import { parseGooglePayPDF } from '../../lib/gpay-pdf-parser'
 import { EXPENSE_CATS, INCOME_CATS } from '../../constants/categories'
 
 interface Props { onClose: () => void }
@@ -17,6 +18,7 @@ export default function GooglePayImportModal({ onClose }: Props) {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [imported, setImported] = useState(0)
   const [error, setError]     = useState('')
+  const [loading, setLoading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const inputStyle: React.CSSProperties = {
@@ -25,32 +27,39 @@ export default function GooglePayImportModal({ onClose }: Props) {
     fontFamily: 'DM Sans', outline: 'none', width: '100%',
   }
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    setError('')
-    const reader = new FileReader()
-    reader.onload = ev => {
-      try {
-        const text = ev.target?.result as string
-        const { rows: parsed, skipped: sk } = parseGooglePayFile(text)
-        if (parsed.length === 0) { setError('No valid transactions found. Make sure you uploaded a Google Pay CSV.'); return }
+    setError(''); setLoading(true)
+    try {
+      const isPDF = file.name.toLowerCase().endsWith('.pdf')
+      const { rows: parsed, skipped: sk } = isPDF
+        ? await parseGooglePayPDF(file)
+        : await new Promise<{ rows: ParsedRow[]; skipped: number }>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = ev => {
+              try { resolve(parseGooglePayFile(ev.target?.result as string)) }
+              catch (err) { reject(err) }
+            }
+            reader.readAsText(file)
+          })
 
-        // Deduplicate against existing
-        const existingTxnIds = txns.map(t => t.tags ?? [])
-        const unique = deduplicateRows(parsed, existingTxnIds)
-        const dupeCount = parsed.length - unique.length
-
-        setRows(unique)
-        setSkipped(sk)
-        setDupes(dupeCount)
-        setSelected(new Set(unique.map((_, i) => i)))
-        setStep('preview')
-      } catch {
-        setError('Failed to parse file. Please check the format.')
+      if (parsed.length === 0) {
+        setError('No valid transactions found. Check the file format and try again.')
+        setLoading(false); return
       }
+
+      const existingTxnIds = txns.map(t => t.tags ?? [])
+      const unique = deduplicateRows(parsed, existingTxnIds)
+      setRows(unique)
+      setSkipped(sk)
+      setDupes(parsed.length - unique.length)
+      setSelected(new Set(unique.map((_, i) => i)))
+      setStep('preview')
+    } catch {
+      setError('Failed to parse file. Please check the format.')
     }
-    reader.readAsText(file)
+    setLoading(false)
     e.target.value = ''
   }
 
@@ -116,11 +125,9 @@ export default function GooglePayImportModal({ onClose }: Props) {
               <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>How to export from Google Pay</div>
                 {[
-                  ['1', 'Open Google Pay app → tap your photo (top right)'],
-                  ['2', 'Tap "Manage Google Account" → "Data & privacy"'],
-                  ['3', 'Scroll to "Download or delete your data" → "Download your data"'],
-                  ['4', 'Select only "Google Pay" → Export once → Download'],
-                  ['5', 'Extract the ZIP → find the CSV file inside "Google Pay" folder'],
+                  ['📄', 'PDF: Open Google Pay → Transactions → See all → ⋮ → Get statements'],
+                  ['📊', 'CSV: Google Takeout → google.com/takeout → select Google Pay → Export'],
+                  ['🏦', 'Bank CSV: Download UPI statement from your bank app or net banking'],
                 ].map(([n, t]) => (
                   <div key={n} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                     <span style={{ width: 20, height: 20, borderRadius: 10, background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{n}</span>
@@ -137,11 +144,13 @@ export default function GooglePayImportModal({ onClose }: Props) {
 
               <button
                 onClick={() => fileRef.current?.click()}
-                style={{ padding: '14px', borderRadius: 14, border: '2px dashed var(--accent)', background: 'var(--accent-dim)', color: 'var(--accent)', cursor: 'pointer', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                disabled={loading}
+                style={{ padding: '14px', borderRadius: 14, border: '2px dashed var(--accent)', background: 'var(--accent-dim)', color: 'var(--accent)', cursor: loading ? 'wait' : 'pointer', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: loading ? 0.7 : 1 }}
               >
-                <span style={{ fontSize: 20 }}>↑</span> Choose CSV file
+                <span style={{ fontSize: 20 }}>{loading ? '⏳' : '↑'}</span>
+                {loading ? 'Reading file…' : 'Choose PDF or CSV file'}
               </button>
-              <input ref={fileRef} type="file" accept=".csv,.tsv,.txt" onChange={handleFile} style={{ display: 'none' }} />
+              <input ref={fileRef} type="file" accept=".csv,.tsv,.txt,.pdf" onChange={handleFile} style={{ display: 'none' }} />
             </div>
           )}
 
