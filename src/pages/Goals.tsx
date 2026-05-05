@@ -17,7 +17,7 @@ function SemiGauge({ pct, color, current }: { pct: number; color: string; curren
       <path d="M10,60 A50,50 0 0,1 110,60" fill="none" stroke={color} strokeWidth="8" strokeLinecap="round"
         strokeDasharray={`${filled} ${circ}`}
         style={{ transition:'stroke-dasharray 1s ease 0.3s', filter:`drop-shadow(0 0 6px ${color}60)` }}/>
-      <text x="60" y="52" textAnchor="middle" fontSize="13" fontWeight="700" fill="var(--text)" fontFamily="DM Sans">{fmt(current, 0)}</text>
+      <text x="60" y="52" textAnchor="middle" fontSize="13" fontWeight="700" fill="var(--text)" fontFamily="DM Sans">{fmt(current)}</text>
       <text x="10" y="76" textAnchor="middle" fontSize="9" fill="var(--text-dim)" fontFamily="DM Sans">0%</text>
       <text x="110" y="76" textAnchor="middle" fontSize="9" fill="var(--text-dim)" fontFamily="DM Sans">100%</text>
     </svg>
@@ -112,7 +112,7 @@ export default function Goals() {
                     <div style={{ width:44, height:44, borderRadius:13, background:`${color}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, border:`1px solid ${color}30`, flexShrink:0 }}>{icon}</div>
                     <div>
                       <div style={{ fontSize:15, fontWeight:600, color:'var(--text)' }}>{g.name}</div>
-                      <div style={{ fontSize:12, color:'var(--text-dim)', marginTop:2 }}>Target: {fmt(g.target, 0)}</div>
+                      <div style={{ fontSize:12, color:'var(--text-dim)', marginTop:2 }}>Target: {fmt(g.target)}</div>
                     </div>
                   </div>
                   <div style={{ display:'flex', alignItems:'center', gap:6 }}>
@@ -131,7 +131,7 @@ export default function Goals() {
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10 }}>
                   <div style={{ textAlign:'center' }}>
                     <div style={{ fontSize:11, color:'var(--text-dim)' }}>Saved so far</div>
-                    <div style={{ fontSize:14, fontWeight:700, fontFamily:'DM Mono', color }}>{fmt(g.current, 0)}</div>
+                    <div style={{ fontSize:14, fontWeight:700, fontFamily:'DM Mono', color }}>{fmt(g.current)}</div>
                   </div>
                   {g.deadline && <div style={{ textAlign:'center' }}>
                     <div style={{ fontSize:11, color:'var(--text-dim)' }}>Deadline</div>
@@ -139,7 +139,7 @@ export default function Goals() {
                   </div>}
                   <div style={{ textAlign:'center' }}>
                     <div style={{ fontSize:11, color:'var(--text-dim)' }}>{remaining<=0?'Status':'To go'}</div>
-                    <div style={{ fontSize:14, fontWeight:700, fontFamily:'DM Mono', color: remaining<=0?'var(--positive)':'var(--text)' }}>{remaining<=0?'âœ“ Done':fmt(remaining, 0)}</div>
+                    <div style={{ fontSize:14, fontWeight:700, fontFamily:'DM Mono', color: remaining<=0?'var(--positive)':'var(--text)' }}>{remaining<=0?'âœ“ Done':fmt(remaining)}</div>
                   </div>
                 </div>
 

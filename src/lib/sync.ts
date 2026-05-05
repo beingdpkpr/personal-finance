@@ -137,7 +137,7 @@ export async function pushAll(
 export async function pullAll(
   accessToken: string,
   spreadsheetId: string,
-  userId: string,
+  _userId: string,
 ): Promise<{
   txns: Transaction[];
   budgets: BudgetMap;

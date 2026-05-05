@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { fmt } from '../lib/format'
-import { resolveLimit, BudgetEntry } from '../lib/data'
+import { resolveLimit } from '../lib/data'
 import { EXPENSE_CATS } from '../constants/categories'
 import Card from '../components/ui/Card'
 import ProgressBar from '../components/ui/ProgressBar'

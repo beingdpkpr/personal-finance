@@ -1,7 +1,7 @@
 ﻿import { useState } from 'react'
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { fmt } from '../lib/format'
-import { NetWorthItem, uid } from '../lib/data'
+import { NetWorthItem } from '../lib/data'
 import AddAccountModal from '../components/modals/AddAccountModal'
 
 type ModalState = { open: false } | { open: true; type: 'asset'|'liability'; editItem?: NetWorthItem }

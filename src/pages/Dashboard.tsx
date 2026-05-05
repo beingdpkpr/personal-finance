@@ -109,7 +109,7 @@ export default function Dashboard() {
           <div style={{ display:'flex', gap:14, alignItems:'center' }}>
             <DonutChart segments={donutSegs} size={110} centerLabel={fmt(totalCatSpend)} centerSub={`${MONTHS[now.getMonth()]} spend`} />
             <div style={{ flex:1, display:'flex', flexDirection:'column', gap:7 }}>
-              {catSpend.slice(0,5).map(c => (
+              {donutSegs.slice(0,5).map(c => (
                 <div key={c.label} style={{ display:'flex', alignItems:'center', gap:7 }}>
                   <span style={{ width:8, height:8, borderRadius:'50%', background:c.color, flexShrink:0 }}></span>
                   <span style={{ fontSize:12, color:'var(--text-mid)', flex:1 }}>{c.label}</span>
@@ -135,7 +135,7 @@ export default function Dashboard() {
             <div style={{ color:'var(--text-dim)', fontSize:13, textAlign:'center', padding:'20px 0' }}>No transactions yet</div>
           ) : (
             <div style={{ display:'flex', flexDirection:'column' }}>
-              {recentTxns.map((t, i) => {
+              {recentTxns.map((t) => {
                 const cat = t.type === 'income'
                   ? INCOME_CATS.find(c => c.id === t.category)
                   : EXPENSE_CATS.find(c => c.id === t.category)
