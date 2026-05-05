@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useFinanceContext } from '../../hooks/FinanceContext'
+import SettingsModal from './SettingsModal'
 
 const NAV = [
   { to: '/dashboard',    label: 'Dashboard',    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> },
@@ -15,6 +17,7 @@ interface Props { collapsed: boolean }
 
 export default function Sidebar({ collapsed }: Props) {
   const { name, email, picture } = useFinanceContext()
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   return (
     <aside style={{
@@ -52,17 +55,24 @@ export default function Sidebar({ collapsed }: Props) {
         ))}
       </nav>
 
-      <div style={{ padding: collapsed ? '12px 0' : '12px 16px', borderTop:'1px solid var(--border)', display:'flex', alignItems:'center', gap:10, justifyContent: collapsed?'center':'flex-start' }}>
+      <button
+        onClick={() => setSettingsOpen(true)}
+        style={{ padding: collapsed ? '12px 0' : '12px 16px', display:'flex', alignItems:'center', gap:10, justifyContent: collapsed?'center':'flex-start', background:'none', border:'none', borderTop:'1px solid var(--border)', width:'100%', cursor:'pointer', transition:'background 0.15s', textAlign:'left' }}
+        onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface2)')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+      >
         <div style={{ width:32, height:32, borderRadius:32, background:'var(--accent-dim)', border:'1px solid var(--border)', overflow:'hidden', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, color:'var(--accent)', fontWeight:700 }}>
           {picture ? <img src={picture} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt="" /> : (name?.[0] ?? '?')}
         </div>
         {!collapsed && (
-          <div style={{ minWidth:0 }}>
+          <div style={{ minWidth:0, flex:1 }}>
             <div style={{ fontSize:13, fontWeight:600, color:'var(--text)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{name ?? email}</div>
-            <div style={{ fontSize:11, color:'var(--text-dim)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>Pro Plan</div>
+            <div style={{ fontSize:11, color:'var(--text-dim)', whiteSpace:'nowrap' }}>Settings & profile</div>
           </div>
         )}
-      </div>
+      </button>
+
+      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
     </aside>
   )
 }
