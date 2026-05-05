@@ -20,6 +20,8 @@ export interface FinanceState {
   name:         string | null;
   picture:      string | null;
   loading:      boolean;
+  syncError:    string | null;  // last Drive sync error, shown as toast
+  sessionNote:  string | null;  // message shown on login page (e.g. session expired)
   txns:         Transaction[];
   budgets:      BudgetMap;
   goals:        Goal[];
@@ -58,6 +60,8 @@ export function useFinance(): FinanceState {
   const [currency, setCurrencyState]  = useState<Currency>(DEFAULT_CURRENCY);
   const [spendTypeMap, setSpendTypeMapState] = useState<SpendTypeMap>({});
   const [customCats, setCustomCatsState]     = useState<CustomCategory[]>([]);
+  const [syncError, setSyncError]            = useState<string | null>(null);
+  const [sessionNote, setSessionNote]        = useState<string | null>(null);
 
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -68,14 +72,16 @@ export function useFinance(): FinanceState {
       if (!session) return;
       if (isTokenExpired(session)) {
         await clearGoogleSession();
+        setSessionNote('Your session expired. Please sign in again to keep your data backed up.');
         setUser(null);
         return;
       }
       if (!session.spreadsheetId) return;
       try {
         await pushAll(session.accessToken, session.spreadsheetId, session.userId);
-      } catch {
-        // silent — next state change will retry
+        setSyncError(null);
+      } catch (e) {
+        setSyncError(e instanceof Error ? e.message : 'Sync failed. Changes are saved locally.');
       }
     }, 2000);
   }, []);
@@ -326,6 +332,7 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
 
   return {
     user, email, name, picture, loading, txns, budgets, goals, nw, recurring, currency, spendTypeMap, customCats,
+    syncError, sessionNote,
     googleSignIn, logout, loadDemoData,
     addTxn, editTxn, deleteTxn, deleteTxns,
     setBudgets, setGoals, setNw, setRecurring, setCurrencyPref, setSpendTypeMap, setCustomCats,

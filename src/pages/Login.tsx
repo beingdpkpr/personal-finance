@@ -4,10 +4,10 @@ import { useFinanceContext } from '../hooks/FinanceContext'
 import { openGoogleOAuthPopup } from '../lib/google-auth'
 
 export default function Login() {
-  const { googleSignIn, loadDemoData, user } = useFinanceContext()
+  const { googleSignIn, loadDemoData, user, sessionNote } = useFinanceContext()
   const navigate = useNavigate()
-  const [error, setError]     = useState('')
-  const [busy, setBusy]       = useState(false)
+  const [error, setError]       = useState('')
+  const [busyMsg, setBusyMsg]   = useState('')
   const [demoBusy, setDemoBusy] = useState(false)
 
   useEffect(() => {
@@ -15,15 +15,16 @@ export default function Login() {
   }, [user, navigate])
 
   async function handleGoogleSignIn() {
-    setBusy(true); setError('')
+    setBusyMsg('Opening Google sign-in…'); setError('')
     try {
       const { accessToken, expiresIn } = await openGoogleOAuthPopup()
+      setBusyMsg('Syncing with Drive…')
       const err = await googleSignIn(accessToken, expiresIn)
-      if (err) { setError(err); setBusy(false); return }
+      if (err) { setError(err); setBusyMsg(''); return }
       navigate('/dashboard', { replace: true })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Sign-in failed')
-      setBusy(false)
+      setBusyMsg('')
     }
   }
 
@@ -51,11 +52,19 @@ export default function Login() {
           <p style={{ fontSize:14, color:'#8891b0', lineHeight:1.6 }}>Track expenses, plan budgets, and stay on top of every transaction.</p>
         </div>
 
+        {sessionNote && !error && (
+          <div style={{ fontSize:13, color:'#b45309', background:'rgba(245,158,11,0.12)', borderRadius:8, padding:'10px 14px', lineHeight:1.5 }}>
+            {sessionNote}
+          </div>
+        )}
         {error && <div style={{ fontSize:13, color:'#f03d50', background:'rgba(240,61,80,0.1)', borderRadius:6, padding:'8px 12px' }}>{error}</div>}
 
-        <button onClick={handleGoogleSignIn} disabled={busy} style={{ background:'white', border:'1px solid #e0e4f2', borderRadius:100, padding:'14px 32px', display:'flex', alignItems:'center', justifyContent:'center', gap:10, cursor:'pointer', fontSize:15, fontWeight:700, color:'#0d1030', opacity: busy?0.6:1 }}>
-          <span style={{ color:'#4285f4', fontWeight:800, fontSize:16 }}>G</span>
-          {busy ? 'Signing in…' : 'Sign in with Google'}
+        <button onClick={handleGoogleSignIn} disabled={!!busyMsg} style={{ background:'white', border:'1px solid #e0e4f2', borderRadius:100, padding:'14px 32px', display:'flex', alignItems:'center', justifyContent:'center', gap:10, cursor: busyMsg ? 'wait' : 'pointer', fontSize:15, fontWeight:700, color:'#0d1030', opacity: busyMsg?0.6:1 }}>
+          {busyMsg ? (
+            <span style={{ fontSize:13, color:'#8891b0' }}>{busyMsg}</span>
+          ) : (
+            <><span style={{ color:'#4285f4', fontWeight:800, fontSize:16 }}>G</span>Sign in with Google</>
+          )}
         </button>
 
         <button onClick={handleDemo} disabled={demoBusy} style={{ background:'none', border:'1px solid #e0e4f2', borderRadius:100, padding:'12px 32px', cursor:'pointer', fontSize:14, color:'#8891b0', opacity: demoBusy?0.6:1 }}>
