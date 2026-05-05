@@ -8,7 +8,7 @@ import { setCurrency } from '../lib/format';
 import { applyRecurring } from '../lib/recurring';
 import {
   saveGoogleSession, getGoogleSession, clearGoogleSession,
-  isTokenExpired, saveSpreadsheetId, hasMigrated, setMigrated,
+  isTokenExpired, hasMigrated, setMigrated,
 } from '../lib/google-auth';
 import { ensureSpreadsheet, pushAll, pullAll } from '../lib/sync';
 
@@ -137,41 +137,35 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
 
       await saveGoogleSession(accessToken, expiresIn, info.email, info.sub, info.name, info.picture);
 
-      // Ensure spreadsheet exists
+      // Ensure spreadsheet exists (searches Drive before creating)
       const existingSession = await getGoogleSession();
-      const spreadsheetId = await ensureSpreadsheet(
+      const { id: spreadsheetId, isNew } = await ensureSpreadsheet(
         accessToken,
         existingSession?.spreadsheetId ?? null,
         info.email,
       );
-      await saveSpreadsheetId(spreadsheetId);
 
-      // Migration: push existing local data on first sign-in
-      if (!(await hasMigrated())) {
+      const migrated = await hasMigrated();
+
+      if (isNew && !migrated) {
+        // Brand-new sheet AND first time on this device — push local data (initial setup)
         const oldSession = await storage.getSession();
         if (oldSession) {
-          // Re-key old data from username to Google userId
           const [t, b, r, g, n, c] = await Promise.all([
-            storage.getTxns(oldSession),
-            storage.getBudgets(oldSession),
-            storage.getRecurring(oldSession),
-            storage.getGoals(oldSession),
-            storage.getNetWorth(oldSession),
-            storage.getCurrency(oldSession),
+            storage.getTxns(oldSession), storage.getBudgets(oldSession),
+            storage.getRecurring(oldSession), storage.getGoals(oldSession),
+            storage.getNetWorth(oldSession), storage.getCurrency(oldSession),
           ]);
           await Promise.all([
-            storage.saveTxns(info.sub, t),
-            storage.saveBudgets(info.sub, b),
-            storage.saveRecurring(info.sub, r),
-            storage.saveGoals(info.sub, g),
-            storage.saveNetWorth(info.sub, n),
-            storage.saveCurrency(info.sub, c),
+            storage.saveTxns(info.sub, t), storage.saveBudgets(info.sub, b),
+            storage.saveRecurring(info.sub, r), storage.saveGoals(info.sub, g),
+            storage.saveNetWorth(info.sub, n), storage.saveCurrency(info.sub, c),
           ]);
         }
         await pushAll(accessToken, spreadsheetId, info.sub);
         await setMigrated();
       } else {
-        // Pull latest from Sheets and save to local
+        // Existing sheet found (cached, or restored from Drive on new device) — pull data
         const data = await pullAll(accessToken, spreadsheetId, info.sub);
         await Promise.all([
           storage.saveTxns(info.sub, data.txns),
@@ -181,6 +175,7 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
           storage.saveNetWorth(info.sub, data.nw),
           storage.saveCurrency(info.sub, data.currency),
         ]);
+        if (!migrated) await setMigrated();
       }
 
       await loadUser(info.sub, info.email, info.name, info.picture);

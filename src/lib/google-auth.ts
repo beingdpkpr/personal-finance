@@ -73,6 +73,7 @@ export async function setMigrated(): Promise<void> {
 const SCOPES = [
   'openid', 'email', 'profile',
   'https://www.googleapis.com/auth/spreadsheets',
+  'https://www.googleapis.com/auth/drive.file',
 ].join(' ');
 
 /* ── Google Identity Services types ── */

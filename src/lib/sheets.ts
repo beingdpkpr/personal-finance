@@ -1,4 +1,6 @@
 const SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
+const DRIVE_BASE  = 'https://www.googleapis.com/drive/v3/files';
+const FOLDER_NAME = 'Artha';
 
 export type TabName = 'Transactions' | 'Budgets' | 'Goals' | 'Recurring' | 'NetWorth' | 'Settings';
 
@@ -32,6 +34,62 @@ async function sheetsRequest(
   return res.json();
 }
 
+/* ── Drive helpers ────────────────────────────────────────────────────────── */
+
+async function driveGet<T>(accessToken: string, params: string): Promise<T | null> {
+  try {
+    const res = await fetch(`${DRIVE_BASE}?${params}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return null;
+    return res.json() as Promise<T>;
+  } catch {
+    return null;
+  }
+}
+
+export async function findSpreadsheetByName(accessToken: string, name: string): Promise<string | null> {
+  const q = `name = '${name.replace(/'/g, "\\'")}' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false`;
+  const data = await driveGet<{ files: { id: string }[] }>(
+    accessToken,
+    `q=${encodeURIComponent(q)}&fields=files(id)&pageSize=5`,
+  );
+  return data?.files?.[0]?.id ?? null;
+}
+
+async function findOrCreateFolder(accessToken: string): Promise<string | null> {
+  const q = `name = '${FOLDER_NAME}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
+  const data = await driveGet<{ files: { id: string }[] }>(
+    accessToken,
+    `q=${encodeURIComponent(q)}&fields=files(id)&pageSize=5`,
+  );
+  if (data?.files?.[0]?.id) return data.files[0].id;
+
+  try {
+    const res = await fetch(DRIVE_BASE, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' }),
+    });
+    if (!res.ok) return null;
+    const folder = await res.json() as { id: string };
+    return folder.id;
+  } catch {
+    return null;
+  }
+}
+
+async function moveToFolder(accessToken: string, fileId: string, folderId: string): Promise<void> {
+  try {
+    await fetch(
+      `${DRIVE_BASE}/${fileId}?addParents=${folderId}&removeParents=root&fields=id`,
+      { method: 'PATCH', headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+  } catch { /* non-fatal */ }
+}
+
+/* ── Spreadsheet lifecycle ────────────────────────────────────────────────── */
+
 export async function createSpreadsheet(accessToken: string, email: string): Promise<string> {
   const body = {
     properties: { title: `Artha - ${email}` },
@@ -40,6 +98,11 @@ export async function createSpreadsheet(accessToken: string, email: string): Pro
     })),
   };
   const data = await sheetsRequest('POST', SHEETS_BASE, accessToken, body) as { spreadsheetId: string };
+
+  // Best-effort: move into the Artha folder
+  const folderId = await findOrCreateFolder(accessToken);
+  if (folderId) await moveToFolder(accessToken, data.spreadsheetId, folderId);
+
   return data.spreadsheetId;
 }
 

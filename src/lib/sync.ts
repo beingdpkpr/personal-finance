@@ -1,5 +1,5 @@
 import { storage } from './storage';
-import { writeTab, readTab, createSpreadsheet, verifySpreadsheet } from './sheets';
+import { writeTab, readTab, createSpreadsheet, verifySpreadsheet, findSpreadsheetByName } from './sheets';
 import { saveSpreadsheetId } from './google-auth';
 import {
   Transaction, BudgetMap, BudgetEntry, Goal,
@@ -91,13 +91,23 @@ export async function ensureSpreadsheet(
   accessToken: string,
   spreadsheetId: string | null,
   email: string,
-): Promise<string> {
+): Promise<{ id: string; isNew: boolean }> {
+  // 1. Cached ID still valid
   if (spreadsheetId && await verifySpreadsheet(accessToken, spreadsheetId)) {
-    return spreadsheetId;
+    return { id: spreadsheetId, isNew: false };
   }
+
+  // 2. Search Drive for an existing "Artha - email" spreadsheet
+  const existingId = await findSpreadsheetByName(accessToken, `Artha - ${email}`);
+  if (existingId) {
+    await saveSpreadsheetId(existingId);
+    return { id: existingId, isNew: false };
+  }
+
+  // 3. Nothing found — create a new one (placed in the Artha folder)
   const newId = await createSpreadsheet(accessToken, email);
   await saveSpreadsheetId(newId);
-  return newId;
+  return { id: newId, isNew: true };
 }
 
 export async function pushAll(
