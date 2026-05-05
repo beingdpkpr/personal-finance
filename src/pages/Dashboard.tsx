@@ -24,9 +24,14 @@ export default function Dashboard() {
   const { txns, nw } = useFinanceContext()
 
   const now = new Date()
-  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
-  const prevD = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
+  // Use the most recent month with transactions, capped at current month
+  const txnMonths = [...new Set(txns.map(t => t.date.slice(0, 7)))].filter(m => m <= currentMonth).sort()
+  const thisMonth = txnMonths.length > 0 ? txnMonths[txnMonths.length - 1] : currentMonth
+  const [ty, tm] = thisMonth.split('-').map(Number)
+  const prevD = new Date(ty, tm - 2, 1)
   const lastMonth = `${prevD.getFullYear()}-${String(prevD.getMonth()+1).padStart(2,'0')}`
+  const monthLabel = new Date(ty, tm - 1, 1).toLocaleString('default', { month: 'long', year: 'numeric' })
 
   const monthTxns = txns.filter(t => t.date.startsWith(thisMonth))
   const lastTxns  = txns.filter(t => t.date.startsWith(lastMonth))
@@ -44,7 +49,7 @@ export default function Dashboard() {
   const lastNW      = netWorth - netSavings
 
   const areaData = Array.from({length:6}, (_,i) => {
-    const d = new Date(now.getFullYear(), now.getMonth()-5+i, 1)
+    const d = new Date(ty, tm-1-5+i, 1)
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
     const mt = txns.filter(t => t.date.startsWith(key))
     return {
@@ -74,13 +79,13 @@ export default function Dashboard() {
         <StatCard label="Net Worth" value={fmt(netWorth)} color="#7c6ef5" delay={0}
           sub={String(pctChange(netWorth, lastNW))} positive={netWorth >= lastNW}
           icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>} />
-        <StatCard label="Monthly Income" value={fmt(monthIncome)} color="#22c55e" delay={0.05}
+        <StatCard label={`Income · ${monthLabel}`} value={fmt(monthIncome)} color="#22c55e" delay={0.05}
           sub={String(pctChange(monthIncome, lastIncome))} positive={monthIncome >= lastIncome}
           icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>} />
-        <StatCard label="Monthly Spend" value={fmt(monthExpense)} color="#f87171" delay={0.1}
+        <StatCard label={`Spend · ${monthLabel}`} value={fmt(monthExpense)} color="#f87171" delay={0.1}
           sub={String(pctChange(monthExpense, lastExpense))} positive={monthExpense <= lastExpense}
           icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>} />
-        <StatCard label="Total Savings" value={fmt(netSavings)} color="#f59e0b" delay={0.15}
+        <StatCard label={`Savings · ${monthLabel}`} value={fmt(netSavings)} color="#f59e0b" delay={0.15}
           sub={String(pctChange(netSavings, lastNetSavings))} positive={netSavings >= lastNetSavings}
           icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3H8l-1 4h10l-1-4z"/><circle cx="12" cy="13" r="2"/></svg>} />
       </div>
@@ -104,7 +109,7 @@ export default function Dashboard() {
           <div style={{ fontSize:14, fontWeight:600, color:'var(--text)', marginBottom:4 }}>Spending Breakdown</div>
           <div style={{ fontSize:12, color:'var(--text-dim)', marginBottom:16 }}>By category</div>
           <div style={{ display:'flex', gap:14, alignItems:'center' }}>
-            <DonutChart segments={donutSegs} size={110} centerLabel={fmt(totalCatSpend)} centerSub={`${MONTHS[now.getMonth()]} spend`} />
+            <DonutChart segments={donutSegs} size={110} centerLabel={fmt(totalCatSpend)} centerSub={`${MONTHS[tm-1]} spend`} />
             <div style={{ flex:1, display:'flex', flexDirection:'column', gap:7 }}>
               {donutSegs.slice(0,5).map(c => (
                 <div key={c.label} style={{ display:'flex', alignItems:'center', gap:7 }}>
