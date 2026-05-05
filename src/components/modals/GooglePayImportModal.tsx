@@ -125,9 +125,9 @@ export default function GooglePayImportModal({ onClose }: Props) {
               <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 14, padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>How to export from Google Pay</div>
                 {[
-                  ['📄', 'PDF: Open Google Pay → Transactions → See all → ⋮ → Get statements'],
-                  ['📊', 'CSV: Google Takeout → google.com/takeout → select Google Pay → Export'],
-                  ['🏦', 'Bank CSV: Download UPI statement from your bank app or net banking'],
+                  ['PDF', 'Open Google Pay → Transactions → See all → menu → Get statements'],
+                  ['CSV', 'Google Takeout → google.com/takeout → select Google Pay → Export'],
+                  ['Bank', 'Download UPI statement from your bank app or net banking'],
                 ].map(([n, t]) => (
                   <div key={n} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                     <span style={{ width: 20, height: 20, borderRadius: 10, background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{n}</span>
@@ -147,7 +147,7 @@ export default function GooglePayImportModal({ onClose }: Props) {
                 disabled={loading}
                 style={{ padding: '14px', borderRadius: 14, border: '2px dashed var(--accent)', background: 'var(--accent-dim)', color: 'var(--accent)', cursor: loading ? 'wait' : 'pointer', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: loading ? 0.7 : 1 }}
               >
-                <span style={{ fontSize: 20 }}>{loading ? '⏳' : '↑'}</span>
+                <span style={{ display:'flex' }}>{loading ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 16"/><polyline points="8 12 12 8 16 12"/></svg> : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>}</span>
                 {loading ? 'Reading file…' : 'Choose PDF or CSV file'}
               </button>
               <input ref={fileRef} type="file" accept=".csv,.tsv,.txt,.pdf" onChange={handleFile} style={{ display: 'none' }} />
@@ -224,7 +224,7 @@ export default function GooglePayImportModal({ onClose }: Props) {
           {/* ── STEP: DONE ── */}
           {step === 'done' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '16px 0' }}>
-              <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--positive-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>✓</div>
+              <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--positive-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="oklch(0.68 0.18 145)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
               <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>Import complete</div>
               <div style={{ fontSize: 14, color: 'var(--text-dim)', textAlign: 'center', lineHeight: 1.6 }}>
                 <span style={{ color: 'var(--positive)', fontWeight: 700, fontSize: 22, display: 'block', fontFamily: 'DM Mono' }}>{imported}</span>

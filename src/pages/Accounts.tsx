@@ -7,7 +7,6 @@ import AddAccountModal from '../components/modals/AddAccountModal'
 type ModalState = { open: false } | { open: true; type: 'asset'|'liability'; editItem?: NetWorthItem }
 
 const ACC_PALETTE = ['#7c6ef5','#22c55e','#f59e0b','#ec4899','#3b82f6','#f97316','#e879f9','#38bdf8']
-const ACC_ICONS   = ['ðŸ¦','ðŸ’°','ðŸ“ˆ','ðŸ’µ','ðŸ›','ðŸ“Š','ðŸ’Ž','ðŸ”’']
 
 export default function Accounts() {
   const { nw, setNw } = useFinanceContext()
@@ -65,7 +64,7 @@ export default function Accounts() {
       <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:18 }}>
         {allItems.map((item) => {
           const color = item.isLiability ? '#ec4899' : ACC_PALETTE[item.colorIdx % ACC_PALETTE.length]
-          const icon  = item.isLiability ? 'ðŸ’³' : ACC_ICONS[item.colorIdx % ACC_ICONS.length]
+          const initial = item.name.slice(0,1).toUpperCase()
           const hov   = hovId === item.id
           return (
             <div key={item.id}
@@ -83,9 +82,9 @@ export default function Accounts() {
               {hov && (
                 <div style={{ position:'absolute', top:12, right:12, display:'flex', gap:6, animation:'fadeIn 0.15s ease' }}>
                   <button onClick={()=>setModal({open:true, type: item.isLiability ? 'liability' : 'asset', editItem: item})}
-                    style={{ width:28, height:28, borderRadius:8, background:'var(--surface3)', border:'1px solid var(--border)', cursor:'pointer', color:'var(--text-dim)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12 }}>âœŽ</button>
+                    style={{ width:28, height:28, borderRadius:8, background:'var(--surface3)', border:'1px solid var(--border)', cursor:'pointer', color:'var(--text-dim)', display:'flex', alignItems:'center', justifyContent:'center' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
                   <button onClick={()=>deleteItem(item.isLiability, item.id)}
-                    style={{ width:28, height:28, borderRadius:8, background:'oklch(0.22 0.08 25)', border:'1px solid var(--negative)', cursor:'pointer', color:'var(--negative)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13 }}>âœ•</button>
+                    style={{ width:28, height:28, borderRadius:8, background:'oklch(0.22 0.08 25)', border:'1px solid var(--negative)', cursor:'pointer', color:'var(--negative)', display:'flex', alignItems:'center', justifyContent:'center' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                 </div>
               )}
               {/* Icon + name */}

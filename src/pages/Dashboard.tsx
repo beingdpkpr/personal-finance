@@ -7,14 +7,7 @@ import StatCard from '../components/ui/StatCard'
 import AreaChart from '../components/charts/AreaChart'
 import DonutChart from '../components/charts/DonutChart'
 
-const CAT_ICONS: Record<string, string> = {
-  essentials: '🧾', food: '🍽', transport: '🚗', entertainment: '🎬',
-  shopping: '🛍', health: '💊', savings: '📈', family: '👨‍👩‍👧', other: '📌',
-  salary: '💰', freelance: '💻',
-}
-
 const ACC_PALETTE = ['#7c6ef5','#22c55e','#f59e0b','#ec4899','#3b82f6','#f97316']
-const ACC_ICONS   = ['🏦','💰','📈','💵','🏛','📊']
 
 function pctChange(curr: number, prev: number): number {
   if (prev === 0) return 0
@@ -78,14 +71,18 @@ export default function Dashboard() {
     <div style={{ padding:28, display:'flex', flexDirection:'column', gap:22 }}>
       {/* Stat cards */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16 }}>
-        <StatCard label="Net Worth"        value={fmt(netWorth)}    icon="💎" color="#7c6ef5" delay={0}
-          sub={String(pctChange(netWorth, lastNW))} positive={netWorth >= lastNW} />
-        <StatCard label="Monthly Income"   value={fmt(monthIncome)} icon="↑"  color="#22c55e" delay={0.05}
-          sub={String(pctChange(monthIncome, lastIncome))} positive={monthIncome >= lastIncome} />
-        <StatCard label="Monthly Spend"    value={fmt(monthExpense)} icon="↓" color="#f87171" delay={0.1}
-          sub={String(pctChange(monthExpense, lastExpense))} positive={monthExpense <= lastExpense} />
-        <StatCard label="Total Savings"    value={fmt(netSavings)}  icon="🏦" color="#f59e0b" delay={0.15}
-          sub={String(pctChange(netSavings, lastNetSavings))} positive={netSavings >= lastNetSavings} />
+        <StatCard label="Net Worth" value={fmt(netWorth)} color="#7c6ef5" delay={0}
+          sub={String(pctChange(netWorth, lastNW))} positive={netWorth >= lastNW}
+          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>} />
+        <StatCard label="Monthly Income" value={fmt(monthIncome)} color="#22c55e" delay={0.05}
+          sub={String(pctChange(monthIncome, lastIncome))} positive={monthIncome >= lastIncome}
+          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>} />
+        <StatCard label="Monthly Spend" value={fmt(monthExpense)} color="#f87171" delay={0.1}
+          sub={String(pctChange(monthExpense, lastExpense))} positive={monthExpense <= lastExpense}
+          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>} />
+        <StatCard label="Total Savings" value={fmt(netSavings)} color="#f59e0b" delay={0.15}
+          sub={String(pctChange(netSavings, lastNetSavings))} positive={netSavings >= lastNetSavings}
+          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3H8l-1 4h10l-1-4z"/><circle cx="12" cy="13" r="2"/></svg>} />
       </div>
 
       {/* Charts row */}
@@ -140,13 +137,13 @@ export default function Dashboard() {
                   ? INCOME_CATS.find(c => c.id === t.category)
                   : EXPENSE_CATS.find(c => c.id === t.category)
                 const color = cat?.color ?? '#888'
-                const icon = CAT_ICONS[t.category] ?? (t.type==='income' ? '↑' : '↓')
+                const initial = (cat?.label ?? t.category).slice(0,1).toUpperCase()
                 return (
                   <div key={t.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'8px 10px', borderRadius:10, cursor:'pointer', transition:'background 0.15s' }}
                     onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background='var(--surface3)'}
                     onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background='transparent'}>
-                    <div style={{ width:36, height:36, borderRadius:10, background:`${color}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>
-                      {icon}
+                    <div style={{ width:36, height:36, borderRadius:10, background:`${color}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:700, color, flexShrink:0, fontFamily:'DM Sans, sans-serif' }}>
+                      {initial}
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:13, fontWeight:500, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.description}</div>
@@ -176,13 +173,13 @@ export default function Dashboard() {
             <div style={{ display:'flex', flexDirection:'column' }}>
               {allAccounts.slice(0, 6).map((acc, i) => {
                 const accColor = ACC_PALETTE[i % ACC_PALETTE.length]
-                const accIcon  = acc.isLiability ? '💳' : ACC_ICONS[i % ACC_ICONS.length]
+                const accInitial = acc.name.slice(0,1).toUpperCase()
                 return (
                   <div key={acc.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'8px 10px', borderRadius:10, cursor:'pointer', transition:'background 0.15s' }}
                     onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background='var(--surface3)'}
                     onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background='transparent'}>
-                    <div style={{ width:36, height:36, borderRadius:10, background:`${accColor}20`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0, border:`1px solid ${accColor}30` }}>
-                      {accIcon}
+                    <div style={{ width:36, height:36, borderRadius:10, background:`${accColor}20`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:700, color:accColor, flexShrink:0, border:`1px solid ${accColor}30`, fontFamily:'DM Sans, sans-serif' }}>
+                      {accInitial}
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:13, fontWeight:500, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{acc.name}</div>

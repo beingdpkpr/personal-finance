@@ -5,7 +5,6 @@ import { Goal, uid } from '../lib/data'
 import Card from '../components/ui/Card'
 
 const GOAL_COLORS = ['#7c6ef5','#22c55e','#f59e0b','#f87171','#38bdf8','#a07aff','#ff7eb3','#2ed18a']
-const GOAL_ICONS  = ['ðŸ›¡','âœˆ','ðŸ’»','ðŸ ','ðŸ’°','ðŸŽ¯','ðŸŽ“','ðŸš—','ðŸ‹','ðŸ’Ž']
 
 function SemiGauge({ pct, color, current }: { pct: number; color: string; current: number }) {
   // Arc path: M10,60 A50,50 0 0,1 110,60  â€” semicircle, circumference â‰ˆ 157
@@ -102,14 +101,14 @@ export default function Goals() {
           {goals.map((g, i) => {
             const pct = g.target > 0 ? Math.min((g.current/g.target)*100, 100) : 0
             const color = GOAL_COLORS[i % GOAL_COLORS.length]
-            const icon  = GOAL_ICONS[i % GOAL_ICONS.length]
+            const initial = g.name.slice(0,1).toUpperCase()
             const remaining = g.target - g.current
             return (
               <Card key={g.id} delay={i*0.05}>
                 {/* Header: icon + name + % badge + actions */}
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16 }}>
                   <div style={{ display:'flex', gap:12, alignItems:'center' }}>
-                    <div style={{ width:44, height:44, borderRadius:13, background:`${color}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, border:`1px solid ${color}30`, flexShrink:0 }}>{icon}</div>
+                    <div style={{ width:44, height:44, borderRadius:13, background:`${color}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, fontWeight:700, color, border:`1px solid ${color}30`, flexShrink:0, fontFamily:'DM Sans, sans-serif' }}>{initial}</div>
                     <div>
                       <div style={{ fontSize:15, fontWeight:600, color:'var(--text)' }}>{g.name}</div>
                       <div style={{ fontSize:12, color:'var(--text-dim)', marginTop:2 }}>Target: {fmt(g.target)}</div>
@@ -117,8 +116,8 @@ export default function Goals() {
                   </div>
                   <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                     <span style={{ fontSize:20, fontWeight:700, fontFamily:'DM Mono', color }}>{Math.round(pct)}%</span>
-                    <button onClick={()=>openEdit(g)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--text-dim)', fontSize:13, padding:'2px 4px' }}>âœŽ</button>
-                    <button onClick={()=>deleteGoal(g.id)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--negative)', fontSize:13, padding:'2px 4px' }}>âœ•</button>
+                    <button onClick={()=>openEdit(g)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--text-dim)', padding:'2px 4px', display:'flex' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                    <button onClick={()=>deleteGoal(g.id)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--negative)', padding:'2px 4px', display:'flex' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                   </div>
                 </div>
 
@@ -139,7 +138,7 @@ export default function Goals() {
                   </div>}
                   <div style={{ textAlign:'center' }}>
                     <div style={{ fontSize:11, color:'var(--text-dim)' }}>{remaining<=0?'Status':'To go'}</div>
-                    <div style={{ fontSize:14, fontWeight:700, fontFamily:'DM Mono', color: remaining<=0?'var(--positive)':'var(--text)' }}>{remaining<=0?'âœ“ Done':fmt(remaining)}</div>
+                    <div style={{ fontSize:14, fontWeight:700, fontFamily:'DM Mono', color: remaining<=0?'var(--positive)':'var(--text)' }>{remaining<=0?'Done':fmt(remaining)}</div>
                   </div>
                 </div>
 

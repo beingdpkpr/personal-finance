@@ -130,7 +130,9 @@ export default function Header({ onToggleSidebar }: Props) {
               </div>
               {alerts.length === 0 ? (
                 <div style={{ padding: '20px 16px', fontSize: 13, color: 'var(--text-dim)', textAlign: 'center' }}>
-                  <div style={{ fontSize: 22, marginBottom: 6 }}>✓</div>
+                  <div style={{ display:'flex', justifyContent:'center', marginBottom: 6, color:'var(--positive)' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  </div>
                   All budgets on track
                 </div>
               ) : (
@@ -141,8 +143,11 @@ export default function Header({ onToggleSidebar }: Props) {
                       onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface2)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
-                      <div style={{ width: 36, height: 36, borderRadius: 10, background: `${a.pct >= 100 ? 'var(--negative-dim)' : 'oklch(0.22 0.08 70)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
-                        {a.pct >= 100 ? '⛔' : '⚠️'}
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: `${a.pct >= 100 ? 'var(--negative-dim)' : 'oklch(0.22 0.08 70)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: a.pct >= 100 ? 'var(--negative)' : 'var(--warning)' }}>
+                        {a.pct >= 100
+                          ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                          : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        }
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>

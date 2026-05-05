@@ -135,15 +135,15 @@ export default function Monthly() {
           {/* Stat cards */}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14 }}>
             {[
-              { label:'Monthly Income',  value: fmt(income),      color:'var(--positive)', icon:'â†‘' },
-              { label:'Monthly Spending',value: fmt(expense),     color:'var(--negative)', icon:'â†“' },
-              { label:'Net Saved',       value: fmt(savings),     color: savings>=0?'var(--positive)':'var(--negative)', icon:'ðŸ’°' },
+              { label:'Monthly Income',  value: fmt(income),  color:'var(--positive)', icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="18 15 12 9 6 15"/></svg> },
+              { label:'Monthly Spending',value: fmt(expense), color:'var(--negative)', icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg> },
+              { label:'Net Saved',       value: fmt(savings), color: savings>=0?'var(--positive)':'var(--negative)', icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 7H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3H8l-1 4h10l-1-4z"/><circle cx="12" cy="13" r="2"/></svg> },
               { label:'Savings Rate',    value:`${savingsRate}%`, color:'var(--accent)',   icon:'%' },
             ].map((s,i) => (
               <Card key={i} delay={i*0.05}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
                   <div style={{ fontSize:11, color:'var(--text-dim)', textTransform:'uppercase', letterSpacing:'0.06em' }}>{s.label}</div>
-                  <span style={{ width:28, height:28, borderRadius:8, background:`${s.color}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, color:s.color, fontWeight:700 }}>{s.icon}</span>
+                  <span style={{ width:28, height:28, borderRadius:8, background:`${s.color}22`, display:'flex', alignItems:'center', justifyContent:'center', color:s.color }}>{s.icon}</span>
                 </div>
                 <div style={{ fontSize:22, fontWeight:700, fontFamily:'DM Mono', color:s.color }}>{s.value}</div>
               </Card>
@@ -253,7 +253,7 @@ export default function Monthly() {
                         </td>
                         <td style={{ padding:'10px 12px', textAlign:'right', fontFamily:'DM Mono', fontSize:12, borderBottom:'1px solid var(--border)',
                           color: diff===null?'var(--text-dim)':diff<0?'oklch(0.68 0.18 145)':'oklch(0.64 0.2 25)' }}>
-                          {diff===null ? 'â€”' : `${diff<0?'â†“':'â†‘'} ${fmt(Math.abs(diff))}`}
+                          {diff===null ? '-' : `${diff<0 ? "↓" : "↑"} ${fmt(Math.abs(diff))}`}
                         </td>
                       </tr>
                     )
@@ -282,8 +282,8 @@ export default function Monthly() {
 
           {/* Yearly bar chart */}
           <Card>
-            <div style={{ fontSize:14, fontWeight:600, color:'var(--text)', marginBottom:4 }}>Monthly Expenses â€” {selYear}</div>
-            <div style={{ fontSize:12, color:'var(--text-dim)', marginBottom:16 }}>Bar view Â· 12 months</div>
+            <div style={{ fontSize:14, fontWeight:600, color:'var(--text)', marginBottom:4 }}>Monthly Expenses — {selYear}</div>
+            <div style={{ fontSize:12, color:'var(--text-dim)', marginBottom:16 }}>Bar view · 12 months</div>
             <BarChart data={yearBarData} />
           </Card>
 
