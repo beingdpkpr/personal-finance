@@ -8,6 +8,30 @@ import GooglePayImportModal from '../components/modals/GooglePayImportModal'
 
 type Filter = 'all' | 'income' | 'expense'
 
+function Checkbox({ checked, indeterminate, onChange }: { checked: boolean; indeterminate?: boolean; onChange: () => void }) {
+  return (
+    <div
+      onClick={e => { e.stopPropagation(); onChange() }}
+      style={{
+        width: 16, height: 16, borderRadius: 4, flexShrink: 0, cursor: 'pointer',
+        border: checked || indeterminate ? 'none' : '1.5px solid var(--border)',
+        background: checked ? 'var(--accent)' : indeterminate ? 'var(--accent)' : 'transparent',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'all 0.15s', boxSizing: 'border-box',
+      }}
+    >
+      {checked && (
+        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+          <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+      {!checked && indeterminate && (
+        <svg width="8" height="2" viewBox="0 0 8 2"><rect width="8" height="2" rx="1" fill="white" /></svg>
+      )}
+    </div>
+  )
+}
+
 export default function Transactions() {
   const { txns, deleteTxn, deleteTxns, openAdd, openEdit, addTxn } = useFinanceContext()
   const [searchParams] = useSearchParams()
@@ -133,27 +157,6 @@ export default function Transactions() {
         <button onClick={openAdd} style={{ padding: '7px 14px', borderRadius: 20, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>+ Add</button>
       </div>
 
-      {/* Bulk action bar */}
-      {selected.size > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', background: 'var(--accent-dim)', border: '1px solid var(--accent)', borderRadius: 12, animation: 'slideUp 0.15s ease both' }}>
-          <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600, flex: 1 }}>
-            {selected.size} selected
-          </span>
-          <button
-            onClick={() => setSelected(new Set())}
-            style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12 }}
-          >
-            Deselect all
-          </button>
-          <button
-            onClick={() => setConfirmDelete(true)}
-            style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: 'var(--negative)', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
-          >
-            Delete {selected.size}
-          </button>
-        </div>
-      )}
-
       {/* Confirm delete dialog */}
       {confirmDelete && (
         <div
@@ -164,8 +167,11 @@ export default function Transactions() {
             style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, padding: 28, width: 360, display: 'flex', flexDirection: 'column', gap: 16, animation: 'scaleIn 0.15s ease both' }}
             onClick={e => e.stopPropagation()}
           >
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Delete {selected.size} transactions?</div>
-            <div style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5 }}>This cannot be undone. All selected transactions will be permanently removed.</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--negative-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🗑</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Delete {selected.size} transaction{selected.size !== 1 ? 's' : ''}?</div>
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6 }}>This cannot be undone. All selected transactions will be permanently removed.</div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button onClick={() => setConfirmDelete(false)} style={{ padding: '9px 20px', borderRadius: 10, border: '1px solid var(--border)', background: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 13 }}>Cancel</button>
               <button onClick={bulkDelete} style={{ padding: '9px 20px', borderRadius: 10, border: 'none', background: 'var(--negative)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Delete</button>
@@ -175,52 +181,95 @@ export default function Transactions() {
       )}
 
       {/* List */}
-      <Card hover={false}>
+      <Card hover={false} style={{ padding: 0, overflow: 'hidden' }}>
         {filtered.length === 0 ? (
           <div style={{ color: 'var(--text-dim)', fontSize: 13, textAlign: 'center', padding: '32px 0' }}>No transactions found</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            {/* Header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '32px 1fr 120px 100px 90px 80px', gap: 12, padding: '8px 12px', borderBottom: '1px solid var(--border)', fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', alignItems: 'center' }}>
-              <input
-                type="checkbox"
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {/* Header — transforms into bulk action bar when items are selected */}
+            <div style={{
+              display: 'grid', gridTemplateColumns: '44px 1fr 120px 100px 90px 80px', gap: 12,
+              padding: '10px 16px',
+              borderBottom: '1px solid var(--border)',
+              alignItems: 'center',
+              background: selected.size > 0 ? 'var(--accent-dim)' : 'var(--surface2)',
+              transition: 'background 0.2s',
+            }}>
+              <Checkbox
                 checked={filtered.length > 0 && selected.size === filtered.length}
-                ref={el => { if (el) el.indeterminate = selected.size > 0 && selected.size < filtered.length }}
+                indeterminate={selected.size > 0 && selected.size < filtered.length}
                 onChange={toggleAll}
-                style={{ cursor: 'pointer', accentColor: 'var(--accent)', width: 14, height: 14 }}
               />
-              <span>Description</span><span>Category</span><span>Date</span><span style={{ textAlign: 'right' }}>Amount</span><span style={{ textAlign: 'right' }}>Actions</span>
+              {selected.size > 0 ? (
+                <>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', gridColumn: '2 / 5' }}>
+                    {selected.size} of {filtered.length} selected
+                  </span>
+                  <div style={{ gridColumn: '5 / 7', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => setSelected(new Set())}
+                      style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12, fontWeight: 500 }}
+                    >
+                      Deselect
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete(true)}
+                      style={{ padding: '5px 12px', borderRadius: 8, border: 'none', background: 'var(--negative)', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}
+                    >
+                      <svg width="12" height="13" viewBox="0 0 12 13" fill="none"><path d="M1 3h10M4 3V2h4v1M5 6v4M7 6v4M2 3l.7 8.1A1 1 0 003.7 12h4.6a1 1 0 001-.9L10 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      Delete {selected.size}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <span style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Description</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Category</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Date</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right' }}>Amount</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right' }}>Actions</span>
+                </>
+              )}
             </div>
-            {filtered.map(t => (
-              <div
-                key={t.id}
-                style={{ display: 'grid', gridTemplateColumns: '32px 1fr 120px 100px 90px 80px', gap: 12, padding: '10px 12px', borderBottom: '1px solid var(--border)', alignItems: 'center', background: selected.has(t.id) ? 'var(--accent-dim)' : 'transparent', transition: 'background 0.1s' }}
-                onMouseEnter={e => { if (!selected.has(t.id)) e.currentTarget.style.background = 'var(--surface3)' }}
-                onMouseLeave={e => { if (!selected.has(t.id)) e.currentTarget.style.background = 'transparent' }}
-              >
-                <input
-                  type="checkbox"
-                  checked={selected.has(t.id)}
-                  onChange={() => toggleRow(t.id)}
-                  style={{ cursor: 'pointer', accentColor: 'var(--accent)', width: 14, height: 14 }}
-                />
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.description}</div>
-                  {t.tags?.length ? <div style={{ fontSize: 10, color: 'var(--text-dim)' }}>{t.tags.join(' · ')}</div> : null}
+
+            {filtered.map(t => {
+              const isSel = selected.has(t.id)
+              return (
+                <div
+                  key={t.id}
+                  onClick={() => toggleRow(t.id)}
+                  style={{
+                    display: 'grid', gridTemplateColumns: '44px 1fr 120px 100px 90px 80px', gap: 12,
+                    padding: '11px 16px',
+                    borderBottom: '1px solid var(--border)',
+                    borderLeft: isSel ? '3px solid var(--accent)' : '3px solid transparent',
+                    alignItems: 'center',
+                    background: isSel ? 'var(--accent-dim)' : 'transparent',
+                    transition: 'background 0.12s, border-left-color 0.12s',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = 'var(--surface3)' }}
+                  onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = 'transparent' }}
+                >
+                  <Checkbox checked={isSel} onChange={() => toggleRow(t.id)} />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.description}</div>
+                    {t.tags?.length ? <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 1 }}>{t.tags.join(' · ')}</div> : null}
+                  </div>
+                  <div style={{ fontSize: 11, padding: '3px 8px', borderRadius: 20, background: `${getCatColor(t.category)}22`, color: getCatColor(t.category), fontWeight: 600, width: 'fit-content', whiteSpace: 'nowrap' }}>
+                    {getCatLabel(t.category)}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t.date}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, fontFamily: 'DM Mono', color: t.type === 'income' ? 'var(--positive)' : 'var(--negative)', textAlign: 'right' }}>
+                    {t.type === 'income' ? '+' : '-'}{fmt(t.amount)}
+                  </div>
+                  <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>
+                    <button onClick={() => openEdit(t)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', fontSize: 13, padding: '3px 6px', borderRadius: 6, lineHeight: 1 }}>✎</button>
+                    <button onClick={() => deleteTxn(t.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--negative)', fontSize: 13, padding: '3px 6px', borderRadius: 6, lineHeight: 1 }}>✕</button>
+                  </div>
                 </div>
-                <div style={{ fontSize: 11, padding: '3px 8px', borderRadius: 20, background: `${getCatColor(t.category)}22`, color: getCatColor(t.category), fontWeight: 600, width: 'fit-content', whiteSpace: 'nowrap' }}>
-                  {getCatLabel(t.category)}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t.date}</div>
-                <div style={{ fontSize: 13, fontWeight: 600, fontFamily: 'DM Mono', color: t.type === 'income' ? 'var(--positive)' : 'var(--negative)', textAlign: 'right' }}>
-                  {t.type === 'income' ? '+' : '-'}{fmt(t.amount)}
-                </div>
-                <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                  <button onClick={() => openEdit(t)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', fontSize: 13, padding: '2px 6px' }}>✎</button>
-                  <button onClick={() => deleteTxn(t.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--negative)', fontSize: 13, padding: '2px 6px' }}>✕</button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </Card>
