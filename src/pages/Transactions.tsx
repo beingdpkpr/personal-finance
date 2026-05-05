@@ -149,7 +149,7 @@ export default function Transactions() {
           <button style={btnStyle(filter === 'expense')} onClick={() => setFilter('expense')}>Expense</button>
         </div>
         <button onClick={exportCSV} style={{ padding: '7px 14px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12 }}>&#8595; Export</button>
-        <button onClick={() =>&#8593; Import CSV</button>
+        <button onClick={() => fileRef.current?.click()} style={{ padding: '7px 14px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12 }}>&#8593; Import CSV</button>
         <input ref={fileRef} type="file" accept=".csv" onChange={importCSV} style={{ display: 'none' }} />
         <button onClick={() => setGpayOpen(true)} style={{ padding: '7px 14px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 5 }}>
           <span style={{ fontWeight: 700, color: '#4285f4', fontSize: 13 }}>G</span> GPay Import
