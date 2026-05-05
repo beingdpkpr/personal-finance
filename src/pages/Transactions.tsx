@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useFinanceContext } from '../hooks/FinanceContext'
+import { useSearchParams } from 'react-router-dom'
 import { fmt } from '../lib/format'
 import { EXPENSE_CATS, INCOME_CATS } from '../constants/categories'
 import Card from '../components/ui/Card'
@@ -8,8 +9,14 @@ type Filter = 'all' | 'income' | 'expense'
 
 export default function Transactions() {
   const { txns, deleteTxn, openAdd, openEdit, addTxn } = useFinanceContext()
-  const [search, setSearch] = useState('')
+  const [searchParams] = useSearchParams()
+  const [search, setSearch] = useState(searchParams.get('q') ?? '')
   const [filter, setFilter] = useState<Filter>('all')
+
+  useEffect(() => {
+    const q = searchParams.get('q')
+    if (q) setSearch(q)
+  }, [searchParams])
   const fileRef = useRef<HTMLInputElement>(null)
 
   const allCats = [...EXPENSE_CATS, ...INCOME_CATS]
