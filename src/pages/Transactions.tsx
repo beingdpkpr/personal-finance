@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { fmt } from '../lib/format'
 import { EXPENSE_CATS, INCOME_CATS } from '../constants/categories'
 import Card from '../components/ui/Card'
+import GooglePayImportModal from '../components/modals/GooglePayImportModal'
 
 type Filter = 'all' | 'income' | 'expense'
 
@@ -12,6 +13,7 @@ export default function Transactions() {
   const [searchParams] = useSearchParams()
   const [search, setSearch] = useState(searchParams.get('q') ?? '')
   const [filter, setFilter] = useState<Filter>('all')
+  const [gpayOpen, setGpayOpen] = useState(false)
 
   useEffect(() => {
     const q = searchParams.get('q')
@@ -105,8 +107,11 @@ export default function Transactions() {
           <button style={btnStyle(filter === 'expense')} onClick={() => setFilter('expense')}>Expense</button>
         </div>
         <button onClick={exportCSV} style={{ padding: '7px 14px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12 }}>↓ Export</button>
-        <button onClick={() => fileRef.current?.click()} style={{ padding: '7px 14px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12 }}>↑ Import</button>
+        <button onClick={() => fileRef.current?.click()} style={{ padding: '7px 14px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12 }}>↑ Import CSV</button>
         <input ref={fileRef} type="file" accept=".csv" onChange={importCSV} style={{ display: 'none' }} />
+        <button onClick={() => setGpayOpen(true)} style={{ padding: '7px 14px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontWeight: 700, color: '#4285f4', fontSize: 13 }}>G</span> GPay Import
+        </button>
         <button onClick={openAdd} style={{ padding: '7px 14px', borderRadius: 20, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>+ Add</button>
       </div>
 
@@ -147,6 +152,8 @@ export default function Transactions() {
           </div>
         )}
       </Card>
+
+      {gpayOpen && <GooglePayImportModal onClose={() => setGpayOpen(false)} />}
     </div>
   )
 }
