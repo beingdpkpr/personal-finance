@@ -75,40 +75,59 @@ const SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets',
 ].join(' ');
 
+/* ── Google Identity Services types ── */
+interface GisTokenResponse {
+  access_token?: string;
+  expires_in?: number;
+  error?: string;
+  error_description?: string;
+}
+interface GisTokenClient {
+  requestAccessToken: (overrides?: { prompt?: string }) => void;
+}
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        oauth2: {
+          initTokenClient: (cfg: {
+            client_id: string;
+            scope: string;
+            callback: (r: GisTokenResponse) => void;
+            error_callback?: (e: { type: string }) => void;
+          }) => GisTokenClient;
+        };
+      };
+    };
+  }
+}
+
 export function openGoogleOAuthPopup(): Promise<{ accessToken: string; expiresIn: number }> {
   return new Promise((resolve, reject) => {
-    const clientId   = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
-    const redirectUri = `${window.location.origin}/auth/callback`;
-    const url = `https://accounts.google.com/o/oauth2/v2/auth?` +
-      `client_id=${encodeURIComponent(clientId)}&` +
-      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-      `response_type=token&` +
-      `scope=${encodeURIComponent(SCOPES)}&` +
-      `include_granted_scopes=true`;
-
-    const popup = window.open(url, 'google-auth', 'width=500,height=620,left=200,top=100');
-    if (!popup) { reject(new Error('Popup blocked. Allow popups for this site.')); return; }
-
-    function onMessage(e: MessageEvent) {
-      if (e.origin !== window.location.origin) return;
-      if (e.data?.type === 'google-oauth') {
-        cleanup();
-        resolve({ accessToken: e.data.accessToken, expiresIn: e.data.expiresIn });
-      } else if (e.data?.type === 'google-oauth-error') {
-        cleanup();
-        reject(new Error(e.data.error ?? 'Google sign-in failed'));
-      }
+    if (!window.google?.accounts?.oauth2) {
+      reject(new Error('Google Identity Services not loaded. Check your internet connection and try again.'));
+      return;
     }
-
-    const closedTimer = setInterval(() => {
-      if (popup.closed) { cleanup(); reject(new Error('Auth popup closed')); }
-    }, 500);
-
-    function cleanup() {
-      clearInterval(closedTimer);
-      window.removeEventListener('message', onMessage);
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
+    if (!clientId) {
+      reject(new Error('VITE_GOOGLE_CLIENT_ID is not set.'));
+      return;
     }
-
-    window.addEventListener('message', onMessage);
+    const client = window.google.accounts.oauth2.initTokenClient({
+      client_id: clientId,
+      scope: SCOPES,
+      callback: (response) => {
+        if (response.access_token) {
+          resolve({ accessToken: response.access_token, expiresIn: response.expires_in ?? 3600 });
+        } else {
+          reject(new Error(response.error_description ?? response.error ?? 'Google sign-in failed'));
+        }
+      },
+      error_callback: (err) => {
+        if (err.type === 'popup_closed') reject(new Error('Sign-in popup was closed'));
+        else reject(new Error(`Sign-in error: ${err.type}`));
+      },
+    });
+    client.requestAccessToken({ prompt: 'consent' });
   });
 }
