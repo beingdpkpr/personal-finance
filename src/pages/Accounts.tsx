@@ -89,7 +89,7 @@ export default function Accounts() {
               )}
               {/* Icon + name */}
               <div style={{ display:'flex', gap:12, alignItems:'center' }}>
-                <div style={{ width:46, height:46, borderRadius:14, background:`${color}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, border:`1px solid ${color}30`, flexShrink:0 }}>{icon}</div>
+                <div style={{ width:46, height:46, borderRadius:14, background:`${color}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:700, color, border:`1px solid ${color}30`, flexShrink:0, fontFamily:'DM Sans, sans-serif' }}>{initial}</div>
                 <div>
                   <div style={{ fontSize:15, fontWeight:700, color:'var(--text)' }}>{item.name}</div>
                   <div style={{ fontSize:12, color:'var(--text-dim)', marginTop:2 }}>{item.isLiability ? 'Liability' : 'Asset'}</div>
