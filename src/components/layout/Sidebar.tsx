@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useFinanceContext } from '../../hooks/FinanceContext'
 import SettingsModal from './SettingsModal'
+import AppLogo from '../ui/AppLogo'
 
 const NAV = [
   { to: '/dashboard',    label: 'Dashboard',    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> },
@@ -32,8 +33,8 @@ export default function Sidebar({ collapsed }: Props) {
       flexShrink: 0,
     }}>
       <div style={{ padding: collapsed ? '20px 0' : '20px 16px', display:'flex', alignItems:'center', gap:10, justifyContent: collapsed?'center':'flex-start', borderBottom:'1px solid var(--border)' }}>
-        <div style={{ width:34, height:34, borderRadius:10, background:'linear-gradient(135deg, var(--accent-mid), var(--accent))', display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, color:'#fff', fontWeight:800, flexShrink:0, boxShadow:'0 4px 16px var(--accent-glow)', fontFamily:'DM Sans, sans-serif', letterSpacing:'-0.02em' }}>A</div>
-        {!collapsed && <span style={{ fontSize:16, fontWeight:700, color:'var(--text)', whiteSpace:'nowrap', letterSpacing:'-0.01em' }}>Artha</span>}
+        <AppLogo size={34} />
+        {!collapsed && <span style={{ fontSize:16, fontWeight:700, color:'var(--text)', whiteSpace:'nowrap', letterSpacing:'-0.01em' }}>Arya's Finance</span>}
       </div>
 
       <nav style={{ flex:1, padding:'12px 8px', display:'flex', flexDirection:'column', gap:2 }}>

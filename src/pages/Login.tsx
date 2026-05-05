@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { openGoogleOAuthPopup } from '../lib/google-auth'
+import AppLogo from '../components/ui/AppLogo'
 
 export default function Login() {
   const { googleSignIn, loadDemoData, user, sessionNote } = useFinanceContext()
@@ -43,8 +44,8 @@ export default function Login() {
       <div style={{ position:'relative', width:'100%', maxWidth:400, background:'rgba(255,255,255,0.84)', borderRadius:24, padding:32, display:'flex', flexDirection:'column', gap:20, boxShadow:'0 8px 32px rgba(0,0,0,0.12)' }}>
         {/* Logo */}
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ width:32, height:32, borderRadius:9, background:'linear-gradient(135deg, #6d5ce6, #7c6ef5)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, color:'#fff', fontWeight:800, fontFamily:'DM Sans, sans-serif', letterSpacing:'-0.02em', boxShadow:'0 4px 12px #7c6ef540' }}>A</div>
-          <span style={{ fontSize:20, fontWeight:800, color:'#0d1030', letterSpacing:'-0.02em' }}>Artha</span>
+          <AppLogo size={36} />
+          <span style={{ fontSize:20, fontWeight:800, color:'#0d1030', letterSpacing:'-0.02em' }}>Arya's Finance</span>
         </div>
 
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>

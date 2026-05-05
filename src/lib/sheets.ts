@@ -1,6 +1,6 @@
 const SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
 const DRIVE_BASE  = 'https://www.googleapis.com/drive/v3/files';
-const FOLDER_NAME = 'Artha';
+const FOLDER_NAME = "Arya's Finance";
 
 export type TabName = 'Transactions' | 'Budgets' | 'Goals' | 'Recurring' | 'NetWorth' | 'Settings' | 'CustomCategories';
 
@@ -93,7 +93,7 @@ async function moveToFolder(accessToken: string, fileId: string, folderId: strin
 
 export async function createSpreadsheet(accessToken: string, email: string): Promise<string> {
   const body = {
-    properties: { title: `Artha - ${email}` },
+    properties: { title: `Arya's Finance - ${email}` },
     sheets: (Object.keys(TAB_HEADERS) as TabName[]).map(title => ({
       properties: { title },
     })),

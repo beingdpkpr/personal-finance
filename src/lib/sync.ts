@@ -113,14 +113,14 @@ export async function ensureSpreadsheet(
     return { id: spreadsheetId, isNew: false };
   }
 
-  // 2. Search Drive for an existing "Artha - email" spreadsheet
-  const existingId = await findSpreadsheetByName(accessToken, `Artha - ${email}`);
+  // 2. Search Drive for an existing "Arya's Finance - email" spreadsheet
+  const existingId = await findSpreadsheetByName(accessToken, `Arya's Finance - ${email}`);
   if (existingId) {
     await saveSpreadsheetId(existingId);
     return { id: existingId, isNew: false };
   }
 
-  // 3. Nothing found — create a new one (placed in the Artha folder)
+  // 3. Nothing found — create a new one (placed in the Arya's Finance folder)
   const newId = await createSpreadsheet(accessToken, email);
   await saveSpreadsheetId(newId);
   return { id: newId, isNew: true };
