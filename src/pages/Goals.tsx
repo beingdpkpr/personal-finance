@@ -138,7 +138,7 @@ export default function Goals() {
                   </div>}
                   <div style={{ textAlign:'center' }}>
                     <div style={{ fontSize:11, color:'var(--text-dim)' }}>{remaining<=0?'Status':'To go'}</div>
-                    <div style={{ fontSize:14, fontWeight:700, fontFamily:'DM Mono', color: remaining<=0?'var(--positive)':'var(--text)' }>{remaining<=0?'Done':fmt(remaining)}</div>
+                    <div style={{ fontSize:14, fontWeight:700, fontFamily:'DM Mono', color: remaining<=0?'var(--positive)':'var(--text)' }}>{remaining<=0?'Done':fmt(remaining)}</div>
                   </div>
                 </div>
 
