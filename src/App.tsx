@@ -23,8 +23,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const base = import.meta.env.BASE_URL   // '/' locally, '/personal-finance/' in prod
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={base}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<AuthGuard><AppShell /></AuthGuard>}>
