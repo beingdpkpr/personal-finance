@@ -10,6 +10,7 @@ import Analytics from './pages/Analytics'
 import Budget from './pages/Budget'
 import Goals from './pages/Goals'
 import Monthly from './pages/Monthly'
+import CategorySetup from './pages/CategorySetup'
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useFinanceContext()
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="budget"       element={<Budget />} />
           <Route path="goals"        element={<Goals />} />
           <Route path="monthly"      element={<Monthly />} />
+          <Route path="categories"   element={<CategorySetup />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
