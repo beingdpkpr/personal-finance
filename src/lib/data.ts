@@ -9,7 +9,7 @@ export const GROUP_LABELS: Record<Group, string> = {
   family:  'Family',
 };
 
-export const GROUPS: Group[] = ['needs', 'family', 'savings', 'wants'];
+export const GROUPS: Group[] = ['needs', 'wants', 'savings', 'family'];
 
 export interface Category {
   id:        string;
