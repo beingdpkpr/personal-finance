@@ -23,7 +23,7 @@ function BudgetArc({ pct, spent, color, hasLimit }: { pct: number; spent: number
       )}
       <text x="60" y="52" textAnchor="middle" fontSize="13" fontWeight="700" fill="var(--text)" fontFamily="DM Mono">{fmt(spent)}</text>
       {hasLimit && (
-        <text x="60" y="64" textAnchor="middle" fontSize="9" fill={arcColor} fontFamily="DM Sans" fontWeight="600">{Math.round(pct)}%</text>
+        <text x="60" y="64" textAnchor="middle" fontSize="9" fill={arcColor} fontFamily="DM Sans" fontWeight="600">{Math.min(Math.round(pct), 100)}%</text>
       )}
       <text x="10" y="76" textAnchor="middle" fontSize="9" fill="var(--text-dim)" fontFamily="DM Sans">0%</text>
       <text x="110" y="76" textAnchor="middle" fontSize="9" fill="var(--text-dim)" fontFamily="DM Sans">100%</text>
@@ -50,10 +50,23 @@ export default function Budget() {
     setEditing(group)
   }
 
+  // Sum of % budgets across all OTHER groups
+  function otherPctTotal(excludeGroup: Group): number {
+    return GROUPS.filter(g => g !== excludeGroup).reduce((s, g) => {
+      const e = budgets[g]
+      return s + (e?.mode === 'pct' ? e.value : 0)
+    }, 0)
+  }
+
   function saveEdit(group: Group) {
     const v = parseFloat(editValue)
     if (!isNaN(v) && v >= 0) {
-      setBudgets({ ...budgets, [group]: { mode: editMode, value: v } })
+      let capped = v
+      if (editMode === 'pct') {
+        const remaining = 100 - otherPctTotal(group)
+        capped = Math.min(v, Math.max(0, remaining))
+      }
+      setBudgets({ ...budgets, [group]: { mode: editMode, value: capped } })
     }
     setEditing(null)
   }
@@ -65,12 +78,20 @@ export default function Budget() {
     setEditing(null)
   }
 
+  const totalPlannedPct = GROUPS.reduce((s, g) => {
+    const e = budgets[g]
+    return s + (e?.mode === 'pct' ? e.value : 0)
+  }, 0)
+
   return (
     <div style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
         <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Budget Tracker</div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
-          Month income: <span style={{ color: 'var(--positive)', fontFamily: 'DM Mono' }}>{fmt(monthIncome)}</span>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+          <span>Month income: <span style={{ color: 'var(--positive)', fontFamily: 'DM Mono' }}>{fmt(monthIncome)}</span></span>
+          {totalPlannedPct > 0 && (
+            <span>Planned: <span style={{ color: totalPlannedPct > 100 ? 'var(--negative)' : totalPlannedPct === 100 ? 'var(--positive)' : 'var(--text)', fontFamily: 'DM Mono', fontWeight: 600 }}>{totalPlannedPct}%</span> of income</span>
+          )}
         </div>
       </div>
 
@@ -116,13 +137,28 @@ export default function Budget() {
                       </button>
                     ))}
                   </div>
-                  <input
-                    value={editValue} onChange={e => setEditValue(e.target.value)}
-                    type="number" min="0" placeholder={editMode === 'pct' ? 'e.g. 40' : 'e.g. 35000'}
-                    autoFocus
-                    style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontSize: 13, fontFamily: 'DM Sans', outline: 'none', width: '100%' }}
-                    onKeyDown={e => { if (e.key === 'Enter') saveEdit(group); if (e.key === 'Escape') setEditing(null) }}
-                  />
+                  {(() => {
+                    const maxPct = 100 - otherPctTotal(group)
+                    const v = parseFloat(editValue)
+                    const overLimit = editMode === 'pct' && !isNaN(v) && v > maxPct
+                    return (
+                      <>
+                        <input
+                          value={editValue} onChange={e => setEditValue(e.target.value)}
+                          type="number" min="0" max={editMode === 'pct' ? maxPct : undefined}
+                          placeholder={editMode === 'pct' ? `max ${maxPct}%` : 'e.g. 35000'}
+                          autoFocus
+                          style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${overLimit ? 'var(--negative)' : 'var(--border)'}`, background: 'var(--surface2)', color: 'var(--text)', fontSize: 13, fontFamily: 'DM Sans', outline: 'none', width: '100%' }}
+                          onKeyDown={e => { if (e.key === 'Enter') saveEdit(group); if (e.key === 'Escape') setEditing(null) }}
+                        />
+                        {overLimit && (
+                          <div style={{ fontSize: 11, color: 'var(--negative)' }}>
+                            Total budget would exceed 100% — max {maxPct}% available for this group.
+                          </div>
+                        )}
+                      </>
+                    )
+                  })()}
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button onClick={() => saveEdit(group)} style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Save</button>
                     <button onClick={() => setEditing(null)} style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: '1px solid var(--border)', background: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12 }}>Cancel</button>
