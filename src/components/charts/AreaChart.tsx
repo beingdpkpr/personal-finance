@@ -47,9 +47,9 @@ export default function AreaChart({ data, color = '#7c6ef5', height = 120 }: Pro
         style={{ strokeDasharray: 1200, strokeDashoffset: drawn ? 0 : 1200, transition: 'stroke-dashoffset 1.4s cubic-bezier(0.4,0,0.2,1)' } as React.CSSProperties} />
       <path d={line(expPts)} fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
         style={{ strokeDasharray: 1200, strokeDashoffset: drawn ? 0 : 1200, transition: 'stroke-dashoffset 1.4s cubic-bezier(0.4,0,0.2,1) 0.1s' } as React.CSSProperties} />
-      {drawn && incPts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r="3.5" fill={color} stroke="var(--surface2)" strokeWidth="2" />)}
-      {drawn && expPts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r="3" fill="#f87171" stroke="var(--surface2)" strokeWidth="2" />)}
-      {data.map((d, i) => <text key={i} x={incPts[i][0]} y={H + 14} textAnchor="middle" fontSize="10" fill="var(--text-dim)" fontFamily="DM Sans">{d.month}</text>)}
+      {drawn && incPts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r={data.length > 8 ? 2.5 : 3.5} fill={color} stroke="var(--surface2)" strokeWidth="2" />)}
+      {drawn && expPts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r={data.length > 8 ? 2 : 3} fill="#f87171" stroke="var(--surface2)" strokeWidth="2" />)}
+      {data.map((d, i) => (data.length <= 8 || i % 2 === 0) && <text key={i} x={incPts[i][0]} y={H + 14} textAnchor="middle" fontSize="10" fill="var(--text-dim)" fontFamily="DM Sans">{d.month}</text>)}
     </svg>
   )
 }

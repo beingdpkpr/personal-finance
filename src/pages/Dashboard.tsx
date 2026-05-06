@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { fmt } from '../lib/format'
@@ -22,6 +23,7 @@ function fmtShortDate(d: string): string {
 export default function Dashboard() {
   const navigate = useNavigate()
   const { txns, nw, categories } = useFinanceContext()
+  const [cashFlowMonths, setCashFlowMonths] = useState<6 | 12>(12)
 
   const now = new Date()
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
@@ -48,12 +50,12 @@ export default function Dashboard() {
   const netWorth    = totalAssets - totalLiab
   const lastNW      = netWorth - netSavings
 
-  const areaData = Array.from({length:6}, (_,i) => {
-    const d = new Date(ty, tm-1-5+i, 1)
+  const areaData = Array.from({length: cashFlowMonths}, (_,i) => {
+    const d = new Date(ty, tm-1-(cashFlowMonths-1)+i, 1)
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
     const mt = txns.filter(t => t.date.startsWith(key))
     return {
-      month: MONTHS[d.getMonth()],
+      month: `${MONTHS[d.getMonth()]}${d.getFullYear() !== ty ? ` '${String(d.getFullYear()).slice(2)}` : ''}`,
       income:  mt.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),
       expense: mt.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0),
     }
@@ -96,9 +98,14 @@ export default function Dashboard() {
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
             <div>
               <div style={{ fontSize:14, fontWeight:600, color:'var(--text)' }}>Cash Flow</div>
-              <div style={{ fontSize:12, color:'var(--text-dim)' }}>Income vs Expenses · Last 6 months</div>
+              <div style={{ fontSize:12, color:'var(--text-dim)' }}>Income vs Expenses · Last {cashFlowMonths} months</div>
             </div>
-            <div style={{ display:'flex', gap:14, alignItems:'center' }}>
+            <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+              <div style={{ display:'flex', gap:4 }}>
+                {([6, 12] as const).map(n => (
+                  <button key={n} onClick={() => setCashFlowMonths(n)} style={{ padding:'3px 10px', borderRadius:20, border: cashFlowMonths===n ? '1px solid var(--accent)' : '1px solid var(--border)', background: cashFlowMonths===n ? 'var(--accent-dim)' : 'transparent', color: cashFlowMonths===n ? 'var(--accent)' : 'var(--text-dim)', cursor:'pointer', fontSize:11, fontWeight: cashFlowMonths===n ? 600 : 400 }}>{n}M</button>
+                ))}
+              </div>
               <span style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'var(--text-mid)' }}><span style={{ width:10, height:3, borderRadius:2, background:'var(--accent)', display:'inline-block' }}></span>Income</span>
               <span style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'var(--text-mid)' }}><span style={{ width:10, height:3, borderRadius:2, background:'#f87171', display:'inline-block' }}></span>Expenses</span>
             </div>
