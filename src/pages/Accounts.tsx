@@ -110,20 +110,18 @@ export default function Accounts() {
                       {item.isLiability ? '-' : ''}{fmt(item.value)}
                     </div>
                   </div>
-                  <span style={{ fontSize:11, color, background:`${color}18`, border:`1px solid ${color}30`, padding:'2px 8px', borderRadius:20, fontWeight:600 }}>{pct}%</span>
+                  <span style={{ fontSize:11, color, background:`${color}18`, border:`1px solid ${color}30`, padding:'2px 8px', borderRadius:20, fontWeight:600 }}>{pct < 1 ? '< 1' : pct}%</span>
                 </div>
               </div>
             )
           })}
-          {sectionLabel === 'Assets' && (
-            <button onClick={()=>setModal({open:true,type:'asset'})}
-              style={{ background:'transparent', border:`2px dashed var(--border)`, borderRadius:16, padding:'20px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10, cursor:'pointer', color:'var(--text-dim)', transition:'all 0.2s', minHeight:160 }}
-              onMouseEnter={e=>{ (e.currentTarget as HTMLElement).style.borderColor='var(--accent)'; (e.currentTarget as HTMLElement).style.color='var(--accent)' }}
-              onMouseLeave={e=>{ (e.currentTarget as HTMLElement).style.borderColor='var(--border)'; (e.currentTarget as HTMLElement).style.color='var(--text-dim)' }}>
-              <div style={{ width:44, height:44, borderRadius:12, border:'2px dashed currentColor', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22 }}>+</div>
-              <span style={{ fontSize:13, fontWeight:500 }}>Add Account</span>
-            </button>
-          )}
+          <button onClick={()=>setModal({open:true, type: sectionLabel === 'Assets' ? 'asset' : 'liability'})}
+            style={{ background:'transparent', border:`2px dashed var(--border)`, borderRadius:16, padding:'20px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10, cursor:'pointer', color:'var(--text-dim)', transition:'all 0.2s', minHeight:160 }}
+            onMouseEnter={e=>{ (e.currentTarget as HTMLElement).style.borderColor='var(--accent)'; (e.currentTarget as HTMLElement).style.color='var(--accent)' }}
+            onMouseLeave={e=>{ (e.currentTarget as HTMLElement).style.borderColor='var(--border)'; (e.currentTarget as HTMLElement).style.color='var(--text-dim)' }}>
+            <div style={{ width:44, height:44, borderRadius:12, border:'2px dashed currentColor', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22 }}>+</div>
+            <span style={{ fontSize:13, fontWeight:500 }}>{sectionLabel === 'Assets' ? 'Add Account' : 'Add Liability'}</span>
+          </button>
         </div>
       </div>
     )
@@ -147,13 +145,14 @@ export default function Accounts() {
             )}
           </div>
           {/* Composition bar */}
-          <div style={{ display:'flex', flexDirection:'column', gap:4, marginTop:2 }}>
-            <div style={{ height:6, borderRadius:3, background:'var(--surface3)', overflow:'hidden', width:280 }}>
-              <div style={{ height:'100%', borderRadius:3, background:'var(--positive)', width:`${assetBarPct}%`, transition:'width 0.6s ease' }} />
+          <div style={{ display:'flex', flexDirection:'column', gap:6, marginTop:2 }}>
+            <div style={{ height:6, borderRadius:3, overflow:'hidden', display:'flex', gap:1, maxWidth:360 }}>
+              <div style={{ height:'100%', borderRadius:'3px 0 0 3px', background:'var(--positive)', width:`${assetBarPct}%`, transition:'width 0.6s ease', flexShrink:0 }} />
+              <div style={{ height:'100%', borderRadius:'0 3px 3px 0', background:'var(--negative)', flex:1, transition:'flex 0.6s ease' }} />
             </div>
             <div style={{ display:'flex', gap:16 }}>
-              <span style={{ fontSize:12, color:'var(--positive)' }}>Assets {fmt(totalAssets)}</span>
-              <span style={{ fontSize:12, color:'var(--negative)' }}>Liabilities {fmt(totalLiab)}</span>
+              <span style={{ fontSize:12, color:'var(--positive)' }}>Assets {fmt(totalAssets)} <span style={{ opacity:0.6 }}>· {Math.round(assetBarPct)}%</span></span>
+              <span style={{ fontSize:12, color:'var(--negative)' }}>Liabilities {fmt(totalLiab)} <span style={{ opacity:0.6 }}>· {Math.round(100 - assetBarPct)}%</span></span>
             </div>
           </div>
         </div>
