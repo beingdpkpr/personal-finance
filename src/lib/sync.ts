@@ -113,11 +113,18 @@ export async function ensureSpreadsheet(
     return { id: spreadsheetId, isNew: false };
   }
 
-  // 2. Search Drive for an existing "Arya's Finance - email" spreadsheet
-  const existingId = await findSpreadsheetByName(accessToken, `Arya's Finance - ${email}`);
-  if (existingId) {
-    await saveSpreadsheetId(existingId);
-    return { id: existingId, isNew: false };
+  // 2. Search Drive for existing spreadsheet — try all known name variants
+  const namesToTry = [
+    `Arya's Finance - ${email}`,
+    `Artha - ${email}`,
+    `Personal Finance - ${email}`,
+  ];
+  for (const name of namesToTry) {
+    const existingId = await findSpreadsheetByName(accessToken, name);
+    if (existingId) {
+      await saveSpreadsheetId(existingId);
+      return { id: existingId, isNew: false };
+    }
   }
 
   // 3. Nothing found — create a new one (placed in the Arya's Finance folder)
