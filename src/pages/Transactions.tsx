@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { useSearchParams } from 'react-router-dom'
 import { fmt } from '../lib/format'
+import { INCOME_CATS } from '../constants/categories'
 import Card from '../components/ui/Card'
 import GooglePayImportModal from '../components/modals/GooglePayImportModal'
 
@@ -32,7 +33,7 @@ function Checkbox({ checked, indeterminate, onChange }: { checked: boolean; inde
 }
 
 export default function Transactions() {
-  const { txns, deleteTxn, deleteTxns, openAdd, openEdit, addTxn, expenseCats, incomeCats } = useFinanceContext()
+  const { txns, deleteTxn, deleteTxns, openAdd, openEdit, addTxn, categories } = useFinanceContext()
   const [searchParams] = useSearchParams()
   const [search, setSearch] = useState(searchParams.get('q') ?? '')
   const [filter, setFilter] = useState<Filter>('all')
@@ -48,9 +49,9 @@ export default function Transactions() {
   useEffect(() => { setSelected(new Set()) }, [search, filter])
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const allCats = [...expenseCats, ...incomeCats]
-  const getCatLabel = (id: string) => allCats.find(c => c.id === id)?.label ?? id
-  const getCatColor = (id: string) => allCats.find(c => c.id === id)?.color ?? '#888'
+  const allCats = [...categories, ...INCOME_CATS]
+  const getCatLabel = (id: string | undefined) => allCats.find(c => c.id === id)?.label ?? (id ?? '')
+  const getCatColor = (id: string | undefined) => allCats.find(c => c.id === id)?.color ?? '#888'
 
   const filtered = txns
     .filter(t => filter === 'all' || t.type === filter)
@@ -103,19 +104,12 @@ export default function Transactions() {
         const cols = line.split(',').map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"'))
         const [date, description, category, type, amount, rawNotes] = cols
         if (date && description && category && type && amount) {
-          let subCategory: string | undefined
           let notes: string | undefined
           if (rawNotes) {
-            const match = rawNotes.match(/subcat:([^|;]+)/)
-            if (match) {
-              subCategory = match[1].trim() || undefined
-              const rest = rawNotes.replace(/subcat:[^|;]*/, '').replace(/^[|;\s]+/, '').trim()
-              notes = rest || undefined
-            } else {
-              notes = rawNotes || undefined
-            }
+            const cleaned = rawNotes.replace(/subcat:[^|;]*/g, '').replace(/^[|;\s]+/, '').trim()
+            notes = cleaned || undefined
           }
-          addTxn({ date, description, category, type: type as 'expense' | 'income', amount: parseFloat(amount) || 0, subCategory, notes })
+          addTxn({ date, description, category, type: type as 'expense' | 'income', amount: parseFloat(amount) || 0, notes })
         }
       })
     }
@@ -265,7 +259,6 @@ export default function Transactions() {
                   <Checkbox checked={isSel} onChange={() => toggleRow(t.id)} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.description}</div>
-                    {t.subCategory && <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 1 }}>{t.subCategory}</div>}
                     {t.tags?.length ? <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 1 }}>{t.tags.join(' · ')}</div> : null}
                   </div>
                   <div style={{ fontSize: 11, padding: '3px 8px', borderRadius: 20, background: `${getCatColor(t.category)}22`, color: getCatColor(t.category), fontWeight: 600, width: 'fit-content', whiteSpace: 'nowrap' }}>

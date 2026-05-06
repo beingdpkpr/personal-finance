@@ -1,28 +1,27 @@
 import { useState } from 'react'
 import { useFinanceContext } from '../../hooks/FinanceContext'
 import { useTheme } from '../../hooks/ThemeContext'
-import { CURRENCIES } from '../../constants/categories'
-import { CatGroup, CustomCategory, GROUP_LABELS, nextCatColor, uid } from '../../lib/data'
+import { CURRENCIES, nextCatColor } from '../../constants/categories'
+import { Group, GROUPS, GROUP_LABELS, Category, uid } from '../../lib/data'
 import { useNavigate } from 'react-router-dom'
 
 interface Props { onClose: () => void }
 
-const GROUP_ORDER: CatGroup[] = ['essentials', 'family', 'savings', 'wants']
-const GROUP_COLORS: Record<CatGroup, string> = {
-  essentials: '#5a9fff',
-  family:     '#60d0e0',
-  savings:    '#2ed18a',
-  wants:      '#f05060',
+const GROUP_COLORS: Record<Group, string> = {
+  needs:    '#5a9fff',
+  family:   '#60d0e0',
+  savings:  '#2ed18a',
+  wants:    '#f05060',
 }
 const SWATCH_COLORS = ['#5a9fff','#f0b030','#a07aff','#f05060','#ff7eb3','#2ed18a','#f0722a','#60d0e0','#8888aa','#e879f9','#fb923c','#34d399']
 
 export default function SettingsModal({ onClose }: Props) {
-  const { name, email, picture, currency, setCurrencyPref, logout, customCats, setCustomCats, expenseCats } = useFinanceContext()
+  const { name, email, picture, currency, setCurrencyPref, logout, categories, setCategories } = useFinanceContext()
   const { darkMode, themeName, toggleDarkMode, setTheme } = useTheme()
   const navigate = useNavigate()
 
   const [tab, setTab] = useState<'general' | 'categories'>('general')
-  const [addingGroup, setAddingGroup] = useState<CatGroup | null>(null)
+  const [addingGroup, setAddingGroup] = useState<Group | null>(null)
   const [newLabel, setNewLabel] = useState('')
   const [newColor, setNewColor] = useState(SWATCH_COLORS[0])
   const [editId, setEditId] = useState<string | null>(null)
@@ -34,28 +33,28 @@ export default function SettingsModal({ onClose }: Props) {
     navigate('/login', { replace: true })
   }
 
-  function startAdd(group: CatGroup) {
+  function startAdd(group: Group) {
     setAddingGroup(group)
     setNewLabel('')
-    setNewColor(nextCatColor(customCats))
+    setNewColor(nextCatColor(categories))
     setEditId(null)
   }
 
   function confirmAdd() {
     if (!newLabel.trim() || !addingGroup) return
-    const cat: CustomCategory = {
-      id:      uid(),
-      label:   newLabel.trim(),
-      color:   newColor,
-      txnType: 'expense',
-      group:   addingGroup,
+    const cat: Category = {
+      id:       uid(),
+      label:    newLabel.trim(),
+      color:    newColor,
+      group:    addingGroup,
+      isCustom: true,
     }
-    setCustomCats([...customCats, cat])
+    setCategories([...categories, cat])
     setAddingGroup(null)
     setNewLabel('')
   }
 
-  function startEdit(cat: CustomCategory) {
+  function startEdit(cat: Category) {
     setEditId(cat.id)
     setEditLabel(cat.label)
     setEditColor(cat.color)
@@ -64,12 +63,12 @@ export default function SettingsModal({ onClose }: Props) {
 
   function confirmEdit() {
     if (!editLabel.trim()) return
-    setCustomCats(customCats.map(c => c.id === editId ? { ...c, label: editLabel.trim(), color: editColor } : c))
+    setCategories(categories.map(c => c.id === editId ? { ...c, label: editLabel.trim(), color: editColor } : c))
     setEditId(null)
   }
 
   function deleteCat(id: string) {
-    setCustomCats(customCats.filter(c => c.id !== id))
+    setCategories(categories.filter(c => c.id !== id))
     if (editId === id) setEditId(null)
   }
 
@@ -155,10 +154,10 @@ export default function SettingsModal({ onClose }: Props) {
               <div style={{ fontSize:12, color:'var(--text-dim)', lineHeight:1.5 }}>
                 Built-in categories are fixed. Add custom sub-categories under any group.
               </div>
-              {GROUP_ORDER.map(group => {
+              {GROUP_LABELS && GROUPS.map(group => {
                 const groupColor = GROUP_COLORS[group]
-                const builtIn = expenseCats.filter(c => !c.isCustom && c.group === group)
-                const custom  = customCats.filter(c => c.txnType === 'expense' && c.group === group)
+                const builtIn = categories.filter(c => !c.isCustom && c.group === group)
+                const custom  = categories.filter(c => c.isCustom && c.group === group)
 
                 return (
                   <div key={group} style={{ display:'flex', flexDirection:'column', gap:10 }}>

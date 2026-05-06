@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useFinanceContext } from '../../hooks/FinanceContext'
 import { fmt } from '../../lib/format'
-import { resolveLimit } from '../../lib/data'
+import { resolveLimit, GROUPS, GROUP_LABELS } from '../../lib/data'
 import SettingsModal from './SettingsModal'
 
 const TITLES: Record<string, string> = {
@@ -16,7 +16,7 @@ interface Props { onToggleSidebar: () => void }
 export default function Header({ onToggleSidebar }: Props) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const { name, picture, txns, budgets, expenseCats } = useFinanceContext()
+  const { name, picture, txns, budgets, categories } = useFinanceContext()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [searchVal, setSearchVal] = useState('')
   const [notifOpen, setNotifOpen] = useState(false)
@@ -31,11 +31,15 @@ export default function Header({ onToggleSidebar }: Props) {
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const monthTxns = txns.filter(t => t.date.startsWith(thisMonth))
   const monthIncome = monthTxns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-  const alerts = expenseCats.map(c => {
-    const spent = monthTxns.filter(t => t.type === 'expense' && t.category === c.id).reduce((s, t) => s + t.amount, 0)
-    const limit = resolveLimit(budgets[c.id], monthIncome)
+  const alerts = GROUPS.map(group => {
+    const spent = monthTxns.filter(t => {
+      if (t.type !== 'expense') return false
+      return categories.find(c => c.id === t.category)?.group === group
+    }).reduce((s, t) => s + t.amount, 0)
+    const limit = resolveLimit(budgets[group], monthIncome)
     const pct = limit > 0 ? (spent / limit) * 100 : 0
-    return { ...c, spent, limit, pct }
+    const color = categories.find(c => c.group === group)?.color ?? '#888'
+    return { id: group, label: GROUP_LABELS[group], color, spent, limit, pct }
   }).filter(a => a.pct >= 80 && a.limit > 0)
 
   // Close notification panel on outside click

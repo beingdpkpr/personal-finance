@@ -1,8 +1,8 @@
 ﻿import { useState, useMemo } from 'react'
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { fmt } from '../lib/format'
-import { MONTHS, MONTHS_FULL } from '../constants/categories'
-import { CatGroup, GROUP_LABELS } from '../lib/data'
+import { MONTHS, MONTHS_FULL, INCOME_CATS } from '../constants/categories'
+import { Group, GROUPS, GROUP_LABELS } from '../lib/data'
 import Card from '../components/ui/Card'
 import ProgressBar from '../components/ui/ProgressBar'
 import BarChart from '../components/charts/BarChart'
@@ -35,7 +35,7 @@ function SavingsGauge({ rate }: { rate: number }) {
 }
 
 export default function Monthly() {
-  const { txns, expenseCats, incomeCats } = useFinanceContext()
+  const { txns, categories } = useFinanceContext()
   const now = new Date()
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
 
@@ -58,20 +58,19 @@ export default function Monthly() {
   const savings   = income - expense
   const savingsRate = income > 0 ? Math.round((savings/income)*100) : 0
 
-  const incomeSources = incomeCats.map(c => ({
+  const incomeSources = INCOME_CATS.map(c => ({
     ...c, amount: monthTxns.filter(t=>t.type==='income'&&t.category===c.id).reduce((s,t)=>s+t.amount,0)
   })).filter(c=>c.amount>0)
 
-  const expenseBycat = expenseCats.map(c => ({
+  const expenseBycat = categories.map(c => ({
     ...c, amount: monthTxns.filter(t=>t.type==='expense'&&t.category===c.id).reduce((s,t)=>s+t.amount,0)
   })).filter(c=>c.amount>0).sort((a,b)=>b.amount-a.amount)
 
-  const GROUP_ORDER: CatGroup[] = ['essentials', 'family', 'savings', 'wants']
-  const GROUP_COLORS: Record<CatGroup, string> = {
-    essentials: '#5a9fff', family: '#60d0e0', savings: '#2ed18a', wants: '#f05060',
+  const GROUP_COLORS: Record<Group, string> = {
+    needs: '#5a9fff', family: '#60d0e0', savings: '#2ed18a', wants: '#f05060',
   }
-  const spendingByGroup = GROUP_ORDER.map(group => {
-    const cats = expenseCats.filter(c => c.group === group)
+  const spendingByGroup = GROUPS.map(group => {
+    const cats = categories.filter(c => c.group === group)
     const amount = cats.reduce((s, c) => {
       return s + monthTxns.filter(t => t.type==='expense' && t.category===c.id).reduce((ss,t)=>ss+t.amount,0)
     }, 0)

@@ -3,7 +3,33 @@ import { useFinanceContext } from '../hooks/FinanceContext'
 import { fmt } from '../lib/format'
 import { Group, GROUPS, GROUP_LABELS, resolveLimit } from '../lib/data'
 import Card from '../components/ui/Card'
-import ProgressBar from '../components/ui/ProgressBar'
+
+const GROUP_COLORS: Record<Group, string> = {
+  needs: '#5a9fff', family: '#60d0e0', savings: '#2ed18a', wants: '#f05060',
+}
+
+function BudgetArc({ pct, spent, color, hasLimit }: { pct: number; spent: number; color: string; hasLimit: boolean }) {
+  const circ = 157
+  const clamped = Math.min(pct, 100)
+  const filled = (clamped / 100) * circ
+  const arcColor = !hasLimit ? 'var(--border)' : pct >= 90 ? 'oklch(0.64 0.2 25)' : pct >= 70 ? '#f59e0b' : color
+  return (
+    <svg width="130" height="74" viewBox="0 0 120 68" style={{ overflow: 'visible', display: 'block' }}>
+      <path d="M10,60 A50,50 0 0,1 110,60" fill="none" stroke="var(--border)" strokeWidth="9" strokeLinecap="round"/>
+      {hasLimit && (
+        <path d="M10,60 A50,50 0 0,1 110,60" fill="none" stroke={arcColor} strokeWidth="9" strokeLinecap="round"
+          strokeDasharray={`${filled} ${circ}`}
+          style={{ transition: 'stroke-dasharray 1s ease 0.3s', filter: `drop-shadow(0 0 5px ${arcColor}70)` }}/>
+      )}
+      <text x="60" y="52" textAnchor="middle" fontSize="13" fontWeight="700" fill="var(--text)" fontFamily="DM Mono">{fmt(spent)}</text>
+      {hasLimit && (
+        <text x="60" y="64" textAnchor="middle" fontSize="9" fill={arcColor} fontFamily="DM Sans" fontWeight="600">{Math.round(pct)}%</text>
+      )}
+      <text x="10" y="76" textAnchor="middle" fontSize="9" fill="var(--text-dim)" fontFamily="DM Sans">0%</text>
+      <text x="110" y="76" textAnchor="middle" fontSize="9" fill="var(--text-dim)" fontFamily="DM Sans">100%</text>
+    </svg>
+  )
+}
 
 export default function Budget() {
   const { txns, budgets, setBudgets, categories } = useFinanceContext()
@@ -56,32 +82,37 @@ export default function Budget() {
             .filter(t => t.type === 'expense' && t.group === group)
             .reduce((s, t) => s + t.amount, 0)
           const pct = limit > 0 ? (spent / limit) * 100 : 0
+          const groupColor = GROUP_COLORS[group]
+          const arcColor = !entry ? 'var(--border)' : pct >= 90 ? 'oklch(0.64 0.2 25)' : pct >= 70 ? '#f59e0b' : groupColor
           const groupCats = categories.filter(c => c.group === group)
           const isExpanded = expanded === group
 
           return (
             <Card key={group} delay={i * 0.06}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                <div>
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: 3, background: groupColor, flexShrink: 0 }} />
                   <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{GROUP_LABELS[group]}</div>
-                  {entry && (
-                    <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
-                      {entry.mode === 'pct' ? `${entry.value}% of income` : fmt(entry.value)}
-                    </div>
-                  )}
                 </div>
                 <div style={{ display: 'flex', gap: 4 }}>
-                  <button onClick={() => startEdit(group)} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>Edit</button>
-                  {entry && <button onClick={() => clearBudget(group)} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', color: 'var(--negative)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>}
+                  <button onClick={() => startEdit(group)} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>
+                    {entry ? 'Edit' : 'Set'}
+                  </button>
+                  {entry && (
+                    <button onClick={() => clearBudget(group)} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', color: 'var(--negative)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  )}
                 </div>
               </div>
 
               {editing === group ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
                   <div style={{ display: 'flex', gap: 4 }}>
                     {(['fixed', 'pct'] as const).map(m => (
                       <button key={m} onClick={() => setEditMode(m)} style={{ flex: 1, padding: '5px 0', borderRadius: 8, border: editMode === m ? '1px solid var(--accent)' : '1px solid var(--border)', background: editMode === m ? 'var(--accent-dim)' : 'var(--surface2)', color: editMode === m ? 'var(--accent)' : 'var(--text-dim)', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>
-                        {m === 'fixed' ? 'Fixed' : '% of income'}
+                        {m === 'fixed' ? 'Fixed ₹' : '% of income'}
                       </button>
                     ))}
                   </div>
@@ -99,24 +130,49 @@ export default function Budget() {
                 </div>
               ) : (
                 <>
-                  <ProgressBar pct={pct} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 12 }}>
-                    <span style={{ color: 'var(--text-dim)' }}>Spent: <span style={{ color: 'var(--text)', fontFamily: 'DM Mono' }}>{fmt(spent)}</span></span>
-                    {limit > 0
-                      ? <span style={{ color: pct >= 90 ? 'var(--negative)' : pct >= 70 ? 'var(--warning)' : 'var(--positive)', fontWeight: 600 }}>{Math.round(pct)}%</span>
-                      : <span style={{ color: 'var(--text-dim)' }}>No budget</span>
-                    }
+                  {/* Arc */}
+                  <div style={{ display: 'flex', justifyContent: 'center', margin: '6px 0 2px' }}>
+                    <BudgetArc pct={pct} spent={spent} color={groupColor} hasLimit={!!entry} />
                   </div>
-                  {limit > 0 && (
-                    <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 4 }}>
-                      Remaining: <span style={{ color: limit - spent >= 0 ? 'var(--positive)' : 'var(--negative)', fontFamily: 'DM Mono', fontWeight: 500 }}>{fmt(Math.abs(limit - spent))}</span>
+
+                  {/* Stats row */}
+                  <div style={{ display: 'grid', gridTemplateColumns: entry ? '1fr 1fr 1fr' : '1fr', gap: 4, textAlign: 'center', marginBottom: 8 }}>
+                    {entry ? (
+                      <>
+                        <div>
+                          <div style={{ fontSize: 10, color: 'var(--text-dim)', marginBottom: 2 }}>Spent</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'DM Mono', color: 'var(--text)' }}>{fmt(spent)}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, color: 'var(--text-dim)', marginBottom: 2 }}>Budget</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'DM Mono', color: groupColor }}>
+                            {entry.mode === 'pct' ? `${entry.value}%` : fmt(limit)}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, color: 'var(--text-dim)', marginBottom: 2 }}>{limit - spent >= 0 ? 'Left' : 'Over'}</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'DM Mono', color: limit - spent >= 0 ? 'var(--positive)' : 'var(--negative)' }}>
+                            {fmt(Math.abs(limit - spent))}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 12, color: 'var(--text-dim)', padding: '4px 0' }}>No budget set</div>
+                    )}
+                  </div>
+
+                  {/* Thin progress bar */}
+                  {entry && (
+                    <div style={{ height: 4, borderRadius: 2, background: 'var(--border)', overflow: 'hidden', marginBottom: 8 }}>
+                      <div style={{ height: '100%', borderRadius: 2, background: arcColor, width: `${Math.min(pct, 100)}%`, transition: 'width 1s ease 0.4s' }} />
                     </div>
                   )}
 
+                  {/* Category breakdown toggle */}
                   {groupCats.length > 0 && (
                     <button
                       onClick={() => setExpanded(isExpanded ? null : group)}
-                      style={{ marginTop: 10, fontSize: 11, color: 'var(--text-dim)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                      style={{ fontSize: 11, color: 'var(--text-dim)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', width: '100%' }}
                     >
                       {isExpanded ? '▲ Hide categories' : `▼ ${groupCats.length} categories`}
                     </button>
@@ -127,11 +183,17 @@ export default function Budget() {
                         const catSpent = monthTxns
                           .filter(t => t.type === 'expense' && t.group === group && t.category === cat.id)
                           .reduce((s, t) => s + t.amount, 0)
+                        const catPct = spent > 0 ? (catSpent / spent) * 100 : 0
                         return (
-                          <div key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-                            <div style={{ width: 6, height: 6, borderRadius: 3, background: cat.color, flexShrink: 0 }} />
-                            <span style={{ flex: 1, color: 'var(--text-dim)' }}>{cat.label}</span>
-                            <span style={{ color: 'var(--text)', fontFamily: 'DM Mono' }}>{fmt(catSpent)}</span>
+                          <div key={cat.id}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, marginBottom: 3 }}>
+                              <div style={{ width: 6, height: 6, borderRadius: 3, background: cat.color, flexShrink: 0 }} />
+                              <span style={{ flex: 1, color: 'var(--text-dim)' }}>{cat.label}</span>
+                              <span style={{ color: 'var(--text)', fontFamily: 'DM Mono' }}>{fmt(catSpent)}</span>
+                            </div>
+                            <div style={{ height: 3, borderRadius: 2, background: 'var(--border)', overflow: 'hidden', marginLeft: 14 }}>
+                              <div style={{ height: '100%', borderRadius: 2, background: cat.color, width: `${catPct}%`, transition: 'width 0.8s ease' }} />
+                            </div>
                           </div>
                         )
                       })}
