@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  BudgetMap, Currency, CustomCategory, ExpenseCat, Goal, IncomeCat, NetWorthData,
+  BudgetMap, Category, Currency, Goal, NetWorthData,
   RecurringRule, Transaction, uid,
 } from '../lib/data';
-import { EXPENSE_CATS, INCOME_CATS } from '../constants/categories';
+import { DEFAULT_CATEGORIES } from '../constants/categories';
 import { storage } from '../lib/storage';
 import { setCurrency } from '../lib/format';
 import { applyRecurring } from '../lib/recurring';
@@ -12,56 +12,55 @@ import {
   isTokenExpired, hasMigrated, setMigrated,
 } from '../lib/google-auth';
 import { ensureSpreadsheet, pushAll, pullAll } from '../lib/sync';
+import { runMigrationIfNeeded } from '../lib/migration';
 
 const DEFAULT_CURRENCY: Currency = { code: 'INR', symbol: '₹', locale: 'en-IN' };
 
 export interface FinanceState {
-  user:         string | null;   // Google userId (sub)
-  email:        string | null;
-  name:         string | null;
-  picture:      string | null;
-  loading:      boolean;
-  syncError:    string | null;  // last Drive sync error, shown as toast
-  sessionNote:  string | null;  // message shown on login page (e.g. session expired)
-  txns:         Transaction[];
-  budgets:      BudgetMap;
-  goals:        Goal[];
-  nw:           NetWorthData;
-  recurring:    RecurringRule[];
-  currency:     Currency;
-  googleSignIn: (accessToken: string, expiresIn: number) => Promise<string | null>;
-  logout:       () => Promise<void>;
-  loadDemoData: () => Promise<void>;
-  addTxn:       (t: Omit<Transaction, 'id'>) => void;
-  editTxn:      (t: Transaction) => void;
-  deleteTxn:    (id: string) => void;
-  deleteTxns:   (ids: string[]) => void;
-  setBudgets:   (b: BudgetMap) => void;
-  setGoals:     (g: Goal[]) => void;
-  setNw:        (n: NetWorthData) => void;
-  setRecurring: (r: RecurringRule[]) => void;
+  user:            string | null;
+  email:           string | null;
+  name:            string | null;
+  picture:         string | null;
+  loading:         boolean;
+  syncError:       string | null;
+  sessionNote:     string | null;
+  txns:            Transaction[];
+  budgets:         BudgetMap;
+  goals:           Goal[];
+  nw:              NetWorthData;
+  recurring:       RecurringRule[];
+  currency:        Currency;
+  categories:      Category[];
+  googleSignIn:    (accessToken: string, expiresIn: number) => Promise<string | null>;
+  logout:          () => Promise<void>;
+  loadDemoData:    () => Promise<void>;
+  addTxn:          (t: Omit<Transaction, 'id'>) => void;
+  editTxn:         (t: Transaction) => void;
+  deleteTxn:       (id: string) => void;
+  deleteTxns:      (ids: string[]) => void;
+  setBudgets:      (b: BudgetMap) => void;
+  setGoals:        (g: Goal[]) => void;
+  setNw:           (n: NetWorthData) => void;
+  setRecurring:    (r: RecurringRule[]) => void;
   setCurrencyPref: (c: Currency) => void;
-  customCats:   CustomCategory[];
-  setCustomCats:(c: CustomCategory[]) => void;
-  expenseCats:  ExpenseCat[];
-  incomeCats:   IncomeCat[];
+  setCategories:   (c: Category[]) => void;
 }
 
 export function useFinance(): FinanceState {
-  const [user, setUser]               = useState<string | null>(null);
-  const [email, setEmail]             = useState<string | null>(null);
-  const [name, setName]               = useState<string | null>(null);
-  const [picture, setPicture]         = useState<string | null>(null);
-  const [loading, setLoading]         = useState(true);
-  const [txns, setTxnsState]          = useState<Transaction[]>([]);
-  const [budgets, setBudgetsState]    = useState<BudgetMap>({});
-  const [goals, setGoalsState]        = useState<Goal[]>([]);
-  const [nw, setNwState]              = useState<NetWorthData>({ assets: [], liabilities: [] });
-  const [recurring, setRecurringState]= useState<RecurringRule[]>([]);
-  const [currency, setCurrencyState]  = useState<Currency>(DEFAULT_CURRENCY);
-  const [customCats, setCustomCatsState]     = useState<CustomCategory[]>([]);
-  const [syncError, setSyncError]            = useState<string | null>(null);
-  const [sessionNote, setSessionNote]        = useState<string | null>(null);
+  const [user, setUser]                  = useState<string | null>(null);
+  const [email, setEmail]                = useState<string | null>(null);
+  const [name, setName]                  = useState<string | null>(null);
+  const [picture, setPicture]            = useState<string | null>(null);
+  const [loading, setLoading]            = useState(true);
+  const [txns, setTxnsState]             = useState<Transaction[]>([]);
+  const [budgets, setBudgetsState]       = useState<BudgetMap>({});
+  const [goals, setGoalsState]           = useState<Goal[]>([]);
+  const [nw, setNwState]                 = useState<NetWorthData>({ assets: [], liabilities: [] });
+  const [recurring, setRecurringState]   = useState<RecurringRule[]>([]);
+  const [currency, setCurrencyState]     = useState<Currency>(DEFAULT_CURRENCY);
+  const [categories, setCategoriesState] = useState<Category[]>([]);
+  const [syncError, setSyncError]        = useState<string | null>(null);
+  const [sessionNote, setSessionNote]    = useState<string | null>(null);
 
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -86,15 +85,16 @@ export function useFinance(): FinanceState {
     }, 2000);
   }, []);
 
-async function loadUser(userId: string, userEmail?: string | null, userName?: string | null, userPicture?: string | null) {
-    const [t, b, r, g, n, c, cc] = await Promise.all([
+  async function loadUser(userId: string, userEmail?: string | null, userName?: string | null, userPicture?: string | null) {
+    runMigrationIfNeeded(userId);
+    const [t, b, r, g, n, c, cats] = await Promise.all([
       storage.getTxns(userId),
       storage.getBudgets(userId),
       storage.getRecurring(userId),
       storage.getGoals(userId),
       storage.getNetWorth(userId),
       storage.getCurrency(userId),
-      storage.getCustomCats(userId),
+      storage.getCategories(userId),
     ]);
     const applied = applyRecurring(r, t);
     setCurrency(c);
@@ -108,7 +108,7 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
     setGoalsState(g);
     setNwState(n);
     setCurrencyState(c);
-    setCustomCatsState(cc);
+    setCategoriesState(cats.length > 0 ? cats : DEFAULT_CATEGORIES);
   }
 
   useEffect(() => {
@@ -120,17 +120,16 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
     });
   }, []);
 
-  useEffect(() => { if (user) { storage.saveTxns(user, txns);           scheduleSync(); } }, [txns,      user, scheduleSync]);
-  useEffect(() => { if (user) { storage.saveBudgets(user, budgets);     scheduleSync(); } }, [budgets,   user, scheduleSync]);
-  useEffect(() => { if (user) { storage.saveRecurring(user, recurring); scheduleSync(); } }, [recurring, user, scheduleSync]);
-  useEffect(() => { if (user) { storage.saveGoals(user, goals);         scheduleSync(); } }, [goals,     user, scheduleSync]);
-  useEffect(() => { if (user) { storage.saveNetWorth(user, nw);         scheduleSync(); } }, [nw,        user, scheduleSync]);
-  useEffect(() => { if (user) { storage.saveCurrency(user, currency);   scheduleSync(); } }, [currency,  user, scheduleSync]);
-  useEffect(() => { if (user) { storage.saveCustomCats(user, customCats); } }, [customCats, user]);
+  useEffect(() => { if (user) { storage.saveTxns(user, txns);             scheduleSync(); } }, [txns,       user, scheduleSync]);
+  useEffect(() => { if (user) { storage.saveBudgets(user, budgets);       scheduleSync(); } }, [budgets,    user, scheduleSync]);
+  useEffect(() => { if (user) { storage.saveRecurring(user, recurring);   scheduleSync(); } }, [recurring,  user, scheduleSync]);
+  useEffect(() => { if (user) { storage.saveGoals(user, goals);           scheduleSync(); } }, [goals,      user, scheduleSync]);
+  useEffect(() => { if (user) { storage.saveNetWorth(user, nw);           scheduleSync(); } }, [nw,         user, scheduleSync]);
+  useEffect(() => { if (user) { storage.saveCurrency(user, currency);     scheduleSync(); } }, [currency,   user, scheduleSync]);
+  useEffect(() => { if (user) { storage.saveCategories(user, categories); scheduleSync(); } }, [categories, user, scheduleSync]);
 
   const googleSignIn = useCallback(async (accessToken: string, expiresIn: number): Promise<string | null> => {
     try {
-      // Fetch user info from Google
       const infoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
@@ -140,7 +139,6 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
 
       await saveGoogleSession(accessToken, expiresIn, info.email, info.sub, info.name, info.picture);
 
-      // Ensure spreadsheet exists (searches Drive before creating)
       const existingSession = await getGoogleSession();
       const { id: spreadsheetId, isNew } = await ensureSpreadsheet(
         accessToken,
@@ -151,7 +149,6 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
       const migrated = await hasMigrated();
 
       if (isNew && !migrated) {
-        // Brand-new sheet AND first time on this device — push local data (initial setup)
         const oldSession = await storage.getSession();
         if (oldSession) {
           const [t, b, r, g, n, c] = await Promise.all([
@@ -168,7 +165,6 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
         await pushAll(accessToken, spreadsheetId, info.sub);
         await setMigrated();
       } else {
-        // Existing sheet found (cached, or restored from Drive on new device) — pull data
         const data = await pullAll(accessToken, spreadsheetId, info.sub);
         await Promise.all([
           storage.saveTxns(info.sub, data.txns),
@@ -177,9 +173,8 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
           storage.saveRecurring(info.sub, data.recurring),
           storage.saveNetWorth(info.sub, data.nw),
           storage.saveCurrency(info.sub, data.currency),
-          storage.saveCustomCats(info.sub, data.customCats),
+          storage.saveCategories(info.sub, data.categories),
         ]);
-        // Restore theme preferences and notify ThemeContext
         localStorage.setItem('pf_dark_mode', String(data.prefs.darkMode));
         localStorage.setItem('pf_theme_name', data.prefs.themeName);
         window.dispatchEvent(new CustomEvent('artha:theme-restored'));
@@ -206,7 +201,7 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
     setGoalsState([]);
     setNwState({ assets: [], liabilities: [] });
     setCurrencyState(DEFAULT_CURRENCY);
-    setCustomCatsState([]);
+    setCategoriesState([]);
   }, []);
 
   const addTxn      = useCallback((t: Omit<Transaction, 'id'>) => setTxnsState(prev => [...prev, { ...t, id: uid() }]), []);
@@ -218,73 +213,68 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
   const setNw       = useCallback((n: NetWorthData) => setNwState(n), []);
   const setRecurring= useCallback((r: RecurringRule[]) => setRecurringState(r), []);
   const setCurrencyPref = useCallback((c: Currency) => { setCurrency(c); setCurrencyState(c); }, []);
-  const setCustomCats   = useCallback((c: CustomCategory[]) => setCustomCatsState(c), []);
+  const setCategories   = useCallback((c: Category[]) => setCategoriesState(c), []);
 
   const loadDemoData = useCallback(async () => {
     const DEMO_TXNS: Transaction[] = [
       // April 2026
-      { id: 'dd01', type: 'income',  amount: 85000, category: 'salary',        description: 'Monthly Salary',          date: '2026-04-01' },
-      { id: 'dd02', type: 'income',  amount: 15000, category: 'freelance',     description: 'Freelance Project',        date: '2026-04-15' },
-      { id: 'dd03', type: 'expense', amount: 22000, category: 'essentials',    description: 'Rent',                     date: '2026-04-02' },
-      { id: 'dd04', type: 'expense', amount: 3200,  category: 'essentials',    description: 'Electricity & Internet',   date: '2026-04-05' },
-      { id: 'dd05', type: 'expense', amount: 2800,  category: 'food',          description: 'Grocery Shopping',         date: '2026-04-06' },
-      { id: 'dd06', type: 'expense', amount: 1200,  category: 'food',          description: 'Dinner - Zomato',          date: '2026-04-09' },
-      { id: 'dd07', type: 'expense', amount: 900,   category: 'food',          description: 'Team Lunch',               date: '2026-04-12' },
-      { id: 'dd08', type: 'expense', amount: 2400,  category: 'food',          description: 'Weekend Meals',            date: '2026-04-19' },
-      { id: 'dd09', type: 'expense', amount: 1200,  category: 'food',          description: 'Café & Snacks',            date: '2026-04-24' },
-      { id: 'dd10', type: 'expense', amount: 1800,  category: 'transport',     description: 'Petrol',                   date: '2026-04-07' },
-      { id: 'dd11', type: 'expense', amount: 600,   category: 'transport',     description: 'Cab Rides',                date: '2026-04-14' },
-      { id: 'dd12', type: 'expense', amount: 800,   category: 'transport',     description: 'Metro Pass',               date: '2026-04-01' },
-      { id: 'dd13', type: 'expense', amount: 3500,  category: 'entertainment', description: 'OTT + Cinema',             date: '2026-04-10' },
-      { id: 'dd14', type: 'expense', amount: 2800,  category: 'entertainment', description: 'Weekend Getaway',          date: '2026-04-21' },
-      { id: 'dd15', type: 'expense', amount: 8500,  category: 'shopping',      description: 'Clothing - Myntra',        date: '2026-04-17' },
-      { id: 'dd16', type: 'expense', amount: 3800,  category: 'shopping',      description: 'Electronics - Amazon',     date: '2026-04-22' },
-      { id: 'dd17', type: 'expense', amount: 2500,  category: 'health',        description: 'Health Checkup + Meds',    date: '2026-04-11' },
-      { id: 'dd18', type: 'expense', amount: 10000, category: 'savings',       description: 'SIP Investment',           date: '2026-04-05' },
-      { id: 'dd19', type: 'expense', amount: 5000,  category: 'family',        description: 'Parents Transfer',         date: '2026-04-08' },
-      // 7-day sparkline data
-      { id: 'dd20', type: 'expense', amount: 3200,  category: 'shopping',      description: 'Amazon Order',             date: '2026-04-22' },
-      { id: 'dd21', type: 'expense', amount: 800,   category: 'food',          description: 'Coffee & Snacks',          date: '2026-04-23' },
-      { id: 'dd22', type: 'expense', amount: 1500,  category: 'food',          description: 'Restaurant',               date: '2026-04-24' },
-      { id: 'dd23', type: 'expense', amount: 2100,  category: 'transport',     description: 'Cab - Airport',            date: '2026-04-26' },
-      { id: 'dd24', type: 'expense', amount: 4200,  category: 'entertainment', description: 'Concert Tickets',          date: '2026-04-27' },
-      { id: 'dd25', type: 'expense', amount: 1200,  category: 'food',          description: 'Breakfast - Swiggy',       date: '2026-04-28' },
+      { id: 'dd01', type: 'income',  amount: 85000, category: 'salary',     description: 'Monthly Salary',        date: '2026-04-01' },
+      { id: 'dd02', type: 'income',  amount: 15000, category: 'freelance',  description: 'Freelance Project',      date: '2026-04-15' },
+      { id: 'dd03', type: 'expense', amount: 22000, group: 'needs',   category: 'essentials',    description: 'Rent',                   date: '2026-04-02' },
+      { id: 'dd04', type: 'expense', amount: 3200,  group: 'needs',   category: 'essentials',    description: 'Electricity & Internet',  date: '2026-04-05' },
+      { id: 'dd05', type: 'expense', amount: 2800,  group: 'needs',   category: 'food',          description: 'Grocery Shopping',        date: '2026-04-06' },
+      { id: 'dd06', type: 'expense', amount: 1200,  group: 'needs',   category: 'food',          description: 'Dinner - Zomato',         date: '2026-04-09' },
+      { id: 'dd07', type: 'expense', amount: 900,   group: 'needs',   category: 'food',          description: 'Team Lunch',              date: '2026-04-12' },
+      { id: 'dd08', type: 'expense', amount: 2400,  group: 'needs',   category: 'food',          description: 'Weekend Meals',           date: '2026-04-19' },
+      { id: 'dd09', type: 'expense', amount: 1200,  group: 'needs',   category: 'food',          description: 'Café & Snacks',           date: '2026-04-24' },
+      { id: 'dd10', type: 'expense', amount: 1800,  group: 'needs',   category: 'transport',     description: 'Petrol',                  date: '2026-04-07' },
+      { id: 'dd11', type: 'expense', amount: 600,   group: 'needs',   category: 'transport',     description: 'Cab Rides',               date: '2026-04-14' },
+      { id: 'dd12', type: 'expense', amount: 800,   group: 'needs',   category: 'transport',     description: 'Metro Pass',              date: '2026-04-01' },
+      { id: 'dd13', type: 'expense', amount: 3500,  group: 'wants',   category: 'entertainment', description: 'OTT + Cinema',            date: '2026-04-10' },
+      { id: 'dd14', type: 'expense', amount: 2800,  group: 'wants',   category: 'entertainment', description: 'Weekend Getaway',         date: '2026-04-21' },
+      { id: 'dd15', type: 'expense', amount: 8500,  group: 'wants',   category: 'shopping',      description: 'Clothing - Myntra',       date: '2026-04-17' },
+      { id: 'dd16', type: 'expense', amount: 3800,  group: 'wants',   category: 'shopping',      description: 'Electronics - Amazon',    date: '2026-04-22' },
+      { id: 'dd17', type: 'expense', amount: 2500,  group: 'needs',   category: 'health',        description: 'Health Checkup + Meds',  date: '2026-04-11' },
+      { id: 'dd18', type: 'expense', amount: 10000, group: 'savings', category: 'savings',       description: 'SIP Investment',          date: '2026-04-05' },
+      { id: 'dd19', type: 'expense', amount: 5000,  group: 'family',  category: 'family',        description: 'Parents Transfer',        date: '2026-04-08' },
+      { id: 'dd20', type: 'expense', amount: 3200,  group: 'wants',   category: 'shopping',      description: 'Amazon Order',            date: '2026-04-22' },
+      { id: 'dd21', type: 'expense', amount: 800,   group: 'needs',   category: 'food',          description: 'Coffee & Snacks',         date: '2026-04-23' },
+      { id: 'dd22', type: 'expense', amount: 1500,  group: 'needs',   category: 'food',          description: 'Restaurant',              date: '2026-04-24' },
+      { id: 'dd23', type: 'expense', amount: 2100,  group: 'needs',   category: 'transport',     description: 'Cab - Airport',           date: '2026-04-26' },
+      { id: 'dd24', type: 'expense', amount: 4200,  group: 'wants',   category: 'entertainment', description: 'Concert Tickets',         date: '2026-04-27' },
+      { id: 'dd25', type: 'expense', amount: 1200,  group: 'needs',   category: 'food',          description: 'Breakfast - Swiggy',      date: '2026-04-28' },
       // March 2026
-      { id: 'dd26', type: 'income',  amount: 85000, category: 'salary',        description: 'Monthly Salary',          date: '2026-03-01' },
-      { id: 'dd27', type: 'expense', amount: 22000, category: 'essentials',    description: 'Rent',                     date: '2026-03-02' },
-      { id: 'dd28', type: 'expense', amount: 7800,  category: 'food',          description: 'Food & Dining',            date: '2026-03-15' },
-      { id: 'dd29', type: 'expense', amount: 4200,  category: 'shopping',      description: 'Shopping',                 date: '2026-03-20' },
-      { id: 'dd30', type: 'expense', amount: 3100,  category: 'entertainment', description: 'Entertainment',            date: '2026-03-12' },
-      { id: 'dd31', type: 'expense', amount: 10000, category: 'savings',       description: 'SIP Investment',           date: '2026-03-05' },
-      { id: 'dd32', type: 'expense', amount: 5000,  category: 'family',        description: 'Parents Transfer',         date: '2026-03-08' },
-      { id: 'dd33', type: 'expense', amount: 2800,  category: 'transport',     description: 'Transport',                date: '2026-03-10' },
+      { id: 'dd26', type: 'income',  amount: 85000, category: 'salary',     description: 'Monthly Salary',        date: '2026-03-01' },
+      { id: 'dd27', type: 'expense', amount: 22000, group: 'needs',   category: 'essentials',    description: 'Rent',                   date: '2026-03-02' },
+      { id: 'dd28', type: 'expense', amount: 7800,  group: 'needs',   category: 'food',          description: 'Food & Dining',          date: '2026-03-15' },
+      { id: 'dd29', type: 'expense', amount: 4200,  group: 'wants',   category: 'shopping',      description: 'Shopping',               date: '2026-03-20' },
+      { id: 'dd30', type: 'expense', amount: 3100,  group: 'wants',   category: 'entertainment', description: 'Entertainment',          date: '2026-03-12' },
+      { id: 'dd31', type: 'expense', amount: 10000, group: 'savings', category: 'savings',       description: 'SIP Investment',         date: '2026-03-05' },
+      { id: 'dd32', type: 'expense', amount: 5000,  group: 'family',  category: 'family',        description: 'Parents Transfer',       date: '2026-03-08' },
+      { id: 'dd33', type: 'expense', amount: 2800,  group: 'needs',   category: 'transport',     description: 'Transport',              date: '2026-03-10' },
       // February 2026
-      { id: 'dd34', type: 'income',  amount: 85000, category: 'salary',        description: 'Monthly Salary',          date: '2026-02-01' },
-      { id: 'dd35', type: 'income',  amount: 8000,  category: 'freelance',     description: 'Freelance - Design',       date: '2026-02-20' },
-      { id: 'dd36', type: 'expense', amount: 22000, category: 'essentials',    description: 'Rent',                     date: '2026-02-02' },
-      { id: 'dd37', type: 'expense', amount: 9200,  category: 'food',          description: 'Food & Dining',            date: '2026-02-14' },
-      { id: 'dd38', type: 'expense', amount: 6500,  category: 'shopping',      description: 'Valentine Shopping',      date: '2026-02-14' },
-      { id: 'dd39', type: 'expense', amount: 5800,  category: 'entertainment', description: 'Entertainment',            date: '2026-02-18' },
-      { id: 'dd40', type: 'expense', amount: 10000, category: 'savings',       description: 'SIP Investment',           date: '2026-02-05' },
-      { id: 'dd41', type: 'expense', amount: 5000,  category: 'family',        description: 'Parents Transfer',         date: '2026-02-08' },
+      { id: 'dd34', type: 'income',  amount: 85000, category: 'salary',     description: 'Monthly Salary',        date: '2026-02-01' },
+      { id: 'dd35', type: 'income',  amount: 8000,  category: 'freelance',  description: 'Freelance - Design',    date: '2026-02-20' },
+      { id: 'dd36', type: 'expense', amount: 22000, group: 'needs',   category: 'essentials',    description: 'Rent',                   date: '2026-02-02' },
+      { id: 'dd37', type: 'expense', amount: 9200,  group: 'needs',   category: 'food',          description: 'Food & Dining',          date: '2026-02-14' },
+      { id: 'dd38', type: 'expense', amount: 6500,  group: 'wants',   category: 'shopping',      description: 'Valentine Shopping',     date: '2026-02-14' },
+      { id: 'dd39', type: 'expense', amount: 5800,  group: 'wants',   category: 'entertainment', description: 'Entertainment',          date: '2026-02-18' },
+      { id: 'dd40', type: 'expense', amount: 10000, group: 'savings', category: 'savings',       description: 'SIP Investment',         date: '2026-02-05' },
+      { id: 'dd41', type: 'expense', amount: 5000,  group: 'family',  category: 'family',        description: 'Parents Transfer',       date: '2026-02-08' },
       // January 2026
-      { id: 'dd42', type: 'income',  amount: 85000, category: 'salary',        description: 'Monthly Salary',          date: '2026-01-01' },
-      { id: 'dd43', type: 'expense', amount: 22000, category: 'essentials',    description: 'Rent',                     date: '2026-01-02' },
-      { id: 'dd44', type: 'expense', amount: 6800,  category: 'food',          description: 'Food & Dining',            date: '2026-01-15' },
-      { id: 'dd45', type: 'expense', amount: 3200,  category: 'shopping',      description: 'Shopping',                 date: '2026-01-22' },
-      { id: 'dd46', type: 'expense', amount: 2800,  category: 'entertainment', description: 'Entertainment',            date: '2026-01-12' },
-      { id: 'dd47', type: 'expense', amount: 10000, category: 'savings',       description: 'SIP Investment',           date: '2026-01-05' },
-      { id: 'dd48', type: 'expense', amount: 5000,  category: 'family',        description: 'Parents Transfer',         date: '2026-01-08' },
+      { id: 'dd42', type: 'income',  amount: 85000, category: 'salary',     description: 'Monthly Salary',        date: '2026-01-01' },
+      { id: 'dd43', type: 'expense', amount: 22000, group: 'needs',   category: 'essentials',    description: 'Rent',                   date: '2026-01-02' },
+      { id: 'dd44', type: 'expense', amount: 6800,  group: 'needs',   category: 'food',          description: 'Food & Dining',          date: '2026-01-15' },
+      { id: 'dd45', type: 'expense', amount: 3200,  group: 'wants',   category: 'shopping',      description: 'Shopping',               date: '2026-01-22' },
+      { id: 'dd46', type: 'expense', amount: 2800,  group: 'wants',   category: 'entertainment', description: 'Entertainment',          date: '2026-01-12' },
+      { id: 'dd47', type: 'expense', amount: 10000, group: 'savings', category: 'savings',       description: 'SIP Investment',         date: '2026-01-05' },
+      { id: 'dd48', type: 'expense', amount: 5000,  group: 'family',  category: 'family',        description: 'Parents Transfer',       date: '2026-01-08' },
     ];
     const DEMO_BUDGETS: BudgetMap = {
-      essentials:    { mode: 'fixed', value: 28000 },
-      food:          { mode: 'fixed', value: 10000 },
-      transport:     { mode: 'fixed', value: 5000  },
-      entertainment: { mode: 'fixed', value: 6000  },
-      shopping:      { mode: 'fixed', value: 10000 },
-      health:        { mode: 'fixed', value: 5000  },
-      savings:       { mode: 'fixed', value: 10000 },
-      family:        { mode: 'fixed', value: 6000  },
+      needs:   { mode: 'fixed', value: 35000 },
+      wants:   { mode: 'fixed', value: 20000 },
+      savings: { mode: 'fixed', value: 10000 },
+      family:  { mode: 'fixed', value: 6000  },
     };
     const DEMO_GOALS: Goal[] = [
       { id: 'dg1', name: 'Emergency Fund',     target: 300000,  current: 180000, deadline: '2026-12-31' },
@@ -304,12 +294,12 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
         { id: 'nl2', name: 'Personal Loan',     value: 80000  },
       ],
     };
-    // Persist so page refresh survives
     await Promise.all([
       storage.saveTxns('demo', DEMO_TXNS),
       storage.saveBudgets('demo', DEMO_BUDGETS),
       storage.saveGoals('demo', DEMO_GOALS),
       storage.saveNetWorth('demo', DEMO_NW),
+      storage.saveCategories('demo', DEFAULT_CATEGORIES),
     ]);
     await saveGoogleSession('demo_token', 99999999, 'demo@example.com', 'demo', 'Demo User', null);
     setCurrency(DEFAULT_CURRENCY);
@@ -322,25 +312,14 @@ async function loadUser(userId: string, userEmail?: string | null, userName?: st
     setGoalsState(DEMO_GOALS);
     setNwState(DEMO_NW);
     setCurrencyState(DEFAULT_CURRENCY);
-    setCustomCatsState([]);
+    setCategoriesState(DEFAULT_CATEGORIES);
   }, []);
 
-  const expenseCats = useMemo<ExpenseCat[]>(() => [
-    ...EXPENSE_CATS.map(c => ({ ...c, isCustom: false })),
-    ...customCats.filter(c => c.txnType === 'expense').map(c => ({ id: c.id, label: c.label, color: c.color, group: c.group, isCustom: true })),
-  ], [customCats]);
-
-  const incomeCats = useMemo<IncomeCat[]>(() => [
-    ...INCOME_CATS.map(c => ({ ...c, isCustom: false })),
-    ...customCats.filter(c => c.txnType === 'income').map(c => ({ id: c.id, label: c.label, color: c.color, isCustom: true })),
-  ], [customCats]);
-
   return {
-    user, email, name, picture, loading, txns, budgets, goals, nw, recurring, currency, customCats,
+    user, email, name, picture, loading, txns, budgets, goals, nw, recurring, currency, categories,
     syncError, sessionNote,
     googleSignIn, logout, loadDemoData,
     addTxn, editTxn, deleteTxn, deleteTxns,
-    setBudgets, setGoals, setNw, setRecurring, setCurrencyPref, setCustomCats,
-    expenseCats, incomeCats,
+    setBudgets, setGoals, setNw, setRecurring, setCurrencyPref, setCategories,
   };
 }
