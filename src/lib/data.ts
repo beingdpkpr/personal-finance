@@ -81,6 +81,9 @@ export interface NetWorthItem {
   id: string;
   name: string;
   value: number;
+  institution?: string;   // e.g. HDFC Bank, Zerodha
+  accountNumber?: string; // last 4 digits or full number
+  notes?: string;
 }
 
 export interface NetWorthData {

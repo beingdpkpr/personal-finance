@@ -90,9 +90,15 @@ export default function Accounts() {
               {/* Icon + name */}
               <div style={{ display:'flex', gap:12, alignItems:'center' }}>
                 <div style={{ width:46, height:46, borderRadius:14, background:`${color}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:700, color, border:`1px solid ${color}30`, flexShrink:0, fontFamily:'DM Sans, sans-serif' }}>{initial}</div>
-                <div>
+                <div style={{ minWidth:0 }}>
                   <div style={{ fontSize:15, fontWeight:700, color:'var(--text)' }}>{item.name}</div>
-                  <div style={{ fontSize:12, color:'var(--text-dim)', marginTop:2 }}>{item.isLiability ? 'Liability' : 'Asset'}</div>
+                  <div style={{ fontSize:12, color:'var(--text-dim)', marginTop:2 }}>
+                    {item.institution && <span>{item.institution}</span>}
+                    {item.institution && item.accountNumber && <span style={{ margin:'0 4px', opacity:0.4 }}>·</span>}
+                    {item.accountNumber && <span style={{ fontFamily:'DM Mono', letterSpacing:'0.03em' }}>••{item.accountNumber.slice(-4)}</span>}
+                    {!item.institution && !item.accountNumber && <span>{item.isLiability ? 'Liability' : 'Asset'}</span>}
+                  </div>
+                  {item.notes && <div style={{ fontSize:11, color:'var(--text-dim)', marginTop:3, opacity:0.7, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.notes}</div>}
                 </div>
               </div>
               {/* Balance */}

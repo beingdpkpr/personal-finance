@@ -76,12 +76,17 @@ function rowToRecurring(r: Record<string, string>): RecurringRule {
 }
 
 function nwItemToRow(item: NetWorthItem, type: 'asset' | 'liability'): string[] {
-  return [item.id, item.name, type, String(item.value)];
+  return [item.id, item.name, type, String(item.value), item.institution ?? '', item.accountNumber ?? '', item.notes ?? ''];
 }
 
 function rowToNwItem(r: Record<string, string>): { item: NetWorthItem; type: 'asset' | 'liability' } {
   return {
-    item: { id: r.id, name: r.name, value: Number(r.value) },
+    item: {
+      id: r.id, name: r.name, value: Number(r.value),
+      institution: r.institution || undefined,
+      accountNumber: r.accountNumber || undefined,
+      notes: r.notes || undefined,
+    },
     type: r.type as 'asset' | 'liability',
   };
 }
