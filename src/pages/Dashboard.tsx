@@ -44,6 +44,7 @@ export default function Dashboard() {
   const lastExpense   = lastTxns.filter(t => t.type==='expense').reduce((s,t) => s+t.amount, 0)
   const netSavings    = monthIncome - monthExpense
   const lastNetSavings = lastIncome - lastExpense
+  const savingsRate   = monthIncome > 0 ? Math.round((netSavings / monthIncome) * 100) : 0
 
   const totalAssets = nw.assets.reduce((s,a) => s+a.value, 0)
   const totalLiab   = nw.liabilities.reduce((s,l) => s+l.value, 0)
@@ -64,9 +65,12 @@ export default function Dashboard() {
   const catSpend = categories.map(c => ({
     label: c.label, color: c.color,
     amount: monthTxns.filter(t=>t.type==='expense'&&t.category===c.id).reduce((s,t)=>s+t.amount,0),
-  })).filter(c => c.amount > 0)
+  })).filter(c => c.amount > 0).sort((a,b) => b.amount - a.amount)
   const totalCatSpend = catSpend.reduce((s,c)=>s+c.amount,0)
-  const donutSegs = catSpend.map(c=>({ label:c.label, color:c.color, pct: totalCatSpend>0?(c.amount/totalCatSpend)*100:0 }))
+  const top5 = catSpend.slice(0, 5)
+  const otherAmt = catSpend.slice(5).reduce((s,c) => s+c.amount, 0)
+  const donutEntries = otherAmt > 0 ? [...top5, { label:'Other', color:'#6b7280', amount: otherAmt }] : top5
+  const donutSegs = donutEntries.map(c=>({ label:c.label, color:c.color, pct: totalCatSpend>0?(c.amount/totalCatSpend)*100:0 }))
 
   const recentTxns = [...txns].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6)
   const allAccounts = [
@@ -89,6 +93,7 @@ export default function Dashboard() {
           icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>} />
         <StatCard label={`Savings · ${monthLabel}`} value={fmt(netSavings)} color="#f59e0b" delay={0.15}
           sub={String(pctChange(netSavings, lastNetSavings))} positive={netSavings >= lastNetSavings}
+          rate={savingsRate}
           icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3H8l-1 4h10l-1-4z"/><circle cx="12" cy="13" r="2"/></svg>} />
       </div>
 
@@ -100,17 +105,18 @@ export default function Dashboard() {
               <div style={{ fontSize:14, fontWeight:600, color:'var(--text)' }}>Cash Flow</div>
               <div style={{ fontSize:12, color:'var(--text-dim)' }}>Income vs Expenses · Last {cashFlowMonths} months</div>
             </div>
-            <div style={{ display:'flex', gap:10, alignItems:'center' }}>
               <div style={{ display:'flex', gap:4 }}>
                 {([6, 12] as const).map(n => (
                   <button key={n} onClick={() => setCashFlowMonths(n)} style={{ padding:'3px 10px', borderRadius:20, border: cashFlowMonths===n ? '1px solid var(--accent)' : '1px solid var(--border)', background: cashFlowMonths===n ? 'var(--accent-dim)' : 'transparent', color: cashFlowMonths===n ? 'var(--accent)' : 'var(--text-dim)', cursor:'pointer', fontSize:11, fontWeight: cashFlowMonths===n ? 600 : 400 }}>{n}M</button>
                 ))}
               </div>
-              <span style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'var(--text-mid)' }}><span style={{ width:10, height:3, borderRadius:2, background:'var(--accent)', display:'inline-block' }}></span>Income</span>
-              <span style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'var(--text-mid)' }}><span style={{ width:10, height:3, borderRadius:2, background:'#f87171', display:'inline-block' }}></span>Expenses</span>
-            </div>
           </div>
-          <AreaChart data={areaData} />
+          <AreaChart data={areaData} showAvgLine />
+          <div style={{ display:'flex', gap:14, marginTop:8 }}>
+            <span style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'var(--text-dim)' }}><span style={{ width:12, height:3, borderRadius:2, background:'var(--accent)', display:'inline-block' }}></span>Income</span>
+            <span style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'var(--text-dim)' }}><span style={{ width:12, height:3, borderRadius:2, background:'#f87171', display:'inline-block' }}></span>Expenses</span>
+            <span style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'var(--text-dim)' }}><span style={{ width:12, height:1, borderRadius:2, background:'#f87171', display:'inline-block', opacity:0.5 }}></span>Avg spend</span>
+          </div>
         </Card>
         <Card>
           <div style={{ fontSize:14, fontWeight:600, color:'var(--text)', marginBottom:4 }}>Spending Breakdown</div>
@@ -149,13 +155,12 @@ export default function Dashboard() {
                   ? INCOME_CATS.find(c => c.id === t.category)
                   : categories.find(c => c.id === t.category)
                 const color = cat?.color ?? '#888'
-                const initial = (cat?.label ?? t.category ?? '').slice(0,1).toUpperCase()
                 return (
                   <div key={t.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'8px 10px', borderRadius:10, cursor:'pointer', transition:'background 0.15s' }}
                     onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background='var(--surface3)'}
                     onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background='transparent'}>
-                    <div style={{ width:36, height:36, borderRadius:10, background:`${color}22`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:700, color, flexShrink:0, fontFamily:'DM Sans, sans-serif' }}>
-                      {initial}
+                    <div style={{ width:36, height:36, borderRadius:10, background:`${color}18`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, border:`1.5px solid ${color}40` }}>
+                      <span style={{ width:10, height:10, borderRadius:'50%', background:color, display:'inline-block' }} />
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:13, fontWeight:500, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.description}</div>
@@ -185,13 +190,12 @@ export default function Dashboard() {
             <div style={{ display:'flex', flexDirection:'column' }}>
               {allAccounts.slice(0, 6).map((acc, i) => {
                 const accColor = ACC_PALETTE[i % ACC_PALETTE.length]
-                const accInitial = acc.name.slice(0,1).toUpperCase()
                 return (
                   <div key={acc.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'8px 10px', borderRadius:10, cursor:'pointer', transition:'background 0.15s' }}
                     onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background='var(--surface3)'}
                     onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background='transparent'}>
-                    <div style={{ width:36, height:36, borderRadius:10, background:`${accColor}20`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:700, color:accColor, flexShrink:0, border:`1px solid ${accColor}30`, fontFamily:'DM Sans, sans-serif' }}>
-                      {accInitial}
+                    <div style={{ width:36, height:36, borderRadius:10, background:`${accColor}18`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, border:`1.5px solid ${accColor}40` }}>
+                      <span style={{ width:10, height:10, borderRadius:'50%', background:accColor, display:'inline-block' }} />
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:13, fontWeight:500, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{acc.name}</div>
@@ -205,6 +209,16 @@ export default function Dashboard() {
                   </div>
                 )
               })}
+              <div style={{ borderTop:'1px solid var(--border)', marginTop:4, paddingTop:8, display:'flex', flexDirection:'column', gap:4 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'2px 10px' }}>
+                  <span style={{ fontSize:11, color:'var(--text-dim)' }}>Total Assets</span>
+                  <span style={{ fontSize:12, fontWeight:700, fontFamily:'DM Mono', color:'var(--positive)' }}>{fmt(totalAssets)}</span>
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'2px 10px' }}>
+                  <span style={{ fontSize:11, color:'var(--text-dim)' }}>Total Liabilities</span>
+                  <span style={{ fontSize:12, fontWeight:700, fontFamily:'DM Mono', color:'var(--negative)' }}>-{fmt(totalLiab)}</span>
+                </div>
+              </div>
             </div>
           )}
         </Card>

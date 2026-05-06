@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 
 interface DataPoint { month: string; income: number; expense: number }
-interface Props { data: DataPoint[]; color?: string; height?: number }
+interface Props { data: DataPoint[]; color?: string; height?: number; showAvgLine?: boolean }
 
-export default function AreaChart({ data, color = '#7c6ef5', height = 120 }: Props) {
+export default function AreaChart({ data, color = '#7c6ef5', height = 120, showAvgLine = false }: Props) {
   const [drawn, setDrawn] = useState(false)
   useEffect(() => { const t = setTimeout(() => setDrawn(true), 300); return () => clearTimeout(t) }, [])
 
@@ -11,6 +11,8 @@ export default function AreaChart({ data, color = '#7c6ef5', height = 120 }: Pro
 
   const W = 500, H = height, PAD = 10
   const maxVal = Math.max(...data.map(d => Math.max(d.income, d.expense)), 1)
+  const avgExp = data.reduce((s, d) => s + d.expense, 0) / data.length
+  const avgExpY = H - PAD - (avgExp / maxVal) * (H - PAD * 2)
   const pts = (key: 'income' | 'expense') => data.map((d, i) => {
     const x = PAD + (i / (data.length - 1)) * (W - PAD * 2)
     const y = H - PAD - (d[key] / maxVal) * (H - PAD * 2)
@@ -36,6 +38,12 @@ export default function AreaChart({ data, color = '#7c6ef5', height = 120 }: Pro
           <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
       </defs>
+      {showAvgLine && drawn && (
+        <>
+          <line x1={PAD} y1={avgExpY} x2={W - PAD} y2={avgExpY} stroke="#f87171" strokeWidth="1" strokeDasharray="5 3" opacity="0.45" />
+          <text x={W - PAD - 2} y={avgExpY - 4} textAnchor="end" fontSize="7" fill="#f87171" opacity="0.7" fontFamily="DM Sans">avg</text>
+        </>
+      )}
       {[0.25, 0.5, 0.75].map(f => (
         <line key={f} x1={PAD} y1={H - PAD - f * (H - PAD * 2)} x2={W - PAD} y2={H - PAD - f * (H - PAD * 2)}
           stroke="rgba(255,255,255,0.05)" strokeWidth="1" strokeDasharray="4 4" />

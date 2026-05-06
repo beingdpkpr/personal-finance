@@ -10,9 +10,10 @@ interface Props {
   positive?: boolean
   delay?: number
   animate?: boolean
+  rate?: number
 }
 
-export default function StatCard({ label, value, sub, icon, color, positive, delay, animate }: Props) {
+export default function StatCard({ label, value, sub, icon, color, positive, delay, animate, rate }: Props) {
   return (
     <Card delay={delay} animate={animate} style={{ display:'flex', flexDirection:'column', gap:14 }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
@@ -24,6 +25,14 @@ export default function StatCard({ label, value, sub, icon, color, positive, del
           {icon}
         </div>
       </div>
+      {rate !== undefined && (
+        <div style={{ display:'flex', flexDirection:'column', gap:4, marginTop:-6 }}>
+          <div style={{ height:3, borderRadius:2, background:'var(--surface3)', overflow:'hidden' }}>
+            <div style={{ height:'100%', borderRadius:2, background: rate >= 20 ? 'var(--positive)' : rate >= 10 ? '#f59e0b' : 'var(--negative)', width:`${Math.min(Math.max(rate,0),100)}%`, transition:'width 0.8s ease' }} />
+          </div>
+          <span style={{ fontSize:10, color:'var(--text-dim)' }}>{rate}% savings rate</span>
+        </div>
+      )}
       {sub !== undefined && (
         <div style={{ display:'flex', alignItems:'center', gap:6 }}>
           {positive !== undefined && (
