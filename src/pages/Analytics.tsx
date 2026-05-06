@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { fmt } from '../lib/format'
 import { MONTHS } from '../constants/categories'
@@ -9,11 +10,11 @@ import BarChart from '../components/charts/BarChart'
 
 export default function Analytics() {
   const { txns, categories } = useFinanceContext()
+  const [months, setMonths] = useState<6 | 12>(6)
   const now = new Date()
 
-  // Last 6 months for area chart
-  const areaData = Array.from({length:6}, (_,i) => {
-    const d = new Date(now.getFullYear(), now.getMonth()-5+i, 1)
+  const areaData = Array.from({length: months}, (_,i) => {
+    const d = new Date(now.getFullYear(), now.getMonth()-(months-1)+i, 1)
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
     const mt = txns.filter(t => t.date.startsWith(key))
     return {
@@ -58,12 +59,21 @@ export default function Analytics() {
       {/* Area chart + summary */}
       <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:16 }}>
         <Card>
-          <div style={{ fontSize:14, fontWeight:600, color:'var(--text)', marginBottom:4 }}>Income vs Expenses</div>
-          <div style={{ fontSize:12, color:'var(--text-dim)', marginBottom:16 }}>Last 6 months</div>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+            <div>
+              <div style={{ fontSize:14, fontWeight:600, color:'var(--text)' }}>Income vs Expenses</div>
+              <div style={{ fontSize:12, color:'var(--text-dim)' }}>Last {months} months</div>
+            </div>
+            <div style={{ display:'flex', gap:4 }}>
+              {([6, 12] as const).map(n => (
+                <button key={n} onClick={() => setMonths(n)} style={{ padding:'3px 10px', borderRadius:20, border: months===n ? '1px solid var(--accent)' : '1px solid var(--border)', background: months===n ? 'var(--accent-dim)' : 'transparent', color: months===n ? 'var(--accent)' : 'var(--text-dim)', cursor:'pointer', fontSize:11, fontWeight: months===n ? 600 : 400 }}>{n}M</button>
+              ))}
+            </div>
+          </div>
           <AreaChart data={areaData} />
         </Card>
         <Card>
-          <div style={{ fontSize:14, fontWeight:600, color:'var(--text)', marginBottom:16 }}>6-Month Summary</div>
+          <div style={{ fontSize:14, fontWeight:600, color:'var(--text)', marginBottom:16 }}>{months}-Month Summary</div>
           <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
             {[
               { label:'Total Income',  value: fmt(totalIncome),  color:'var(--positive)' },
