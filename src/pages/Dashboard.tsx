@@ -22,7 +22,7 @@ function fmtShortDate(d: string): string {
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { txns, nw, categories } = useFinanceContext()
+  const { txns, nw, categories, openAdd } = useFinanceContext()
   const [cashFlowMonths, setCashFlowMonths] = useState<6 | 12>(12)
 
   const now = new Date()
@@ -124,11 +124,12 @@ export default function Dashboard() {
           <div style={{ display:'flex', gap:14, alignItems:'center' }}>
             <DonutChart segments={donutSegs} size={110} centerLabel={fmt(totalCatSpend)} centerSub={`${MONTHS[tm-1]} spend`} />
             <div style={{ flex:1, display:'flex', flexDirection:'column', gap:7 }}>
-              {donutSegs.slice(0,5).map(c => (
+              {donutSegs.map(c => (
                 <div key={c.label} style={{ display:'flex', alignItems:'center', gap:7 }}>
                   <span style={{ width:8, height:8, borderRadius:'50%', background:c.color, flexShrink:0 }}></span>
                   <span style={{ fontSize:12, color:'var(--text-mid)', flex:1 }}>{c.label}</span>
-                  <span style={{ fontSize:12, fontFamily:'DM Mono', color:'var(--text)' }}>{Math.round(c.pct)}%</span>
+                  <span style={{ fontSize:11, fontFamily:'DM Mono', color:'var(--text-dim)' }}>{Math.round(c.pct)}%</span>
+                  <span style={{ fontSize:12, fontFamily:'DM Mono', color:'var(--text)', minWidth:56, textAlign:'right' }}>{fmt(totalCatSpend * c.pct / 100)}</span>
                 </div>
               ))}
             </div>
@@ -142,9 +143,10 @@ export default function Dashboard() {
         <Card>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
             <div style={{ fontSize:14, fontWeight:600, color:'var(--text)' }}>Recent Transactions</div>
-            <button onClick={() => navigate('/transactions')} style={{ background:'none', border:'none', color:'var(--accent)', cursor:'pointer', fontSize:12, fontWeight:500 }}>
-              View all →
-            </button>
+            <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+              <button onClick={openAdd} style={{ padding:'4px 12px', borderRadius:20, border:'1px solid var(--accent)', background:'var(--accent-dim)', color:'var(--accent)', cursor:'pointer', fontSize:12, fontWeight:600 }}>+ Add</button>
+              <button onClick={() => navigate('/transactions')} style={{ background:'none', border:'none', color:'var(--accent)', cursor:'pointer', fontSize:12, fontWeight:500 }}>View all →</button>
+            </div>
           </div>
           {recentTxns.length === 0 ? (
             <div style={{ color:'var(--text-dim)', fontSize:13, textAlign:'center', padding:'20px 0' }}>No transactions yet</div>
@@ -166,7 +168,7 @@ export default function Dashboard() {
                       <div style={{ fontSize:13, fontWeight:500, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.description}</div>
                       <div style={{ fontSize:11, color:'var(--text-dim)', marginTop:2 }}>{cat?.label ?? t.category} · {fmtShortDate(t.date)}</div>
                     </div>
-                    <div style={{ fontSize:13, fontWeight:600, fontFamily:'DM Mono', color: t.type==='income' ? 'var(--positive)' : 'var(--text)', flexShrink:0 }}>
+                    <div style={{ fontSize:13, fontWeight:600, fontFamily:'DM Mono', color: t.type==='income' ? 'var(--positive)' : 'var(--negative)', flexShrink:0 }}>
                       {t.type==='income' ? '+' : '-'}{fmt(t.amount)}
                     </div>
                   </div>
@@ -209,6 +211,9 @@ export default function Dashboard() {
                   </div>
                 )
               })}
+              {allAccounts.length > 6 && (
+                <div style={{ padding:'4px 10px', fontSize:11, color:'var(--text-dim)' }}>and {allAccounts.length - 6} more · <span style={{ color:'var(--accent)', cursor:'pointer' }} onClick={() => navigate('/accounts')}>Manage →</span></div>
+              )}
               <div style={{ borderTop:'1px solid var(--border)', marginTop:4, paddingTop:8, display:'flex', flexDirection:'column', gap:4 }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'2px 10px' }}>
                   <span style={{ fontSize:11, color:'var(--text-dim)' }}>Total Assets</span>
