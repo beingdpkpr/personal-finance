@@ -39,11 +39,14 @@ export default function AddTransactionModal() {
     const amt = parseFloat(amount)
     if (!amt || !desc) return
     if (type === 'expense' && !group) return
+    const validCat = type === 'income'
+      ? (INCOME_CATS.find(c => c.id === cat) ? cat : undefined)
+      : (categories.find(c => c.id === cat) ? cat : undefined)
     const txn = {
       type,
       amount: amt,
       group:     type === 'expense' ? (group as Group) : undefined,
-      category:  cat || undefined,
+      category:  validCat,
       description: desc,
       date,
       notes:  notes || undefined,
@@ -89,7 +92,7 @@ export default function AddTransactionModal() {
         {type === 'expense' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div>
-              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>Group *</div>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>Category *</div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {GROUPS.map(g => (
                   <button key={g} onClick={() => { setGroup(g); setCat('') }} style={{
@@ -105,7 +108,7 @@ export default function AddTransactionModal() {
 
             {group && groupCats.length > 0 && (
               <div>
-                <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>Category <span style={{ opacity: 0.6 }}>(optional)</span></div>
+                <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>Sub-category <span style={{ opacity: 0.6 }}>(optional)</span></div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                   {groupCats.map(c => (
                     <button key={c.id} onClick={() => setCat(cat === c.id ? '' : c.id)} style={{

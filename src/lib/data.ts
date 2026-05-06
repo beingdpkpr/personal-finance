@@ -31,6 +31,7 @@ export interface Transaction {
   amount:       number;
   group?:       Group;    // budget group — set for expense transactions
   category?:    string;   // Category.id for expenses; income cat id for income
+  subCategory?: string;
   description:  string;
   date:         string;   // 'YYYY-MM-DD'
   notes?:       string;
