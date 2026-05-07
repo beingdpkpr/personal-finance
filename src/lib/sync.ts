@@ -2,10 +2,9 @@ import { storage } from './storage';
 import { writeTab, readTab, createSpreadsheet, verifySpreadsheet, findSpreadsheetByName } from './sheets';
 import { saveSpreadsheetId } from './google-auth';
 import {
-  Transaction, BudgetMap, BudgetEntry, Goal,
+  Transaction, BudgetMap, BudgetEntry, Goal, IncomeCat,
   RecurringRule, NetWorthItem, Currency, Category, Group, UserPrefs, DEFAULT_PREFS,
 } from './data';
-
 // ── Serializers ──────────────────────────────────────────────────────────────
 
 function txnToRow(t: Transaction): string[] {
@@ -15,6 +14,7 @@ function txnToRow(t: Transaction): string[] {
     t.description, t.date,
     t.notes ?? '', JSON.stringify(t.tags ?? []),
     t.recurringId ?? '', t.auto ? '1' : '0',
+    t.sourceAccountId ?? '', t.destinationAccountId ?? '',
   ];
 }
 
@@ -38,8 +38,10 @@ function rowToTxn(r: Record<string, string>): Transaction {
     date:        r.date,
     notes:       r.notes || undefined,
     tags,
-    recurringId: r.recurringId || undefined,
-    auto:        r.auto === '1',
+    recurringId:     r.recurringId     || undefined,
+    auto:            r.auto === '1',
+    sourceAccountId:      r.sourceAccountId      || undefined,
+    destinationAccountId: r.destinationAccountId || undefined,
   };
 }
 
@@ -52,17 +54,26 @@ function rowToBudget(r: Record<string, string>): [string, BudgetEntry] {
 }
 
 function catToRow(c: Category): string[] {
-  return [c.id, c.label, c.group, c.color];
+  return [c.id, c.label, c.group, c.color, c.depositsToAccount ? '1' : '0'];
 }
 
 function rowToCat(r: Record<string, string>): Category | null {
   if (!r.id || !r.label || !r.group) return null;
   return {
-    id:    r.id,
-    label: r.label,
-    group: r.group as Group,
-    color: r.color || '#8888aa',
+    id:                 r.id,
+    label:              r.label,
+    group:              r.group as Group,
+    color:              r.color || '#8888aa',
+    depositsToAccount:  r.depositsToAccount === '1' || undefined,
   };
+}
+
+function incomeCatToRow(c: IncomeCat): string[] {
+  return [c.id, c.label, c.color, c.requiresAccount ? '1' : '0'];
+}
+function rowToIncomeCat(r: Record<string, string>): IncomeCat | null {
+  if (!r.id || !r.label) return null;
+  return { id: r.id, label: r.label, color: r.color || '#2ed18a', requiresAccount: r.requiresAccount === '1' || undefined };
 }
 
 function goalToRow(g: Goal): string[] {
@@ -142,7 +153,7 @@ export async function pushAll(
   spreadsheetId: string,
   userId: string,
 ): Promise<void> {
-  const [txns, budgets, goals, recurring, nw, currency, cats, prefs] = await Promise.all([
+  const [txns, budgets, goals, recurring, nw, currency, cats, incomeCats, prefs] = await Promise.all([
     storage.getTxns(userId),
     storage.getBudgets(userId),
     storage.getGoals(userId),
@@ -150,6 +161,7 @@ export async function pushAll(
     storage.getNetWorth(userId),
     storage.getCurrency(userId),
     storage.getCategories(userId),
+    storage.getIncomeCats(userId),
     storage.getPrefs(userId),
   ]);
 
@@ -168,6 +180,7 @@ export async function pushAll(
     writeTab(accessToken, spreadsheetId, 'Recurring', recurring.map(recurringToRow)),
     writeTab(accessToken, spreadsheetId, 'NetWorth', nwRows),
     writeTab(accessToken, spreadsheetId, 'Categories', cats.map(catToRow)),
+    writeTab(accessToken, spreadsheetId, 'IncomeCats', incomeCats.map(incomeCatToRow)),
     writeTab(accessToken, spreadsheetId, 'Settings', [
       [
         currency.code, currency.symbol, currency.locale, new Date().toISOString(),
@@ -191,18 +204,20 @@ export async function pullAll(
   nw:         { assets: NetWorthItem[]; liabilities: NetWorthItem[] };
   currency:   Currency;
   categories: Category[];
+  incomeCats: IncomeCat[];
   prefs:      { darkMode: boolean; themeName: string };
   userPrefs:  UserPrefs;
 }> {
   const DEFAULT_CURRENCY: Currency = { code: 'INR', symbol: '₹', locale: 'en-IN' };
 
-  const [txnRows, budgetRows, goalRows, recurringRows, nwRows, catRows, settingsRows] = await Promise.all([
+  const [txnRows, budgetRows, goalRows, recurringRows, nwRows, catRows, incomeCatRows, settingsRows] = await Promise.all([
     readTab(accessToken, spreadsheetId, 'Transactions'),
     readTab(accessToken, spreadsheetId, 'Budgets'),
     readTab(accessToken, spreadsheetId, 'Goals'),
     readTab(accessToken, spreadsheetId, 'Recurring'),
     readTab(accessToken, spreadsheetId, 'NetWorth'),
     readTab(accessToken, spreadsheetId, 'Categories'),
+    readTab(accessToken, spreadsheetId, 'IncomeCats'),
     readTab(accessToken, spreadsheetId, 'Settings'),
   ]);
 
@@ -235,6 +250,7 @@ export async function pullAll(
     },
     currency,
     categories: catRows.map(rowToCat).filter((c): c is Category => c !== null),
+    incomeCats: incomeCatRows.map(rowToIncomeCat).filter((c): c is IncomeCat => c !== null),
     prefs: {
       darkMode:  (s0?.dark_mode ?? 'true') !== 'false',
       themeName,

@@ -2,7 +2,6 @@ import { useState, useRef } from 'react'
 import { useFinanceContext } from '../../hooks/FinanceContext'
 import { parseGooglePayFile, deduplicateRows, ParsedRow } from '../../lib/gpay-parser'
 import { parseGooglePayPDF } from '../../lib/gpay-pdf-parser'
-import { INCOME_CATS } from '../../constants/categories'
 
 interface Props { onClose: () => void }
 
@@ -10,7 +9,7 @@ type Step = 'upload' | 'preview' | 'done'
 
 
 export default function GooglePayImportModal({ onClose }: Props) {
-  const { txns, addTxn, categories } = useFinanceContext()
+  const { txns, addTxn, categories, incomeCats } = useFinanceContext()
   const [step, setStep]       = useState<Step>('upload')
   const [rows, setRows]       = useState<ParsedRow[]>([])
   const [skipped, setSkipped] = useState(0)
@@ -90,7 +89,7 @@ export default function GooglePayImportModal({ onClose }: Props) {
   }
 
   const expCatOptions = categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)
-  const incCatOptions = INCOME_CATS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)
+  const incCatOptions = incomeCats.map(c => <option key={c.id} value={c.id}>{c.label}</option>)
 
   return (
     <div

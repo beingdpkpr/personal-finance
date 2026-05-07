@@ -2,7 +2,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { fmt } from '../lib/format'
-import { MONTHS, MONTHS_FULL, INCOME_CATS } from '../constants/categories'
+import { MONTHS, MONTHS_FULL } from '../constants/categories'
 import { Group, GROUPS, GROUP_LABELS } from '../lib/data'
 import Card from '../components/ui/Card'
 import ProgressBar from '../components/ui/ProgressBar'
@@ -37,7 +37,7 @@ function SavingsGauge({ rate }: { rate: number }) {
 
 export default function Monthly() {
   const navigate = useNavigate()
-  const { txns, categories } = useFinanceContext()
+  const { txns, categories, incomeCats } = useFinanceContext()
   const now = new Date()
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
 
@@ -60,7 +60,7 @@ export default function Monthly() {
   const savings   = income - expense
   const savingsRate = income > 0 ? Math.round((savings/income)*100) : 0
 
-  const incomeSources = INCOME_CATS.map(c => ({
+  const incomeSources = incomeCats.map(c => ({
     ...c, amount: monthTxns.filter(t=>t.type==='income'&&t.category===c.id).reduce((s,t)=>s+t.amount,0)
   })).filter(c=>c.amount>0)
 

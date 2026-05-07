@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { fmt } from '../lib/format'
-import { MONTHS, INCOME_CATS } from '../constants/categories'
+import { MONTHS } from '../constants/categories'
 import Card from '../components/ui/Card'
 import StatCard from '../components/ui/StatCard'
 import AreaChart from '../components/charts/AreaChart'
@@ -22,7 +22,7 @@ function fmtShortDate(d: string): string {
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { txns, nw, categories, openAdd, prefs, setPrefs } = useFinanceContext()
+  const { txns, nw, categories, incomeCats, openAdd, prefs, setPrefs } = useFinanceContext()
   const [cashFlowMonths, setCashFlowMonths] = useState<6 | 12>(() => prefs.defaultCashFlowMonths)
 
   function handleMonthToggle(n: 6 | 12) {
@@ -43,13 +43,19 @@ export default function Dashboard() {
   const monthTxns = txns.filter(t => t.date.startsWith(thisMonth))
   const lastTxns  = txns.filter(t => t.date.startsWith(lastMonth))
 
-  const monthIncome   = monthTxns.filter(t => t.type==='income').reduce((s,t) => s+t.amount, 0)
-  const monthExpense  = monthTxns.filter(t => t.type==='expense').reduce((s,t) => s+t.amount, 0)
-  const lastIncome    = lastTxns.filter(t => t.type==='income').reduce((s,t) => s+t.amount, 0)
-  const lastExpense   = lastTxns.filter(t => t.type==='expense').reduce((s,t) => s+t.amount, 0)
-  const netSavings    = monthIncome - monthExpense
+  // Categories that fund accounts are savings transfers, not real spending
+  const transferCatIds = new Set(categories.filter(c => c.depositsToAccount).map(c => c.id))
+  const isTransfer = (t: { type: string; category?: string }) =>
+    t.type === 'expense' && transferCatIds.has(t.category ?? '')
+
+  const monthIncome    = monthTxns.filter(t => t.type==='income').reduce((s,t) => s+t.amount, 0)
+  const monthExpense   = monthTxns.filter(t => t.type==='expense' && !isTransfer(t)).reduce((s,t) => s+t.amount, 0)
+  const monthTransfers = monthTxns.filter(t => isTransfer(t)).reduce((s,t) => s+t.amount, 0)
+  const lastIncome     = lastTxns.filter(t => t.type==='income').reduce((s,t) => s+t.amount, 0)
+  const lastExpense    = lastTxns.filter(t => t.type==='expense' && !isTransfer(t)).reduce((s,t) => s+t.amount, 0)
+  const netSavings     = monthIncome - monthExpense
   const lastNetSavings = lastIncome - lastExpense
-  const savingsRate   = monthIncome > 0 ? Math.round((netSavings / monthIncome) * 100) : 0
+  const savingsRate    = monthIncome > 0 ? Math.round((netSavings / monthIncome) * 100) : 0
 
   const totalAssets   = nw.assets.reduce((s,a) => s+a.value, 0)
   const totalLiab     = nw.liabilities.reduce((s,l) => s+l.value, 0)
@@ -67,11 +73,11 @@ export default function Dashboard() {
     return {
       month: `${MONTHS[d.getMonth()]}${d.getFullYear() !== ty ? ` '${String(d.getFullYear()).slice(2)}` : ''}`,
       income:  mt.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),
-      expense: mt.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0),
+      expense: mt.filter(t=>t.type==='expense'&&!isTransfer(t)).reduce((s,t)=>s+t.amount,0),
     }
   })
 
-  const catSpend = categories.map(c => ({
+  const catSpend = categories.filter(c => !c.depositsToAccount).map(c => ({
     label: c.label, color: c.color,
     amount: monthTxns.filter(t=>t.type==='expense'&&t.category===c.id).reduce((s,t)=>s+t.amount,0),
   })).filter(c => c.amount > 0).sort((a,b) => b.amount - a.amount)
@@ -87,7 +93,7 @@ export default function Dashboard() {
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
     const mt = txns.filter(t => t.date.startsWith(key))
     return mt.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-         - mt.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+         - mt.filter(t => t.type === 'expense' && !isTransfer(t)).reduce((s, t) => s + t.amount, 0)
   }).reduce<number[]>((acc, delta, i) => {
     acc.push(i === 0 ? liquidNW - areaData.slice(0, 5).reduce((s, d) => s + d.income - d.expense, 0) : acc[i - 1] + delta)
     return acc
@@ -116,6 +122,7 @@ export default function Dashboard() {
         <StatCard label={`Savings · ${monthLabel}`} value={fmt(netSavings)} color="#f59e0b" delay={0.15}
           sub={String(pctChange(netSavings, lastNetSavings))} positive={netSavings >= lastNetSavings}
           rate={savingsRate}
+          note={monthTransfers > 0 ? `${fmt(monthTransfers)} invested` : undefined}
           icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3H8l-1 4h10l-1-4z"/><circle cx="12" cy="13" r="2"/></svg>} />
       </div>
 
@@ -180,7 +187,7 @@ export default function Dashboard() {
             <div style={{ display:'flex', flexDirection:'column' }}>
               {recentTxns.map((t) => {
                 const cat = t.type === 'income'
-                  ? INCOME_CATS.find(c => c.id === t.category)
+                  ? incomeCats.find(c => c.id === t.category)
                   : categories.find(c => c.id === t.category)
                 const color = cat?.color ?? '#888'
                 return (

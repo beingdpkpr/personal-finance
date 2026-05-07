@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  BudgetMap, Category, Currency, Goal, NetWorthData,
+  BudgetMap, Category, Currency, Goal, IncomeCat, NetWorthData,
   RecurringRule, Transaction, UserPrefs, DEFAULT_PREFS, uid,
 } from '../lib/data';
-import { DEFAULT_CATEGORIES } from '../constants/categories';
+import { DEFAULT_CATEGORIES, INCOME_CATS } from '../constants/categories';
 import { storage } from '../lib/storage';
 import { setCurrency } from '../lib/format';
 import { applyRecurring } from '../lib/recurring';
@@ -31,6 +31,7 @@ export interface FinanceState {
   recurring:       RecurringRule[];
   currency:        Currency;
   categories:      Category[];
+  incomeCats:      IncomeCat[];
   googleSignIn:    (accessToken: string, expiresIn: number) => Promise<string | null>;
   logout:          () => Promise<void>;
   loadDemoData:    () => Promise<void>;
@@ -46,6 +47,7 @@ export interface FinanceState {
   setRecurring:    (r: RecurringRule[]) => void;
   setCurrencyPref: (c: Currency) => void;
   setCategories:   (c: Category[]) => void;
+  setIncomeCats:   (c: IncomeCat[]) => void;
   prefs:           UserPrefs;
   setPrefs:        (p: UserPrefs) => void;
 }
@@ -62,8 +64,9 @@ export function useFinance(): FinanceState {
   const [nw, setNwState]                 = useState<NetWorthData>({ assets: [], liabilities: [] });
   const [recurring, setRecurringState]   = useState<RecurringRule[]>([]);
   const [currency, setCurrencyState]     = useState<Currency>(DEFAULT_CURRENCY);
-  const [categories, setCategoriesState] = useState<Category[]>([]);
-  const [prefs, setPrefsState]           = useState<UserPrefs>(DEFAULT_PREFS);
+  const [categories, setCategoriesState]   = useState<Category[]>([]);
+  const [incomeCatsState, setIncomeCatsState] = useState<IncomeCat[]>(INCOME_CATS);
+  const [prefs, setPrefsState]             = useState<UserPrefs>(DEFAULT_PREFS);
   const [syncError, setSyncError]        = useState<string | null>(null);
   const [sessionNote, setSessionNote]    = useState<string | null>(null);
 
@@ -97,7 +100,7 @@ export function useFinance(): FinanceState {
 
   async function loadUser(userId: string, userEmail?: string | null, userName?: string | null, userPicture?: string | null) {
     runMigrationIfNeeded(userId);
-    const [t, b, r, g, n, c, cats, p] = await Promise.all([
+    const [t, b, r, g, n, c, cats, ic, p] = await Promise.all([
       storage.getTxns(userId),
       storage.getBudgets(userId),
       storage.getRecurring(userId),
@@ -105,6 +108,7 @@ export function useFinance(): FinanceState {
       storage.getNetWorth(userId),
       storage.getCurrency(userId),
       storage.getCategories(userId),
+      storage.getIncomeCats(userId),
       storage.getPrefs(userId),
     ]);
     const applied = applyRecurring(r, t);
@@ -125,6 +129,7 @@ export function useFinance(): FinanceState {
     setNwState(n);
     setCurrencyState(c);
     setCategoriesState(cats.length > 0 ? cats : DEFAULT_CATEGORIES);
+    setIncomeCatsState(ic.length > 0 ? ic : INCOME_CATS);
     setPrefsState(p);
   }
 
@@ -143,7 +148,8 @@ export function useFinance(): FinanceState {
   useEffect(() => { if (user) { storage.saveGoals(user, goals);           scheduleSync(); } }, [goals,      user, scheduleSync]);
   useEffect(() => { if (user) { storage.saveNetWorth(user, nw);           scheduleSync(); } }, [nw,         user, scheduleSync]);
   useEffect(() => { if (user) { storage.saveCurrency(user, currency);     scheduleSync(); } }, [currency,   user, scheduleSync]);
-  useEffect(() => { if (user) { storage.saveCategories(user, categories); scheduleSync(); } }, [categories, user, scheduleSync]);
+  useEffect(() => { if (user) { storage.saveCategories(user, categories);  scheduleSync(); } }, [categories,  user, scheduleSync]);
+  useEffect(() => { if (user) { storage.saveIncomeCats(user, incomeCatsState); scheduleSync(); } }, [incomeCatsState, user, scheduleSync]);
   useEffect(() => { if (user) { storage.savePrefs(user, prefs);           scheduleSync(); } }, [prefs,      user, scheduleSync]);
 
   const googleSignIn = useCallback(async (accessToken: string, expiresIn: number): Promise<string | null> => {
@@ -192,6 +198,7 @@ export function useFinance(): FinanceState {
           storage.saveNetWorth(info.sub, data.nw),
           storage.saveCurrency(info.sub, data.currency),
           storage.saveCategories(info.sub, data.categories),
+          storage.saveIncomeCats(info.sub, data.incomeCats.length > 0 ? data.incomeCats : INCOME_CATS),
           storage.savePrefs(info.sub, data.userPrefs),
         ]);
         localStorage.setItem('pf_dark_mode', String(data.prefs.darkMode));
@@ -223,17 +230,98 @@ export function useFinance(): FinanceState {
     setCategoriesState([]);
   }, []);
 
-  const addTxn      = useCallback((t: Omit<Transaction, 'id'>) => setTxnsState(prev => [...prev, { ...t, id: uid() }]), []);
-  const editTxn     = useCallback((t: Transaction) => setTxnsState(prev => prev.map(x => x.id === t.id ? t : x)), []);
-  const editTxns    = useCallback((ts: Transaction[]) => { const map = new Map(ts.map(t => [t.id, t])); setTxnsState(prev => prev.map(x => map.has(x.id) ? map.get(x.id)! : x)); }, []);
-  const deleteTxn   = useCallback((id: string) => setTxnsState(prev => prev.filter(x => x.id !== id)), []);
-  const deleteTxns  = useCallback((ids: string[]) => { const set = new Set(ids); setTxnsState(prev => prev.filter(x => !set.has(x.id))); }, []);
+  // Helper: compute net NW delta for one transaction being applied (+1) or reversed (-1)
+  function applyTxnToNw(
+    assets: NetWorthData['assets'],
+    t: Pick<Transaction, 'amount' | 'sourceAccountId' | 'destinationAccountId'>,
+    sign: 1 | -1,
+  ): NetWorthData['assets'] {
+    let changed = false;
+    const next = assets.map(a => {
+      let val = a.value;
+      if (a.id === t.sourceAccountId)      val -= sign * t.amount;  // withdrawal
+      if (a.id === t.destinationAccountId) val += sign * t.amount;  // deposit
+      if (val !== a.value) { changed = true; return { ...a, value: val }; }
+      return a;
+    });
+    return changed ? next : assets;
+  }
+
+  const addTxn = useCallback((t: Omit<Transaction, 'id'>) => {
+    setTxnsState(prev => [...prev, { ...t, id: uid() }]);
+    if (t.sourceAccountId || t.destinationAccountId) {
+      setNwState(n => ({ ...n, assets: applyTxnToNw(n.assets, t, 1) }));
+    }
+  }, []);
+
+  const editTxn = useCallback((t: Transaction) => {
+    setTxnsState(prev => {
+      const old = prev.find(x => x.id === t.id);
+      if (old?.sourceAccountId || old?.destinationAccountId || t.sourceAccountId || t.destinationAccountId) {
+        setNwState(n => {
+          let assets = n.assets;
+          if (old) assets = applyTxnToNw(assets, old, -1);  // undo old
+          assets = applyTxnToNw(assets, t, 1);              // apply new
+          return { ...n, assets };
+        });
+      }
+      return prev.map(x => x.id === t.id ? t : x);
+    });
+  }, []);
+
+  const editTxns = useCallback((ts: Transaction[]) => {
+    const map = new Map(ts.map(t => [t.id, t]));
+    setTxnsState(prev => {
+      const linked = ts.filter(t => {
+        const old = prev.find(x => x.id === t.id);
+        return t.sourceAccountId || t.destinationAccountId || old?.sourceAccountId || old?.destinationAccountId;
+      });
+      if (linked.length > 0) {
+        setNwState(n => {
+          let assets = n.assets;
+          linked.forEach(t => {
+            const old = prev.find(x => x.id === t.id);
+            if (old) assets = applyTxnToNw(assets, old, -1);
+            assets = applyTxnToNw(assets, t, 1);
+          });
+          return { ...n, assets };
+        });
+      }
+      return prev.map(x => map.has(x.id) ? map.get(x.id)! : x);
+    });
+  }, []);
+
+  const deleteTxn = useCallback((id: string) => {
+    setTxnsState(prev => {
+      const txn = prev.find(x => x.id === id);
+      if (txn && (txn.sourceAccountId || txn.destinationAccountId)) {
+        setNwState(n => ({ ...n, assets: applyTxnToNw(n.assets, txn, -1) }));
+      }
+      return prev.filter(x => x.id !== id);
+    });
+  }, []);
+
+  const deleteTxns = useCallback((ids: string[]) => {
+    const set = new Set(ids);
+    setTxnsState(prev => {
+      const linked = prev.filter(x => set.has(x.id) && (x.sourceAccountId || x.destinationAccountId));
+      if (linked.length > 0) {
+        setNwState(n => {
+          let assets = n.assets;
+          linked.forEach(t => { assets = applyTxnToNw(assets, t, -1); });
+          return { ...n, assets };
+        });
+      }
+      return prev.filter(x => !set.has(x.id));
+    });
+  }, []);
   const setBudgets  = useCallback((b: BudgetMap) => setBudgetsState(b), []);
   const setGoals    = useCallback((g: Goal[]) => setGoalsState(g), []);
   const setNw       = useCallback((n: NetWorthData) => setNwState(n), []);
   const setRecurring= useCallback((r: RecurringRule[]) => setRecurringState(r), []);
   const setCurrencyPref = useCallback((c: Currency) => { setCurrency(c); setCurrencyState(c); }, []);
   const setCategories   = useCallback((c: Category[]) => setCategoriesState(c), []);
+  const setIncomeCats   = useCallback((c: IncomeCat[]) => setIncomeCatsState(c), []);
   const setPrefs        = useCallback((p: UserPrefs) => setPrefsState(p), []);
 
   const syncNow = useCallback(async (): Promise<string | null> => {
@@ -362,11 +450,11 @@ export function useFinance(): FinanceState {
   }, []);
 
   return {
-    user, email, name, picture, loading, txns, budgets, goals, nw, recurring, currency, categories,
+    user, email, name, picture, loading, txns, budgets, goals, nw, recurring, currency, categories, incomeCats: incomeCatsState,
     syncError, sessionNote,
     googleSignIn, logout, loadDemoData, syncNow,
     addTxn, editTxn, editTxns, deleteTxn, deleteTxns,
-    setBudgets, setGoals, setNw, setRecurring, setCurrencyPref, setCategories, setPrefs,
+    setBudgets, setGoals, setNw, setRecurring, setCurrencyPref, setCategories, setIncomeCats, setPrefs,
     prefs,
   };
 }

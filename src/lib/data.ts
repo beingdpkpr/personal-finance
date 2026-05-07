@@ -12,32 +12,36 @@ export const GROUP_LABELS: Record<Group, string> = {
 export const GROUPS: Group[] = ['needs', 'wants', 'savings', 'family'];
 
 export interface Category {
-  id:        string;
-  label:     string;
-  group:     Group;
-  color:     string;
-  isCustom?: boolean;
+  id:                 string;
+  label:              string;
+  group:              Group;
+  color:              string;
+  isCustom?:          boolean;
+  depositsToAccount?: boolean;  // true for savings/investment categories that fund an account
 }
 
 export interface IncomeCat {
-  id:    string;
-  label: string;
-  color: string;
+  id:               string;
+  label:            string;
+  color:            string;
+  requiresAccount?: boolean;  // true for withdrawal/drawdown categories
 }
 
 export interface Transaction {
-  id:           string;
-  type:         TxnType;
-  amount:       number;
-  group?:       Group;    // budget group — set for expense transactions
-  category?:    string;   // Category.id for expenses; income cat id for income
-  subCategory?: string;
-  description:  string;
-  date:         string;   // 'YYYY-MM-DD'
-  notes?:       string;
-  tags?:        string[];
-  recurringId?: string;
-  auto?:        boolean;
+  id:                string;
+  type:              TxnType;
+  amount:            number;
+  group?:            Group;    // budget group — set for expense transactions
+  category?:         string;   // Category.id for expenses; income cat id for income
+  subCategory?:      string;
+  description:       string;
+  date:              string;   // 'YYYY-MM-DD'
+  notes?:            string;
+  tags?:             string[];
+  recurringId?:      string;
+  auto?:             boolean;
+  sourceAccountId?:      string;   // NW asset id — withdrawal reduces account value
+  destinationAccountId?: string;   // NW asset id — savings/investment increases account value
 }
 
 export interface BudgetEntry {

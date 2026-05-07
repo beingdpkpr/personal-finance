@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useFinanceContext } from '../hooks/FinanceContext'
-import { Category, Group, GROUPS, GROUP_LABELS, uid } from '../lib/data'
+import { Category, Group, GROUPS, GROUP_LABELS, IncomeCat, uid } from '../lib/data'
 import { nextCatColor } from '../constants/categories'
 import Card from '../components/ui/Card'
 
@@ -37,6 +37,142 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
   )
 }
 
+function nextIncomeColor(cats: IncomeCat[]): string {
+  const palette = ['#2ed18a','#5a9fff','#f59e0b','#a07aff','#ff7eb3','#60d0e0','#fb923c','#34d399']
+  const used = new Set(cats.map(c => c.color))
+  return palette.find(c => !used.has(c)) ?? palette[cats.length % palette.length]
+}
+
+function IncomeSection() {
+  const { incomeCats, setIncomeCats, txns } = useFinanceContext()
+  const [editingId, setEditingId]           = useState<string | null>(null)
+  const [adding, setAdding]                 = useState(false)
+  const [labelInput, setLabelInput]         = useState('')
+  const [colorInput, setColorInput]         = useState('#2ed18a')
+  const [requiresAccount, setRequiresAccount] = useState(false)
+  const INCOME_COLOR = '#2ed18a'
+
+  const txnCountByCat = (id: string) => txns.filter(t => t.type === 'income' && t.category === id).length
+
+  function startAdd() { setAdding(true); setEditingId(null); setLabelInput(''); setColorInput(nextIncomeColor(incomeCats)); setRequiresAccount(false) }
+  function startEdit(c: IncomeCat) { setEditingId(c.id); setAdding(false); setLabelInput(c.label); setColorInput(c.color); setRequiresAccount(c.requiresAccount ?? false) }
+  function cancel() { setAdding(false); setEditingId(null); setLabelInput('') }
+
+  function saveAdd() {
+    if (!labelInput.trim()) return
+    setIncomeCats([...incomeCats, { id: uid(), label: labelInput.trim(), color: colorInput, requiresAccount: requiresAccount || undefined }])
+    setAdding(false); setLabelInput('')
+  }
+
+  function saveEdit() {
+    if (!labelInput.trim() || !editingId) return
+    setIncomeCats(incomeCats.map(c => c.id === editingId ? { ...c, label: labelInput.trim(), color: colorInput, requiresAccount: requiresAccount || undefined } : c))
+    setEditingId(null); setLabelInput('')
+  }
+
+  function deleteIncomeCat(id: string) { setIncomeCats(incomeCats.filter(c => c.id !== id)) }
+
+  const inputStyle: React.CSSProperties = {
+    padding: '7px 10px', borderRadius: 8, border: '1px solid var(--border)',
+    background: 'var(--surface2)', color: 'var(--text)', fontSize: 13,
+    fontFamily: 'DM Sans', outline: 'none', width: '100%',
+  }
+
+  return (
+    <Card delay={0.2}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 10, height: 10, borderRadius: 3, background: INCOME_COLOR }} />
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Income Sources</div>
+        </div>
+        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: `${INCOME_COLOR}22`, color: INCOME_COLOR }}>{incomeCats.length}</span>
+      </div>
+
+      <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {incomeCats.length === 0 && !adding && (
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', padding: '10px 0', textAlign: 'center' }}>No income sources yet.</div>
+        )}
+
+        {incomeCats.map(cat => (
+          <div key={cat.id}>
+            {editingId === cat.id ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 0' }}>
+                <ColorPicker value={colorInput} onChange={setColorInput} />
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <div style={{ width: 10, height: 10, borderRadius: 3, background: colorInput, flexShrink: 0 }} />
+                  <input value={labelInput} onChange={e => setLabelInput(e.target.value)} style={inputStyle} autoFocus
+                    onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancel() }} />
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+                  <input type="checkbox" checked={requiresAccount} onChange={e => setRequiresAccount(e.target.checked)}
+                    style={{ width: 14, height: 14, accentColor: 'var(--accent)', cursor: 'pointer' }} />
+                  <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Requires source account <span style={{ opacity: 0.6 }}>(withdrawal / drawdown)</span></span>
+                </label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button onClick={saveEdit} style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Save</button>
+                  <button onClick={cancel} style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: '1px solid var(--border)', background: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12 }}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div
+                onClick={() => startEdit(cat)}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 8px', borderRadius: 8, cursor: 'pointer', transition: 'background 0.12s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface2)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <div style={{ width: 10, height: 10, borderRadius: 3, background: cat.color, flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: 13, color: 'var(--text)' }}>{cat.label}</span>
+                {cat.requiresAccount && (
+                  <span style={{ fontSize: 10, color: '#f59e0b', background: '#f59e0b18', border: '1px solid #f59e0b30', borderRadius: 20, padding: '1px 6px', fontWeight: 600 }}>account</span>
+                )}
+                {txnCountByCat(cat.id) > 0 && (
+                  <span style={{ fontSize: 10, color: 'var(--text-dim)', background: 'var(--surface3)', borderRadius: 20, padding: '1px 6px', fontWeight: 500 }}>{txnCountByCat(cat.id)}</span>
+                )}
+                <button
+                  onClick={e => { e.stopPropagation(); deleteIncomeCat(cat.id) }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '2px 4px', display: 'flex', opacity: 0.6 }}
+                  title="Delete"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+
+        {adding ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6, padding: '8px 0', borderTop: '1px solid var(--border)' }}>
+            <ColorPicker value={colorInput} onChange={setColorInput} />
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <div style={{ width: 10, height: 10, borderRadius: 3, background: colorInput, flexShrink: 0 }} />
+              <input value={labelInput} onChange={e => setLabelInput(e.target.value)} placeholder="Source name" style={inputStyle} autoFocus
+                onKeyDown={e => { if (e.key === 'Enter') saveAdd(); if (e.key === 'Escape') cancel() }} />
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+              <input type="checkbox" checked={requiresAccount} onChange={e => setRequiresAccount(e.target.checked)}
+                style={{ width: 14, height: 14, accentColor: 'var(--accent)', cursor: 'pointer' }} />
+              <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Requires source account <span style={{ opacity: 0.6 }}>(withdrawal / drawdown)</span></span>
+            </label>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={saveAdd} style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Add</button>
+              <button onClick={cancel} style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: '1px solid var(--border)', background: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12 }}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={startAdd}
+            style={{ marginTop: 6, fontSize: 12, color: INCOME_COLOR, background: 'none', border: `1px dashed ${INCOME_COLOR}55`, borderRadius: 8, cursor: 'pointer', padding: '6px 0', width: '100%', textAlign: 'center', transition: 'background 0.12s' }}
+            onMouseEnter={e => (e.currentTarget.style.background = `${INCOME_COLOR}11`)}
+            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+          >
+            + Add income source
+          </button>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 export default function CategorySetup() {
   const { categories, setCategories, txns } = useFinanceContext()
   const dragRef = useRef<{ id: string; group: Group } | null>(null)
@@ -60,17 +196,19 @@ export default function CategorySetup() {
     setCategories([...others, ...reordered])
     dragRef.current = null
   }
-  const [openGroups, setOpenGroups]   = useState<Set<Group>>(new Set(GROUPS))
-  const [editingId, setEditingId]     = useState<string | null>(null)
-  const [addingGroup, setAddingGroup] = useState<Group | null>(null)
-  const [labelInput, setLabelInput]   = useState('')
-  const [colorInput, setColorInput]   = useState('#5a9fff')
+  const [openGroups, setOpenGroups]         = useState<Set<Group>>(new Set(GROUPS))
+  const [editingId, setEditingId]           = useState<string | null>(null)
+  const [addingGroup, setAddingGroup]       = useState<Group | null>(null)
+  const [labelInput, setLabelInput]         = useState('')
+  const [colorInput, setColorInput]         = useState('#5a9fff')
+  const [depositsToAccount, setDepositsToAccount] = useState(false)
 
   function startAdd(group: Group) {
     setAddingGroup(group)
     setEditingId(null)
     setLabelInput('')
     setColorInput(nextCatColor(categories))
+    setDepositsToAccount(false)
   }
 
   function startEdit(cat: Category) {
@@ -78,6 +216,7 @@ export default function CategorySetup() {
     setAddingGroup(null)
     setLabelInput(cat.label)
     setColorInput(cat.color)
+    setDepositsToAccount(cat.depositsToAccount ?? false)
   }
 
   function cancelEdit() {
@@ -90,6 +229,7 @@ export default function CategorySetup() {
     if (!labelInput.trim() || !addingGroup) return
     const newCat: Category = {
       id: uid(), label: labelInput.trim(), group: addingGroup, color: colorInput, isCustom: true,
+      depositsToAccount: depositsToAccount || undefined,
     }
     setCategories([...categories, newCat])
     setAddingGroup(null)
@@ -99,7 +239,7 @@ export default function CategorySetup() {
   function saveEdit() {
     if (!labelInput.trim() || !editingId) return
     setCategories(categories.map(c =>
-      c.id === editingId ? { ...c, label: labelInput.trim(), color: colorInput } : c,
+      c.id === editingId ? { ...c, label: labelInput.trim(), color: colorInput, depositsToAccount: depositsToAccount || undefined } : c,
     ))
     setEditingId(null)
     setLabelInput('')
@@ -129,6 +269,8 @@ export default function CategorySetup() {
         <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Category Setup</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>Define categories for each budget group. Used when adding transactions.</div>
       </div>
+
+      <IncomeSection />
 
       <div className="grid-half">
         {GROUPS.map((group, i) => {
@@ -188,6 +330,11 @@ export default function CategorySetup() {
                               onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit() }}
                             />
                           </div>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+                            <input type="checkbox" checked={depositsToAccount} onChange={e => setDepositsToAccount(e.target.checked)}
+                              style={{ width: 14, height: 14, accentColor: 'var(--accent)', cursor: 'pointer' }} />
+                            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Deposits to account <span style={{ opacity: 0.6 }}>(savings / investment)</span></span>
+                          </label>
                           <div style={{ display: 'flex', gap: 6 }}>
                             <button onClick={saveEdit} style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Save</button>
                             <button onClick={cancelEdit} style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: '1px solid var(--border)', background: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12 }}>Cancel</button>
@@ -211,6 +358,9 @@ export default function CategorySetup() {
                           </svg>
                           <div style={{ width: 10, height: 10, borderRadius: 3, background: cat.color, flexShrink: 0 }} />
                           <span style={{ flex: 1, fontSize: 13, color: 'var(--text)' }}>{cat.label}</span>
+                          {cat.depositsToAccount && (
+                            <span style={{ fontSize: 10, color: 'var(--positive)', background: 'oklch(0.22 0.1 145)', border: '1px solid oklch(0.35 0.1 145)', borderRadius: 20, padding: '1px 6px', fontWeight: 600 }}>account</span>
+                          )}
                           {txnCountByCat(cat.id) > 0 && (
                             <span style={{ fontSize: 10, color: 'var(--text-dim)', background: 'var(--surface3)', borderRadius: 20, padding: '1px 6px', fontWeight: 500 }}>
                               {txnCountByCat(cat.id)}
@@ -240,6 +390,11 @@ export default function CategorySetup() {
                           onKeyDown={e => { if (e.key === 'Enter') saveAdd(); if (e.key === 'Escape') cancelEdit() }}
                         />
                       </div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+                        <input type="checkbox" checked={depositsToAccount} onChange={e => setDepositsToAccount(e.target.checked)}
+                          style={{ width: 14, height: 14, accentColor: 'var(--accent)', cursor: 'pointer' }} />
+                        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Deposits to account <span style={{ opacity: 0.6 }}>(savings / investment)</span></span>
+                      </label>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button onClick={saveAdd} style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Add</button>
                         <button onClick={cancelEdit} style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: '1px solid var(--border)', background: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12 }}>Cancel</button>

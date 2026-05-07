@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react'
 import { useFinanceContext } from '../../hooks/FinanceContext'
 import { Group, GROUPS, GROUP_LABELS, TxnType } from '../../lib/data'
-import { INCOME_CATS } from '../../constants/categories'
 
 export default function AddTransactionModal() {
-  const { modalVisible, editItem, closeModal, addTxn, editTxn, categories } = useFinanceContext()
-  const [type, setType]         = useState<TxnType>('expense')
-  const [amount, setAmount]     = useState('')
-  const [group, setGroup]       = useState<Group | ''>('')
-  const [cat, setCat]           = useState('')
-  const [desc, setDesc]         = useState('')
-  const [date, setDate]         = useState(new Date().toISOString().slice(0, 10))
-  const [notes, setNotes]       = useState('')
-  const [tags, setTags]         = useState('')
-  const [dateError, setDateError] = useState(false)
+  const { modalVisible, editItem, closeModal, addTxn, editTxn, categories, incomeCats, nw } = useFinanceContext()
+  const [type, setType]               = useState<TxnType>('expense')
+  const [amount, setAmount]           = useState('')
+  const [group, setGroup]             = useState<Group | ''>('')
+  const [cat, setCat]                 = useState('')
+  const [desc, setDesc]               = useState('')
+  const [date, setDate]               = useState(new Date().toISOString().slice(0, 10))
+  const [notes, setNotes]             = useState('')
+  const [tags, setTags]               = useState('')
+  const [dateError, setDateError]               = useState(false)
+  const [sourceAccountId, setSourceAccountId]   = useState('')
+  const [destAccountId, setDestAccountId]       = useState('')
 
   useEffect(() => {
     if (editItem) {
@@ -25,10 +26,12 @@ export default function AddTransactionModal() {
       setDate(editItem.date)
       setNotes(editItem.notes ?? '')
       setTags((editItem.tags ?? []).join(', '))
+      setSourceAccountId(editItem.sourceAccountId ?? '')
+      setDestAccountId(editItem.destinationAccountId ?? '')
     } else {
       setType('expense'); setAmount(''); setGroup(''); setCat('')
       setDesc(''); setDate(new Date().toISOString().slice(0, 10))
-      setNotes(''); setTags(''); setDateError(false)
+      setNotes(''); setTags(''); setDateError(false); setSourceAccountId(''); setDestAccountId('')
     }
   }, [editItem, modalVisible])
 
@@ -42,17 +45,19 @@ export default function AddTransactionModal() {
     if (type === 'expense' && !group) return
     if (!date) { setDateError(true); return }
     const validCat = type === 'income'
-      ? (INCOME_CATS.find(c => c.id === cat) ? cat : undefined)
+      ? (incomeCats.find(c => c.id === cat) ? cat : undefined)
       : (categories.find(c => c.id === cat) ? cat : undefined)
     const txn = {
       type,
       amount: amt,
-      group:     type === 'expense' ? (group as Group) : undefined,
-      category:  validCat,
-      description: desc,
+      group:           type === 'expense' ? (group as Group) : undefined,
+      category:        validCat,
+      description:     desc,
       date,
-      notes:  notes || undefined,
-      tags:   tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
+      notes:           notes || undefined,
+      tags:            tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
+      sourceAccountId:      type === 'income'  && sourceAccountId ? sourceAccountId : undefined,
+      destinationAccountId: type === 'expense' && destAccountId   ? destAccountId   : undefined,
     }
     if (editItem) editTxn({ ...txn, id: editItem.id })
     else addTxn(txn)
@@ -122,7 +127,7 @@ export default function AddTransactionModal() {
                 <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>Sub-category <span style={{ opacity: 0.6 }}>(optional)</span></div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                   {groupCats.map(c => (
-                    <button key={c.id} onClick={() => setCat(cat === c.id ? '' : c.id)} style={{
+                    <button key={c.id} onClick={() => { const next = cat === c.id ? '' : c.id; setCat(next); if (!c.depositsToAccount) setDestAccountId('') }} style={{
                       padding: '5px 11px', borderRadius: 20, cursor: 'pointer', fontSize: 11, fontWeight: cat === c.id ? 600 : 400,
                       border: cat === c.id ? `1px solid ${c.color}` : '1px solid var(--border)',
                       background: cat === c.id ? `${c.color}22` : 'var(--surface2)',
@@ -133,23 +138,73 @@ export default function AddTransactionModal() {
                 </div>
               </div>
             )}
+
+            {nw.assets.length > 0 && categories.find(c => c.id === cat)?.depositsToAccount && (
+              <div>
+                <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6 }}>
+                  Deposit to account <span style={{ opacity: 0.6 }}>(optional)</span>
+                </div>
+                <select
+                  value={destAccountId}
+                  onChange={e => setDestAccountId(e.target.value)}
+                  style={{ ...inputStyle, cursor: 'pointer' }}
+                >
+                  <option value=''>— None —</option>
+                  {nw.assets.map(a => (
+                    <option key={a.id} value={a.id}>{a.name}{a.institution ? ` · ${a.institution}` : ''}</option>
+                  ))}
+                </select>
+                {destAccountId && (
+                  <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--positive)', background: 'oklch(0.22 0.1 145)', border: '1px solid oklch(0.35 0.1 145)', borderRadius: 8, padding: '5px 10px' }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                    Account balance will increase by this amount
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
         {type === 'income' && (
-          <div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>Category</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-              {INCOME_CATS.map(c => (
-                <button key={c.id} onClick={() => setCat(cat === c.id ? '' : c.id)} style={{
-                  padding: '5px 11px', borderRadius: 20, cursor: 'pointer', fontSize: 11, fontWeight: cat === c.id ? 600 : 400,
-                  border: cat === c.id ? `1px solid ${c.color}` : '1px solid var(--border)',
-                  background: cat === c.id ? `${c.color}22` : 'var(--surface2)',
-                  color: cat === c.id ? c.color : 'var(--text-dim)',
-                  transition: 'all 0.12s',
-                }}>{c.label}</button>
-              ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>Category</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {incomeCats.map(c => (
+                  <button key={c.id} onClick={() => { const next = cat === c.id ? '' : c.id; setCat(next); if (!c.requiresAccount) setSourceAccountId('') }} style={{
+                    padding: '5px 11px', borderRadius: 20, cursor: 'pointer', fontSize: 11, fontWeight: cat === c.id ? 600 : 400,
+                    border: cat === c.id ? `1px solid ${c.color}` : '1px solid var(--border)',
+                    background: cat === c.id ? `${c.color}22` : 'var(--surface2)',
+                    color: cat === c.id ? c.color : 'var(--text-dim)',
+                    transition: 'all 0.12s',
+                  }}>{c.label}</button>
+                ))}
+              </div>
             </div>
+
+            {nw.assets.length > 0 && incomeCats.find(c => c.id === cat)?.requiresAccount && (
+              <div>
+                <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6 }}>
+                  Withdraw from account <span style={{ opacity: 0.6 }}>(optional)</span>
+                </div>
+                <select
+                  value={sourceAccountId}
+                  onChange={e => setSourceAccountId(e.target.value)}
+                  style={{ ...inputStyle, cursor: 'pointer' }}
+                >
+                  <option value=''>— None —</option>
+                  {nw.assets.map(a => (
+                    <option key={a.id} value={a.id}>{a.name}{a.institution ? ` · ${a.institution}` : ''}</option>
+                  ))}
+                </select>
+                {sourceAccountId && (
+                  <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#f59e0b', background: '#f59e0b12', border: '1px solid #f59e0b30', borderRadius: 8, padding: '5px 10px' }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    Account balance will be reduced by this amount
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

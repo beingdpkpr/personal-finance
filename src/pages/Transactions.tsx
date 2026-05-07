@@ -3,7 +3,7 @@ import { useFinanceContext } from '../hooks/FinanceContext'
 import { useSearchParams } from 'react-router-dom'
 import { fmt } from '../lib/format'
 import { Group, GROUPS, GROUP_LABELS } from '../lib/data'
-import { INCOME_CATS, MONTHS_FULL } from '../constants/categories'
+import { MONTHS_FULL } from '../constants/categories'
 import Card from '../components/ui/Card'
 import GooglePayImportModal from '../components/modals/GooglePayImportModal'
 
@@ -32,7 +32,7 @@ function Checkbox({ checked, indeterminate, onChange }: { checked: boolean; inde
 }
 
 export default function Transactions() {
-  const { txns, deleteTxn, deleteTxns, openAdd, openEdit, addTxn, editTxn, editTxns, categories } = useFinanceContext()
+  const { txns, deleteTxn, deleteTxns, openAdd, openEdit, addTxn, editTxn, editTxns, categories, incomeCats } = useFinanceContext()
   const [searchParams] = useSearchParams()
   const [search, setSearch]           = useState(searchParams.get('q') ?? '')
   const [filter, setFilter]           = useState<Filter>('all')
@@ -101,17 +101,17 @@ export default function Transactions() {
   }
 
   const PAGE_SIZE = 50
-  const allCats = [...categories, ...INCOME_CATS]
+  const allCats = [...categories, ...incomeCats]
 
   const getCatLabel = (id: string | undefined, type?: string) => {
     if (!id) return ''
-    if (type === 'income') return INCOME_CATS.find(c => c.id === id)?.label ?? ''
+    if (type === 'income') return incomeCats.find(c => c.id === id)?.label ?? ''
     if (type === 'expense') return categories.find(c => c.id === id)?.label ?? ''
     return allCats.find(c => c.id === id)?.label ?? ''
   }
   const getCatColor = (id: string | undefined, type?: string) => {
     if (!id) return '#888'
-    if (type === 'income') return INCOME_CATS.find(c => c.id === id)?.color ?? '#888'
+    if (type === 'income') return incomeCats.find(c => c.id === id)?.color ?? '#888'
     if (type === 'expense') return categories.find(c => c.id === id)?.color ?? '#888'
     return allCats.find(c => c.id === id)?.color ?? '#888'
   }
@@ -429,7 +429,7 @@ export default function Transactions() {
                     {openFilter === 'subcat' && (
                       <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 300, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, minWidth: 160, boxShadow: '0 8px 24px rgba(0,0,0,0.35)', overflow: 'hidden', maxHeight: 280, overflowY: 'auto' }}>
                         {(() => {
-                          const opts = filter === 'income' ? INCOME_CATS : groupFilter !== 'all' ? categories.filter(c => c.group === groupFilter) : categories
+                          const opts = filter === 'income' ? incomeCats : groupFilter !== 'all' ? categories.filter(c => c.group === groupFilter) : categories
                           return <>
                             <button onClick={() => { setSubCatFilter('all'); setOpenFilter(null) }} style={{ display: 'block', width: '100%', padding: '9px 14px', background: subCatFilter === 'all' ? 'var(--accent-dim)' : 'transparent', border: 'none', borderBottom: '1px solid var(--border)', textAlign: 'left', cursor: 'pointer', fontSize: 12, color: subCatFilter === 'all' ? 'var(--accent)' : 'var(--text)', fontWeight: subCatFilter === 'all' ? 600 : 400, fontFamily: 'DM Sans' }}>All</button>
                             {opts.map((c, i) => (

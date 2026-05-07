@@ -13,6 +13,11 @@ export default function Analytics() {
   const [months, setMonths] = useState<6 | 12>(6)
   const now = new Date()
 
+  // Categories that fund accounts are savings transfers, not real spending
+  const transferCatIds = new Set(categories.filter(c => c.depositsToAccount).map(c => c.id))
+  const isTransfer = (t: { type: string; category?: string }) =>
+    t.type === 'expense' && transferCatIds.has(t.category ?? '')
+
   const areaData = Array.from({length: months}, (_,i) => {
     const d = new Date(now.getFullYear(), now.getMonth()-(months-1)+i, 1)
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
@@ -20,22 +25,22 @@ export default function Analytics() {
     return {
       month: MONTHS[d.getMonth()],
       income:  mt.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),
-      expense: mt.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0),
+      expense: mt.filter(t=>t.type==='expense'&&!isTransfer(t)).reduce((s,t)=>s+t.amount,0),
     }
   })
 
   // Monthly expenses for current year (bar chart)
   const barData = Array.from({length:12}, (_,i) => {
     const key = `${now.getFullYear()}-${String(i+1).padStart(2,'0')}`
-    const amount = txns.filter(t=>t.date.startsWith(key)&&t.type==='expense').reduce((s,t)=>s+t.amount,0)
+    const amount = txns.filter(t=>t.date.startsWith(key)&&t.type==='expense'&&!isTransfer(t)).reduce((s,t)=>s+t.amount,0)
     return { month: MONTHS[i], amount }
   })
 
   // Current month category breakdown
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
-  const monthExpTxns = txns.filter(t=>t.date.startsWith(thisMonth)&&t.type==='expense')
+  const monthExpTxns = txns.filter(t=>t.date.startsWith(thisMonth)&&t.type==='expense'&&!isTransfer(t))
   const totalExp = monthExpTxns.reduce((s,t)=>s+t.amount,0)
-  const catBreakdown = categories.map(c => ({
+  const catBreakdown = categories.filter(c=>!c.depositsToAccount).map(c => ({
     ...c,
     amount: monthExpTxns.filter(t=>t.category===c.id).reduce((s,t)=>s+t.amount,0),
   })).filter(c=>c.amount>0).sort((a,b)=>b.amount-a.amount)
@@ -58,7 +63,7 @@ export default function Analytics() {
   const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
   const dowTotals = Array(7).fill(0)
   const dowCounts = Array(7).fill(0)
-  txns.filter(t => t.type === 'expense').forEach(t => {
+  txns.filter(t => t.type === 'expense' && !isTransfer(t)).forEach(t => {
     const d = new Date(t.date + 'T00:00:00')
     const dow = d.getDay()
     dowTotals[dow] += t.amount
@@ -75,8 +80,8 @@ export default function Analytics() {
     const mk2 = `${lastYear}-${String(i+1).padStart(2,'0')}`
     return {
       month: MONTHS[i],
-      thisYear:  txns.filter(t=>t.date.startsWith(mk1)&&t.type==='expense').reduce((s,t)=>s+t.amount,0),
-      lastYear:  txns.filter(t=>t.date.startsWith(mk2)&&t.type==='expense').reduce((s,t)=>s+t.amount,0),
+      thisYear:  txns.filter(t=>t.date.startsWith(mk1)&&t.type==='expense'&&!isTransfer(t)).reduce((s,t)=>s+t.amount,0),
+      lastYear:  txns.filter(t=>t.date.startsWith(mk2)&&t.type==='expense'&&!isTransfer(t)).reduce((s,t)=>s+t.amount,0),
     }
   })
   const hasLastYearData = yoyData.some(d => d.lastYear > 0)

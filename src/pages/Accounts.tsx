@@ -35,6 +35,15 @@ export default function Accounts() {
 
   const assetBarPct = totalAssets + totalLiab > 0 ? (totalAssets / (totalAssets + totalLiab)) * 100 : 100
 
+  const withdrawalsByAccount = txns.reduce<Record<string, number>>((acc, t) => {
+    if (t.sourceAccountId) acc[t.sourceAccountId] = (acc[t.sourceAccountId] ?? 0) + t.amount;
+    return acc;
+  }, {})
+  const depositsByAccount = txns.reduce<Record<string, number>>((acc, t) => {
+    if (t.destinationAccountId) acc[t.destinationAccountId] = (acc[t.destinationAccountId] ?? 0) + t.amount;
+    return acc;
+  }, {})
+
   const assets      = nw.assets.map((a, i) => ({ ...a, isLiability: false, color: ACC_PALETTE[i % ACC_PALETTE.length] }))
   const liabilities = nw.liabilities.map((l, i) => ({ ...l, isLiability: true, color: ACC_PALETTE[(nw.assets.length + i) % ACC_PALETTE.length] }))
 
@@ -127,6 +136,18 @@ export default function Accounts() {
                     <div style={{ fontSize:24, fontWeight:700, fontFamily:'DM Mono', color: item.isLiability ? 'var(--negative)' : 'var(--text)', letterSpacing:'-0.02em' }}>
                       {item.isLiability ? '-' : ''}{fmt(item.value)}
                     </div>
+                    {!item.isLiability && depositsByAccount[item.id] > 0 && (
+                      <div style={{ fontSize:11, color:'var(--positive)', marginTop:3, display:'flex', alignItems:'center', gap:4 }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                        {fmt(depositsByAccount[item.id])} deposited via transactions
+                      </div>
+                    )}
+                    {!item.isLiability && withdrawalsByAccount[item.id] > 0 && (
+                      <div style={{ fontSize:11, color:'var(--text-dim)', marginTop:2, display:'flex', alignItems:'center', gap:4 }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                        {fmt(withdrawalsByAccount[item.id])} withdrawn via transactions
+                      </div>
+                    )}
                   </div>
                   <span style={{ fontSize:11, color, background:`${color}18`, border:`1px solid ${color}30`, padding:'2px 8px', borderRadius:20, fontWeight:600 }}>{pct < 1 ? '< 1' : pct}%</span>
                 </div>
