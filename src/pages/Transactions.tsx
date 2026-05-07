@@ -4,6 +4,10 @@ import { useSearchParams } from 'react-router-dom'
 import { fmt } from '../lib/format'
 import { Group, GROUPS, GROUP_LABELS } from '../lib/data'
 import { INCOME_CATS, MONTHS_FULL } from '../constants/categories'
+
+const GROUP_COLORS: Record<Group, string> = {
+  needs: '#5a9fff', family: '#60d0e0', savings: '#2ed18a', wants: '#f05060',
+}
 import Card from '../components/ui/Card'
 import GooglePayImportModal from '../components/modals/GooglePayImportModal'
 
@@ -213,12 +217,18 @@ export default function Transactions() {
         </div>
         {(filter === 'expense' || filter === 'all') && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {GROUPS.map(g => (
-              <button key={g} style={btnStyle(groupFilter === g)} onClick={() => {
-                const next = groupFilter === g ? 'all' : g as Group
-                setGroupFilter(next); setSubCatFilter('all')
-              }}>{GROUP_LABELS[g]}</button>
-            ))}
+            {GROUPS.map(g => {
+              const active = groupFilter === g
+              const gc = GROUP_COLORS[g]
+              return (
+                <button key={g} onClick={() => { setGroupFilter(groupFilter === g ? 'all' : g); setSubCatFilter('all') }} style={{
+                  padding: '6px 16px', borderRadius: 20, cursor: 'pointer', fontSize: 13, fontWeight: active ? 600 : 400, transition: 'all 0.15s',
+                  border: active ? `1px solid ${gc}` : '1px solid var(--border)',
+                  background: active ? `${gc}22` : 'transparent',
+                  color: active ? gc : 'var(--text-dim)',
+                }}>{GROUP_LABELS[g]}</button>
+              )
+            })}
           </div>
         )}
         {groupFilter !== 'all' && categories.filter(c => c.group === groupFilter).length > 0 && (
@@ -350,7 +360,7 @@ export default function Transactions() {
                       {/* Category column */}
                       <div>
                         {t.type === 'expense' && t.group ? (
-                          <div style={{ fontSize: 11, padding: '3px 8px', borderRadius: 20, background: 'var(--surface3)', color: 'var(--text-dim)', fontWeight: 600, width: 'fit-content', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: 11, padding: '3px 8px', borderRadius: 20, background: `${GROUP_COLORS[t.group]}22`, color: GROUP_COLORS[t.group], fontWeight: 600, width: 'fit-content', whiteSpace: 'nowrap' }}>
                             {GROUP_LABELS[t.group]}
                           </div>
                         ) : t.type === 'income' && getCatLabel(t.category, t.type) ? (

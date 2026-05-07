@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-type ThemeName = 'violet' | 'slate' | 'rose';
+type ThemeName = 'violet' | 'slate' | 'rose' | 'mono';
 
 interface ThemeCtx {
   darkMode:       boolean;
@@ -33,7 +33,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       const dm = localStorage.getItem('pf_dark_mode');
       const tn = localStorage.getItem('pf_theme_name') as ThemeName | null;
       if (dm !== null) setDarkMode(dm !== 'false');
-      if (tn && ['violet', 'slate', 'rose'].includes(tn)) setThemeName(tn);
+      if (tn && ['violet', 'slate', 'rose', 'mono'].includes(tn)) setThemeName(tn);
     };
     window.addEventListener('artha:theme-restored', handler);
     return () => window.removeEventListener('artha:theme-restored', handler);

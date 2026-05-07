@@ -125,7 +125,7 @@ export default function SettingsModal({ onClose }: Props) {
               <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                 <span style={{ fontSize:14, color:'var(--text)' }}>Accent Theme</span>
                 <div style={{ display:'flex', gap:8 }}>
-                  {(['violet','slate','rose'] as const).map(t => (
+                  {(['violet','slate','rose','mono'] as const).map(t => (
                     <button key={t} onClick={() => setTheme(t)} style={{ flex:1, padding:'8px 0', borderRadius:10, border: themeName===t ? '2px solid var(--accent)' : '1px solid var(--border)', background: themeName===t ? 'var(--accent-dim)' : 'var(--surface2)', color: themeName===t ? 'var(--accent)' : 'var(--text-dim)', cursor:'pointer', fontSize:13, fontWeight: themeName===t?600:400, textTransform:'capitalize', transition:'all 0.15s' }}>
                       {t}
                     </button>
