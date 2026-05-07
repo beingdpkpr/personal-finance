@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   BudgetMap, Category, Currency, Goal, NetWorthData,
-  RecurringRule, Transaction, uid,
+  RecurringRule, Transaction, UserPrefs, DEFAULT_PREFS, uid,
 } from '../lib/data';
 import { DEFAULT_CATEGORIES } from '../constants/categories';
 import { storage } from '../lib/storage';
@@ -44,6 +44,8 @@ export interface FinanceState {
   setRecurring:    (r: RecurringRule[]) => void;
   setCurrencyPref: (c: Currency) => void;
   setCategories:   (c: Category[]) => void;
+  prefs:           UserPrefs;
+  setPrefs:        (p: UserPrefs) => void;
 }
 
 export function useFinance(): FinanceState {
@@ -59,6 +61,7 @@ export function useFinance(): FinanceState {
   const [recurring, setRecurringState]   = useState<RecurringRule[]>([]);
   const [currency, setCurrencyState]     = useState<Currency>(DEFAULT_CURRENCY);
   const [categories, setCategoriesState] = useState<Category[]>([]);
+  const [prefs, setPrefsState]           = useState<UserPrefs>(DEFAULT_PREFS);
   const [syncError, setSyncError]        = useState<string | null>(null);
   const [sessionNote, setSessionNote]    = useState<string | null>(null);
 
@@ -87,7 +90,7 @@ export function useFinance(): FinanceState {
 
   async function loadUser(userId: string, userEmail?: string | null, userName?: string | null, userPicture?: string | null) {
     runMigrationIfNeeded(userId);
-    const [t, b, r, g, n, c, cats] = await Promise.all([
+    const [t, b, r, g, n, c, cats, p] = await Promise.all([
       storage.getTxns(userId),
       storage.getBudgets(userId),
       storage.getRecurring(userId),
@@ -95,6 +98,7 @@ export function useFinance(): FinanceState {
       storage.getNetWorth(userId),
       storage.getCurrency(userId),
       storage.getCategories(userId),
+      storage.getPrefs(userId),
     ]);
     const applied = applyRecurring(r, t);
     setCurrency(c);
@@ -109,6 +113,7 @@ export function useFinance(): FinanceState {
     setNwState(n);
     setCurrencyState(c);
     setCategoriesState(cats.length > 0 ? cats : DEFAULT_CATEGORIES);
+    setPrefsState(p);
   }
 
   useEffect(() => {
@@ -127,6 +132,7 @@ export function useFinance(): FinanceState {
   useEffect(() => { if (user) { storage.saveNetWorth(user, nw);           scheduleSync(); } }, [nw,         user, scheduleSync]);
   useEffect(() => { if (user) { storage.saveCurrency(user, currency);     scheduleSync(); } }, [currency,   user, scheduleSync]);
   useEffect(() => { if (user) { storage.saveCategories(user, categories); scheduleSync(); } }, [categories, user, scheduleSync]);
+  useEffect(() => { if (user) { storage.savePrefs(user, prefs);           scheduleSync(); } }, [prefs,      user, scheduleSync]);
 
   const googleSignIn = useCallback(async (accessToken: string, expiresIn: number): Promise<string | null> => {
     try {
@@ -174,6 +180,7 @@ export function useFinance(): FinanceState {
           storage.saveNetWorth(info.sub, data.nw),
           storage.saveCurrency(info.sub, data.currency),
           storage.saveCategories(info.sub, data.categories),
+          storage.savePrefs(info.sub, data.userPrefs),
         ]);
         localStorage.setItem('pf_dark_mode', String(data.prefs.darkMode));
         localStorage.setItem('pf_theme_name', data.prefs.themeName);
@@ -214,6 +221,7 @@ export function useFinance(): FinanceState {
   const setRecurring= useCallback((r: RecurringRule[]) => setRecurringState(r), []);
   const setCurrencyPref = useCallback((c: Currency) => { setCurrency(c); setCurrencyState(c); }, []);
   const setCategories   = useCallback((c: Category[]) => setCategoriesState(c), []);
+  const setPrefs        = useCallback((p: UserPrefs) => setPrefsState(p), []);
 
   const loadDemoData = useCallback(async () => {
     const DEMO_TXNS: Transaction[] = [
@@ -320,6 +328,7 @@ export function useFinance(): FinanceState {
     syncError, sessionNote,
     googleSignIn, logout, loadDemoData,
     addTxn, editTxn, deleteTxn, deleteTxns,
-    setBudgets, setGoals, setNw, setRecurring, setCurrencyPref, setCategories,
+    setBudgets, setGoals, setNw, setRecurring, setCurrencyPref, setCategories, setPrefs,
+    prefs,
   };
 }

@@ -6,7 +6,7 @@ import AddTransactionModal from '../modals/AddTransactionModal'
 import { useFinanceContext } from '../../hooks/FinanceContext'
 
 export default function AppShell() {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('pf_ui_sidebar_collapsed') === 'true')
   const [mobileOpen, setMobileOpen] = useState(false)
   const { syncError } = useFinanceContext()
   const [visibleError, setVisibleError] = useState<string | null>(null)
@@ -19,8 +19,15 @@ export default function AppShell() {
   }, [syncError])
 
   function handleToggle() {
-    if (window.innerWidth <= 768) setMobileOpen(o => !o)
-    else setCollapsed(c => !c)
+    if (window.innerWidth <= 768) {
+      setMobileOpen(o => !o)
+    } else {
+      setCollapsed(c => {
+        const next = !c
+        localStorage.setItem('pf_ui_sidebar_collapsed', String(next))
+        return next
+      })
+    }
   }
 
   return (

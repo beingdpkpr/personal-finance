@@ -22,8 +22,13 @@ function fmtShortDate(d: string): string {
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { txns, nw, categories, openAdd } = useFinanceContext()
-  const [cashFlowMonths, setCashFlowMonths] = useState<6 | 12>(12)
+  const { txns, nw, categories, openAdd, prefs, setPrefs } = useFinanceContext()
+  const [cashFlowMonths, setCashFlowMonths] = useState<6 | 12>(() => prefs.defaultCashFlowMonths)
+
+  function handleMonthToggle(n: 6 | 12) {
+    setCashFlowMonths(n)
+    setPrefs({ ...prefs, defaultCashFlowMonths: n })
+  }
 
   const now = new Date()
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
@@ -107,7 +112,7 @@ export default function Dashboard() {
             </div>
               <div style={{ display:'flex', gap:4 }}>
                 {([6, 12] as const).map(n => (
-                  <button key={n} onClick={() => setCashFlowMonths(n)} style={{ padding:'3px 10px', borderRadius:20, border: cashFlowMonths===n ? '1px solid var(--accent)' : '1px solid var(--border)', background: cashFlowMonths===n ? 'var(--accent-dim)' : 'transparent', color: cashFlowMonths===n ? 'var(--accent)' : 'var(--text-dim)', cursor:'pointer', fontSize:11, fontWeight: cashFlowMonths===n ? 600 : 400 }}>{n}M</button>
+                  <button key={n} onClick={() => handleMonthToggle(n)} style={{ padding:'3px 10px', borderRadius:20, border: cashFlowMonths===n ? '1px solid var(--accent)' : '1px solid var(--border)', background: cashFlowMonths===n ? 'var(--accent-dim)' : 'transparent', color: cashFlowMonths===n ? 'var(--accent)' : 'var(--text-dim)', cursor:'pointer', fontSize:11, fontWeight: cashFlowMonths===n ? 600 : 400 }}>{n}M</button>
                 ))}
               </div>
           </div>

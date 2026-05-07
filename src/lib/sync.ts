@@ -3,7 +3,7 @@ import { writeTab, readTab, createSpreadsheet, verifySpreadsheet, findSpreadshee
 import { saveSpreadsheetId } from './google-auth';
 import {
   Transaction, BudgetMap, BudgetEntry, Goal,
-  RecurringRule, NetWorthItem, Currency, Category, Group,
+  RecurringRule, NetWorthItem, Currency, Category, Group, UserPrefs, DEFAULT_PREFS,
 } from './data';
 
 // ── Serializers ──────────────────────────────────────────────────────────────
@@ -141,7 +141,7 @@ export async function pushAll(
   spreadsheetId: string,
   userId: string,
 ): Promise<void> {
-  const [txns, budgets, goals, recurring, nw, currency, cats] = await Promise.all([
+  const [txns, budgets, goals, recurring, nw, currency, cats, prefs] = await Promise.all([
     storage.getTxns(userId),
     storage.getBudgets(userId),
     storage.getGoals(userId),
@@ -149,6 +149,7 @@ export async function pushAll(
     storage.getNetWorth(userId),
     storage.getCurrency(userId),
     storage.getCategories(userId),
+    storage.getPrefs(userId),
   ]);
 
   const budgetRows = Object.entries(budgets as BudgetMap).map(([group, entry]) =>
@@ -171,6 +172,7 @@ export async function pushAll(
         currency.code, currency.symbol, currency.locale, new Date().toISOString(),
         localStorage.getItem('pf_dark_mode') ?? 'true',
         localStorage.getItem('pf_theme_name') ?? 'violet',
+        JSON.stringify(prefs),
       ],
     ]),
   ]);
@@ -189,6 +191,7 @@ export async function pullAll(
   currency:   Currency;
   categories: Category[];
   prefs:      { darkMode: boolean; themeName: string };
+  userPrefs:  UserPrefs;
 }> {
   const DEFAULT_CURRENCY: Currency = { code: 'INR', symbol: '₹', locale: 'en-IN' };
 
@@ -215,6 +218,11 @@ export async function pullAll(
   const validThemes = ['violet', 'slate', 'rose'];
   const themeName = validThemes.includes(s0?.theme_name ?? '') ? s0!.theme_name : 'violet';
 
+  let userPrefs: UserPrefs = DEFAULT_PREFS;
+  if (s0?.prefs) {
+    try { userPrefs = { ...DEFAULT_PREFS, ...JSON.parse(s0.prefs) }; } catch { /* use default */ }
+  }
+
   return {
     txns:       txnRows.map(rowToTxn),
     budgets:    Object.fromEntries(budgetRows.map(rowToBudget)),
@@ -230,5 +238,6 @@ export async function pullAll(
       darkMode:  (s0?.dark_mode ?? 'true') !== 'false',
       themeName,
     },
+    userPrefs,
   };
 }

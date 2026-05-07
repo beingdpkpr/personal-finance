@@ -85,6 +85,14 @@ export interface Currency {
   locale: string;
 }
 
+export interface UserPrefs {
+  defaultCashFlowMonths: 6 | 12;
+}
+
+export const DEFAULT_PREFS: UserPrefs = {
+  defaultCashFlowMonths: 12,
+};
+
 export interface UserStore {
   [username: string]: { password: string };
 }
