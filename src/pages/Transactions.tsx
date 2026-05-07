@@ -36,7 +36,7 @@ export default function Transactions() {
   const [searchParams] = useSearchParams()
   const [search, setSearch]           = useState(searchParams.get('q') ?? '')
   const [filter, setFilter]           = useState<Filter>('all')
-  const [groupFilter, setGroupFilter] = useState<Group | 'all'>('all')
+  const [groupFilter, setGroupFilter] = useState<Group | 'all' | 'uncategorized'>('all')
   const [subCatFilter, setSubCatFilter] = useState<string | 'all'>('all')
   const [openFilter, setOpenFilter]   = useState<string | null>(null)
   const [dateFrom, setDateFrom]       = useState(searchParams.get('from') ?? '')
@@ -120,9 +120,17 @@ export default function Transactions() {
     [...new Set(txns.filter(t => !!t.date).map(t => t.date.slice(0, 7)))].sort((a, b) => b.localeCompare(a)),
   [txns])
 
+  const usedGroups = useMemo(() => GROUPS.filter(g => txns.some(t => t.type === 'expense' && t.group === g)), [txns])
+  const hasIncome = useMemo(() => txns.some(t => t.type === 'income'), [txns])
+  const hasUncategorized = useMemo(() => txns.some(t => t.type === 'expense' && !t.group), [txns])
+
   const filtered = txns
     .filter(t => filter === 'all' || t.type === filter)
-    .filter(t => groupFilter === 'all' || (t.type === 'expense' && t.group === groupFilter))
+    .filter(t => {
+      if (groupFilter === 'all') return true
+      if (groupFilter === 'uncategorized') return t.type === 'expense' && !t.group
+      return t.type === 'expense' && t.group === groupFilter
+    })
     .filter(t => subCatFilter === 'all' || t.category === subCatFilter)
     .filter(t => !dateFrom || t.date >= dateFrom)
     .filter(t => !dateTo   || t.date <= dateTo)
@@ -402,12 +410,13 @@ export default function Transactions() {
                       <svg width="10" height="7" viewBox="0 0 10 7" fill="none"><path d="M1 1.5h8M2.5 3.75h5M4 6h2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
                     </button>
                     {openFilter === 'cat' && (
-                      <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 300, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, minWidth: 150, boxShadow: '0 8px 24px rgba(0,0,0,0.35)', overflow: 'hidden' }}>
+                      <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 300, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, minWidth: 160, boxShadow: '0 8px 24px rgba(0,0,0,0.35)', overflow: 'hidden', maxHeight: 300, overflowY: 'auto' }}>
                         <button onClick={() => { setFilter('all'); setGroupFilter('all'); setSubCatFilter('all'); setOpenFilter(null) }} style={{ display: 'block', width: '100%', padding: '9px 14px', background: filter === 'all' && groupFilter === 'all' ? 'var(--accent-dim)' : 'transparent', border: 'none', borderBottom: '1px solid var(--border)', textAlign: 'left', cursor: 'pointer', fontSize: 12, color: filter === 'all' && groupFilter === 'all' ? 'var(--accent)' : 'var(--text)', fontWeight: filter === 'all' && groupFilter === 'all' ? 600 : 400, fontFamily: 'DM Sans' }}>All</button>
-                        <button onClick={() => { setFilter('income'); setGroupFilter('all'); setSubCatFilter('all'); setOpenFilter(null) }} style={{ display: 'block', width: '100%', padding: '9px 14px', background: filter === 'income' ? 'var(--accent-dim)' : 'transparent', border: 'none', borderBottom: '1px solid var(--border)', textAlign: 'left', cursor: 'pointer', fontSize: 12, color: filter === 'income' ? 'var(--accent)' : 'var(--positive)', fontWeight: filter === 'income' ? 600 : 400, fontFamily: 'DM Sans' }}>Income</button>
-                        {GROUPS.map((g, i) => (
-                          <button key={g} onClick={() => { setFilter('expense'); setGroupFilter(g); setSubCatFilter('all'); setOpenFilter(null) }} style={{ display: 'block', width: '100%', padding: '9px 14px', background: groupFilter === g ? 'var(--accent-dim)' : 'transparent', border: 'none', borderBottom: i < GROUPS.length - 1 ? '1px solid var(--border)' : 'none', textAlign: 'left', cursor: 'pointer', fontSize: 12, color: groupFilter === g ? 'var(--accent)' : GROUP_COLORS[g], fontWeight: groupFilter === g ? 600 : 400, fontFamily: 'DM Sans' }}>{GROUP_LABELS[g]}</button>
+                        {hasIncome && <button onClick={() => { setFilter('income'); setGroupFilter('all'); setSubCatFilter('all'); setOpenFilter(null) }} style={{ display: 'block', width: '100%', padding: '9px 14px', background: filter === 'income' ? 'var(--accent-dim)' : 'transparent', border: 'none', borderBottom: '1px solid var(--border)', textAlign: 'left', cursor: 'pointer', fontSize: 12, color: filter === 'income' ? 'var(--accent)' : 'var(--positive)', fontWeight: filter === 'income' ? 600 : 400, fontFamily: 'DM Sans' }}>Income</button>}
+                        {usedGroups.map(g => (
+                          <button key={g} onClick={() => { setFilter('expense'); setGroupFilter(g); setSubCatFilter('all'); setOpenFilter(null) }} style={{ display: 'block', width: '100%', padding: '9px 14px', background: groupFilter === g ? 'var(--accent-dim)' : 'transparent', border: 'none', borderBottom: '1px solid var(--border)', textAlign: 'left', cursor: 'pointer', fontSize: 12, color: groupFilter === g ? 'var(--accent)' : GROUP_COLORS[g], fontWeight: groupFilter === g ? 600 : 400, fontFamily: 'DM Sans' }}>{GROUP_LABELS[g]}</button>
                         ))}
+                        {hasUncategorized && <button onClick={() => { setFilter('expense'); setGroupFilter('uncategorized'); setSubCatFilter('all'); setOpenFilter(null) }} style={{ display: 'block', width: '100%', padding: '9px 14px', background: groupFilter === 'uncategorized' ? 'var(--accent-dim)' : 'transparent', border: 'none', borderBottom: 'none', textAlign: 'left', cursor: 'pointer', fontSize: 12, color: groupFilter === 'uncategorized' ? 'var(--accent)' : 'var(--text-dim)', fontWeight: groupFilter === 'uncategorized' ? 600 : 400, fontFamily: 'DM Sans', fontStyle: 'italic' }}>Uncategorized</button>}
                       </div>
                     )}
                   </div>
