@@ -84,7 +84,7 @@ export default function Budget() {
   }, 0)
 
   return (
-    <div style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="page-pad">
       <div>
         <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Budget Tracker</div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
@@ -95,7 +95,7 @@ export default function Budget() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+      <div className="grid-half">
         {GROUPS.map((group, i) => {
           const entry = budgets[group]
           const limit = resolveLimit(entry, monthIncome)
