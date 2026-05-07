@@ -54,6 +54,34 @@ export default function Analytics() {
   const totalExpense = areaData.reduce((s,d)=>s+d.expense,0)
   const avgSavings   = areaData.length > 0 ? Math.round(((totalIncome-totalExpense)/Math.max(totalIncome,1))*100) : 0
 
+  // Day-of-week heatmap (last 3 months of expense txns)
+  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+  const dowTotals = Array(7).fill(0)
+  const dowCounts = Array(7).fill(0)
+  txns.filter(t => t.type === 'expense').forEach(t => {
+    const d = new Date(t.date + 'T00:00:00')
+    const dow = d.getDay()
+    dowTotals[dow] += t.amount
+    dowCounts[dow]++
+  })
+  const dowAvg = dowTotals.map((total, i) => ({ day: DAYS[i], avg: dowCounts[i] > 0 ? Math.round(total / dowCounts[i]) : 0, count: dowCounts[i] }))
+  const maxDowAvg = Math.max(...dowAvg.map(d => d.avg), 1)
+
+  // Year-over-year comparison
+  const thisYear = now.getFullYear()
+  const lastYear = thisYear - 1
+  const yoyData = Array.from({ length: 12 }, (_, i) => {
+    const mk1 = `${thisYear}-${String(i+1).padStart(2,'0')}`
+    const mk2 = `${lastYear}-${String(i+1).padStart(2,'0')}`
+    return {
+      month: MONTHS[i],
+      thisYear:  txns.filter(t=>t.date.startsWith(mk1)&&t.type==='expense').reduce((s,t)=>s+t.amount,0),
+      lastYear:  txns.filter(t=>t.date.startsWith(mk2)&&t.type==='expense').reduce((s,t)=>s+t.amount,0),
+    }
+  })
+  const hasLastYearData = yoyData.some(d => d.lastYear > 0)
+  const yoyMax = Math.max(...yoyData.flatMap(d => [d.thisYear, d.lastYear]), 1)
+
   return (
     <div className="page-pad">
       {/* Area chart + summary */}
@@ -96,6 +124,48 @@ export default function Analytics() {
         <div style={{ fontSize:12, color:'var(--text-dim)', marginBottom:16 }}>{now.getFullYear()}</div>
         <BarChart data={barData} />
       </Card>
+
+      {/* Day-of-week heatmap */}
+      <Card>
+        <div style={{ fontSize:14, fontWeight:600, color:'var(--text)', marginBottom:4 }}>Spending by Day of Week</div>
+        <div style={{ fontSize:12, color:'var(--text-dim)', marginBottom:16 }}>Average expense per transaction, all time</div>
+        <div style={{ display:'flex', gap:8, alignItems:'flex-end', height:80 }}>
+          {dowAvg.map(d => {
+            const barH = maxDowAvg > 0 ? Math.max((d.avg / maxDowAvg) * 64, d.avg > 0 ? 4 : 0) : 0
+            const isWeekend = d.day === 'Sun' || d.day === 'Sat'
+            return (
+              <div key={d.day} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+                <div style={{ fontSize:10, color:'var(--text-dim)', fontFamily:'DM Mono', textAlign:'center' }}>{d.avg > 0 ? fmt(d.avg) : ''}</div>
+                <div style={{ width:'100%', borderRadius:4, background: isWeekend ? '#f59e0b' : 'var(--accent)', height: barH, minHeight: d.avg > 0 ? 4 : 0, opacity: d.avg > 0 ? 0.85 : 0.15, transition:'height 0.6s ease', alignSelf:'flex-end' }} />
+                <div style={{ fontSize:11, color: isWeekend ? '#f59e0b' : 'var(--text-dim)', fontWeight: isWeekend ? 600 : 400 }}>{d.day}</div>
+              </div>
+            )
+          })}
+        </div>
+      </Card>
+
+      {/* Year-over-year comparison */}
+      {hasLastYearData && (
+        <Card>
+          <div style={{ fontSize:14, fontWeight:600, color:'var(--text)', marginBottom:4 }}>Year-over-Year Expenses</div>
+          <div style={{ fontSize:12, color:'var(--text-dim)', marginBottom:4 }}>Monthly comparison</div>
+          <div style={{ display:'flex', gap:16, marginBottom:16 }}>
+            <span style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'var(--text-dim)' }}><span style={{ width:10, height:10, borderRadius:3, background:'var(--accent)', display:'inline-block' }} />{thisYear}</span>
+            <span style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'var(--text-dim)' }}><span style={{ width:10, height:10, borderRadius:3, background:'var(--border)', display:'inline-block' }} />{lastYear}</span>
+          </div>
+          <div style={{ display:'flex', gap:4, alignItems:'flex-end', height:100 }}>
+            {yoyData.map(d => (
+              <div key={d.month} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
+                <div style={{ width:'100%', display:'flex', gap:1, alignItems:'flex-end', height:80 }}>
+                  <div style={{ flex:1, borderRadius:'3px 3px 0 0', background:'var(--accent)', height: yoyMax > 0 ? `${(d.thisYear/yoyMax)*100}%` : 0, minHeight: d.thisYear > 0 ? 3 : 0, transition:'height 0.6s ease', opacity:0.85 }} />
+                  <div style={{ flex:1, borderRadius:'3px 3px 0 0', background:'var(--border)', height: yoyMax > 0 ? `${(d.lastYear/yoyMax)*100}%` : 0, minHeight: d.lastYear > 0 ? 3 : 0, transition:'height 0.6s ease' }} />
+                </div>
+                <div style={{ fontSize:9, color:'var(--text-dim)', textAlign:'center' }}>{d.month}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Category breakdown — grouped */}
       <Card>

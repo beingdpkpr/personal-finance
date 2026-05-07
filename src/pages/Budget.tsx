@@ -39,9 +39,26 @@ export default function Budget() {
   const [expanded, setExpanded] = useState<Group | null>(null)
 
   const now = new Date()
-  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth)
+
+  // Build list of months that have transactions, plus current month
+  const availableMonths = [...new Set([
+    ...txns.map(t => t.date.slice(0, 7)),
+    currentMonth,
+  ])].filter(m => m <= currentMonth).sort().reverse()
+
+  const thisMonth = selectedMonth
+  const [selY, selM] = selectedMonth.split('-').map(Number)
+  const monthLabel = new Date(selY, selM - 1, 1).toLocaleString('default', { month: 'long', year: 'numeric' })
+
   const monthTxns = txns.filter(t => t.date.startsWith(thisMonth))
   const monthIncome = monthTxns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+
+  // Projected end-of-month: extrapolate daily burn to full month
+  const isCurrentMonth = selectedMonth === currentMonth
+  const dayOfMonth = now.getDate()
+  const daysInMonth = new Date(selY, selM, 0).getDate()
 
   function startEdit(group: Group) {
     const entry = budgets[group]
@@ -85,14 +102,23 @@ export default function Budget() {
 
   return (
     <div className="page-pad">
-      <div>
-        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Budget Tracker</div>
-        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-          <span>Month income: <span style={{ color: 'var(--positive)', fontFamily: 'DM Mono' }}>{fmt(monthIncome)}</span></span>
-          {totalPlannedPct > 0 && (
-            <span>Planned: <span style={{ color: totalPlannedPct > 100 ? 'var(--negative)' : totalPlannedPct === 100 ? 'var(--positive)' : 'var(--text)', fontFamily: 'DM Mono', fontWeight: 600 }}>{totalPlannedPct}%</span> of income</span>
-          )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Budget Tracker</div>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+            <span>{monthLabel} income: <span style={{ color: 'var(--positive)', fontFamily: 'DM Mono' }}>{fmt(monthIncome)}</span></span>
+            {totalPlannedPct > 0 && (
+              <span>Planned: <span style={{ color: totalPlannedPct > 100 ? 'var(--negative)' : totalPlannedPct === 100 ? 'var(--positive)' : 'var(--text)', fontFamily: 'DM Mono', fontWeight: 600 }}>{totalPlannedPct}%</span> of income</span>
+            )}
+          </div>
         </div>
+        <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}
+          style={{ padding: '7px 12px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontSize: 13, fontFamily: 'DM Sans', outline: 'none', cursor: 'pointer' }}>
+          {availableMonths.map(m => {
+            const [y, mo] = m.split('-').map(Number)
+            return <option key={m} value={m}>{new Date(y, mo - 1, 1).toLocaleString('default', { month: 'long', year: 'numeric' })}</option>
+          })}
+        </select>
       </div>
 
       <div className="grid-half">
@@ -202,6 +228,19 @@ export default function Budget() {
                     <div style={{ height: 4, borderRadius: 2, background: 'var(--border)', overflow: 'hidden', marginBottom: 8 }}>
                       <div style={{ height: '100%', borderRadius: 2, background: arcColor, width: `${Math.min(pct, 100)}%`, transition: 'width 1s ease 0.4s' }} />
                     </div>
+                  )}
+                  {/* Projected end-of-month spend */}
+                  {entry && isCurrentMonth && dayOfMonth > 0 && spent > 0 && (
+                    (() => {
+                      const projected = Math.round((spent / dayOfMonth) * daysInMonth)
+                      const projPct = limit > 0 ? Math.round((projected / limit) * 100) : 0
+                      return (
+                        <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 6 }}>
+                          Projected: <span style={{ fontFamily: 'DM Mono', color: projected > limit && limit > 0 ? 'var(--negative)' : 'var(--text)', fontWeight: 600 }}>{fmt(projected)}</span>
+                          {limit > 0 && <span style={{ marginLeft: 4, color: projPct > 100 ? 'var(--negative)' : 'var(--text-dim)' }}>({projPct}%)</span>}
+                        </div>
+                      )
+                    })()
                   )}
 
                   {/* Category breakdown toggle */}

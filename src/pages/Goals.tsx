@@ -28,10 +28,30 @@ function emptyForm(): Omit<Goal,'id'> {
 }
 
 export default function Goals() {
-  const { goals, setGoals } = useFinanceContext()
+  const { goals, setGoals, txns } = useFinanceContext()
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId]   = useState<string | null>(null)
   const [form, setForm]       = useState<Omit<Goal,'id'>>(emptyForm())
+  const [contributeId, setContributeId] = useState<string | null>(null)
+  const [contributeVal, setContributeVal] = useState('')
+
+  // Average monthly net savings from last 3 months
+  const now = new Date()
+  const monthlySavings = Array.from({ length: 3 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - 1 - i, 1)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const mt = txns.filter(t => t.date.startsWith(key))
+    return mt.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+           - mt.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  })
+  const avgMonthlySavings = monthlySavings.reduce((s, v) => s + v, 0) / monthlySavings.length
+
+  function applyContribution(goalId: string) {
+    const amt = parseFloat(contributeVal)
+    if (!amt || amt <= 0) return
+    setGoals(goals.map(g => g.id === goalId ? { ...g, current: g.current + amt } : g))
+    setContributeId(null); setContributeVal('')
+  }
 
   function openAdd() {
     setEditId(null); setForm(emptyForm()); setShowForm(true)
@@ -143,9 +163,41 @@ export default function Goals() {
                 </div>
 
                 {/* Progress bar */}
-                <div style={{ height:6, borderRadius:4, background:'var(--border)', overflow:'hidden' }}>
+                <div style={{ height:6, borderRadius:4, background:'var(--border)', overflow:'hidden', marginBottom: 12 }}>
                   <div style={{ height:'100%', borderRadius:4, background:color, width:`${pct}%`, transition:'width 1s ease 0.4s' }}></div>
                 </div>
+
+                {/* Projected completion */}
+                {remaining > 0 && avgMonthlySavings > 0 && (
+                  <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 10 }}>
+                    At current savings rate: <span style={{ color: 'var(--text)', fontWeight: 600 }}>
+                      {(() => {
+                        const months = Math.ceil(remaining / avgMonthlySavings)
+                        const d = new Date(now.getFullYear(), now.getMonth() + months, 1)
+                        return d.toLocaleString('default', { month: 'short', year: 'numeric' })
+                      })()}
+                    </span>
+                  </div>
+                )}
+
+                {/* Quick contribution */}
+                {contributeId === g.id ? (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input autoFocus type="number" min="0" value={contributeVal} onChange={e => setContributeVal(e.target.value)}
+                      placeholder="Amount to add"
+                      onKeyDown={e => { if (e.key === 'Enter') applyContribution(g.id); if (e.key === 'Escape') { setContributeId(null); setContributeVal('') } }}
+                      style={{ flex: 1, padding: '6px 10px', borderRadius: 8, border: `1px solid ${color}`, background: 'var(--surface2)', color: 'var(--text)', fontSize: 13, fontFamily: 'DM Sans', outline: 'none' }} />
+                    <button onClick={() => applyContribution(g.id)} style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: color, color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Add</button>
+                    <button onClick={() => { setContributeId(null); setContributeVal('') }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12 }}>✕</button>
+                  </div>
+                ) : remaining > 0 ? (
+                  <button onClick={() => { setContributeId(g.id); setContributeVal('') }}
+                    style={{ width: '100%', padding: '7px 0', borderRadius: 8, border: `1px dashed ${color}55`, background: `${color}0d`, color, cursor: 'pointer', fontSize: 12, fontWeight: 600, transition: 'background 0.12s' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = `${color}22`)}
+                    onMouseLeave={e => (e.currentTarget.style.background = `${color}0d`)}>
+                    + Add contribution
+                  </button>
+                ) : null}
               </Card>
             )
           })}

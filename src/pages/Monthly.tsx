@@ -1,4 +1,5 @@
 ﻿import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { fmt } from '../lib/format'
 import { MONTHS, MONTHS_FULL, INCOME_CATS } from '../constants/categories'
@@ -35,6 +36,7 @@ function SavingsGauge({ rate }: { rate: number }) {
 }
 
 export default function Monthly() {
+  const navigate = useNavigate()
   const { txns, categories } = useFinanceContext()
   const now = new Date()
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
@@ -272,7 +274,7 @@ export default function Monthly() {
               <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
                 <thead>
                   <tr>
-                    {['Month','Income','Spending','Saved','Rate','vs prev'].map(h => (
+                    {['Month','Income','Spending','Saved','Rate','vs prev',''].map(h => (
                       <th key={h} style={{ textAlign: h==='Month'?'left':'right', padding:'8px 12px', fontSize:11, fontWeight:600, color:'var(--text-dim)', textTransform:'uppercase', letterSpacing:'0.05em', borderBottom:'1px solid var(--border)', whiteSpace:'nowrap' }}>{h}</th>
                     ))}
                   </tr>
@@ -299,6 +301,16 @@ export default function Monthly() {
                         <td style={{ padding:'10px 12px', textAlign:'right', fontFamily:'DM Mono', fontSize:12, borderBottom:'1px solid var(--border)',
                           color: diff===null?'var(--text-dim)':diff<0?'oklch(0.68 0.18 145)':'oklch(0.64 0.2 25)' }}>
                           {diff===null ? '-' : `${diff<0 ? "↓" : "↑"} ${fmt(Math.abs(diff))}`}
+                        </td>
+                        <td style={{ padding:'10px 12px', borderBottom:'1px solid var(--border)', textAlign:'right' }} onClick={e => e.stopPropagation()}>
+                          <button onClick={() => {
+                            const mo = String(MONTHS.indexOf(row.month)+1).padStart(2,'0')
+                            const mk = `${row.year}-${mo}`
+                            const lastDay = new Date(row.year, MONTHS.indexOf(row.month)+1, 0).getDate()
+                            navigate(`/transactions?from=${mk}-01&to=${mk}-${lastDay}`)
+                          }} style={{ fontSize:10, padding:'2px 7px', borderRadius:6, border:'1px solid var(--border)', background:'none', color:'var(--text-dim)', cursor:'pointer', whiteSpace:'nowrap' }}>
+                            Txns →
+                          </button>
                         </td>
                       </tr>
                     )

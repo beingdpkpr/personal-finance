@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { Category, Group, GROUPS, GROUP_LABELS, uid } from '../lib/data'
 import { nextCatColor } from '../constants/categories'
@@ -38,7 +38,28 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
 }
 
 export default function CategorySetup() {
-  const { categories, setCategories } = useFinanceContext()
+  const { categories, setCategories, txns } = useFinanceContext()
+  const dragRef = useRef<{ id: string; group: Group } | null>(null)
+
+  const txnCountByCat = (catId: string) => txns.filter(t => t.category === catId).length
+
+  function handleDragStart(catId: string, group: Group) {
+    dragRef.current = { id: catId, group }
+  }
+
+  function handleDrop(targetId: string, targetGroup: Group) {
+    const src = dragRef.current
+    if (!src || src.id === targetId || src.group !== targetGroup) return
+    const groupCats = categories.filter(c => c.group === targetGroup)
+    const others    = categories.filter(c => c.group !== targetGroup)
+    const srcIdx = groupCats.findIndex(c => c.id === src.id)
+    const tgtIdx = groupCats.findIndex(c => c.id === targetId)
+    const reordered = [...groupCats]
+    reordered.splice(srcIdx, 1)
+    reordered.splice(tgtIdx, 0, groupCats[srcIdx])
+    setCategories([...others, ...reordered])
+    dragRef.current = null
+  }
   const [openGroups, setOpenGroups]   = useState<Set<Group>>(new Set(GROUPS))
   const [editingId, setEditingId]     = useState<string | null>(null)
   const [addingGroup, setAddingGroup] = useState<Group | null>(null)
@@ -175,12 +196,26 @@ export default function CategorySetup() {
                       ) : (
                         <div
                           onClick={() => startEdit(cat)}
+                          draggable
+                          onDragStart={() => handleDragStart(cat.id, group)}
+                          onDragOver={e => e.preventDefault()}
+                          onDrop={() => handleDrop(cat.id, group)}
                           style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 8px', borderRadius: 8, cursor: 'pointer', transition: 'background 0.12s' }}
                           onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface2)')}
                           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                         >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'var(--text-dim)', opacity: 0.4, flexShrink: 0, cursor: 'grab' }}>
+                            <circle cx="9" cy="7" r="1" fill="currentColor"/><circle cx="15" cy="7" r="1" fill="currentColor"/>
+                            <circle cx="9" cy="12" r="1" fill="currentColor"/><circle cx="15" cy="12" r="1" fill="currentColor"/>
+                            <circle cx="9" cy="17" r="1" fill="currentColor"/><circle cx="15" cy="17" r="1" fill="currentColor"/>
+                          </svg>
                           <div style={{ width: 10, height: 10, borderRadius: 3, background: cat.color, flexShrink: 0 }} />
                           <span style={{ flex: 1, fontSize: 13, color: 'var(--text)' }}>{cat.label}</span>
+                          {txnCountByCat(cat.id) > 0 && (
+                            <span style={{ fontSize: 10, color: 'var(--text-dim)', background: 'var(--surface3)', borderRadius: 20, padding: '1px 6px', fontWeight: 500 }}>
+                              {txnCountByCat(cat.id)}
+                            </span>
+                          )}
                           <button
                             onClick={e => { e.stopPropagation(); deleteCategory(cat.id) }}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '2px 4px', display: 'flex', opacity: 0.6 }}

@@ -77,6 +77,18 @@ export default function Dashboard() {
   const donutEntries = otherAmt > 0 ? [...top5, { label:'Other', color:'#6b7280', amount: otherAmt }] : top5
   const donutSegs = donutEntries.map(c=>({ label:c.label, color:c.color, pct: totalCatSpend>0?(c.amount/totalCatSpend)*100:0 }))
 
+  // Net worth trend: reconstruct NW for last 6 months by reversing monthly net savings
+  const nwTrend = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(ty, tm - 1 - (5 - i), 1)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const mt = txns.filter(t => t.date.startsWith(key))
+    return mt.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+         - mt.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  }).reduce<number[]>((acc, delta, i) => {
+    acc.push(i === 0 ? netWorth - areaData.slice(0, 5).reduce((s, d) => s + d.income - d.expense, 0) : acc[i - 1] + delta)
+    return acc
+  }, [])
+
   const recentTxns = [...txns].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6)
   const allAccounts = [
     ...nw.assets.map(a => ({ ...a, isLiability: false })),
@@ -127,10 +139,14 @@ export default function Dashboard() {
           <div style={{ fontSize:14, fontWeight:600, color:'var(--text)', marginBottom:4 }}>Spending Breakdown</div>
           <div style={{ fontSize:12, color:'var(--text-dim)', marginBottom:16 }}>By category</div>
           <div style={{ display:'flex', gap:14, alignItems:'center' }}>
-            <DonutChart segments={donutSegs} size={110} centerLabel={fmt(totalCatSpend)} centerSub={`${MONTHS[tm-1]} spend`} />
+            <DonutChart segments={donutSegs} size={110} centerLabel={fmt(totalCatSpend)} centerSub={`${MONTHS[tm-1]} spend`}
+              onSegmentClick={i => navigate(`/transactions?q=${encodeURIComponent(donutSegs[i].label)}`)} />
             <div style={{ flex:1, display:'flex', flexDirection:'column', gap:7 }}>
-              {donutSegs.map(c => (
-                <div key={c.label} style={{ display:'flex', alignItems:'center', gap:7 }}>
+              {donutSegs.map((c, i) => (
+                <div key={c.label} onClick={() => navigate(`/transactions?q=${encodeURIComponent(c.label)}`)}
+                  style={{ display:'flex', alignItems:'center', gap:7, cursor:'pointer', borderRadius:6, padding:'2px 4px', transition:'background 0.12s' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface3)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                   <span style={{ width:8, height:8, borderRadius:'50%', background:c.color, flexShrink:0 }}></span>
                   <span style={{ fontSize:12, color:'var(--text-mid)', flex:1 }}>{c.label}</span>
                   <span style={{ fontSize:11, fontFamily:'DM Mono', color:'var(--text-dim)' }}>{Math.round(c.pct)}%</span>
@@ -186,7 +202,21 @@ export default function Dashboard() {
         {/* Accounts */}
         <Card>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
-            <div style={{ fontSize:14, fontWeight:600, color:'var(--text)' }}>Accounts</div>
+            <div>
+              <div style={{ fontSize:14, fontWeight:600, color:'var(--text)' }}>Accounts</div>
+              {nwTrend.length > 1 && (() => {
+                const min = Math.min(...nwTrend), max = Math.max(...nwTrend)
+                const range = max - min || 1
+                const W = 80, H = 24
+                const pts = nwTrend.map((v, i) => `${(i / (nwTrend.length - 1)) * W},${H - ((v - min) / range) * H}`).join(' ')
+                const up = nwTrend[nwTrend.length - 1] >= nwTrend[0]
+                return (
+                  <svg width={W} height={H} style={{ display:'block', marginTop:4 }}>
+                    <polyline points={pts} fill="none" stroke={up ? 'var(--positive)' : 'var(--negative)'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )
+              })()}
+            </div>
             <button onClick={() => navigate('/accounts')} style={{ background:'none', border:'none', color:'var(--accent)', cursor:'pointer', fontSize:12, fontWeight:500 }}>
               Manage →
             </button>
