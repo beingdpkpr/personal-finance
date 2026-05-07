@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, Fragment } from 'react'
+import { useState, useRef, useEffect, useMemo, Fragment } from 'react'
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { useSearchParams } from 'react-router-dom'
 import { fmt } from '../lib/format'
@@ -46,20 +46,35 @@ export default function Transactions() {
   const [page, setPage]               = useState(1)
   const [editingAmountId, setEditingAmountId] = useState<string | null>(null)
   const [editingAmountVal, setEditingAmountVal] = useState('')
+  const [collapsedMonths, setCollapsedMonths] = useState<Set<string>>(new Set())
   const [gpayOpen, setGpayOpen]       = useState(false)
   const [selected, setSelected]       = useState<Set<string>>(new Set())
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [showRecat, setShowRecat]     = useState(false)
   const [recatGroup, setRecatGroup]   = useState<Group | ''>('')
   const [recatCat, setRecatCat]       = useState('')
+  const [selectedMonth, setSelectedMonth] = useState(searchParams.get('month') ?? '')
+
+  function selectMonth(ym: string) {
+    setSelectedMonth(ym)
+    if (!ym) { setDateFrom(''); setDateTo(''); return }
+    const [y, m] = ym.split('-').map(Number)
+    const lastDay = new Date(y, m, 0).getDate()
+    setDateFrom(`${ym}-01`)
+    setDateTo(`${ym}-${String(lastDay).padStart(2, '0')}`)
+  }
 
   useEffect(() => {
-    const q    = searchParams.get('q')
-    const from = searchParams.get('from')
-    const to   = searchParams.get('to')
-    if (q    !== null) setSearch(q)
-    if (from !== null) setDateFrom(from)
-    if (to   !== null) setDateTo(to)
+    const q     = searchParams.get('q')
+    const from  = searchParams.get('from')
+    const to    = searchParams.get('to')
+    const month = searchParams.get('month')
+    if (q     !== null) setSearch(q)
+    if (month !== null) selectMonth(month)
+    else {
+      if (from !== null) setDateFrom(from)
+      if (to   !== null) setDateTo(to)
+    }
   }, [searchParams])
   useEffect(() => { setSelected(new Set()); setPage(1) }, [search, filter, groupFilter, subCatFilter, tagFilter, dateFrom, dateTo, sortCol, sortDir])
 
@@ -86,6 +101,10 @@ export default function Transactions() {
     if (type === 'expense') return categories.find(c => c.id === id)?.color ?? '#888'
     return allCats.find(c => c.id === id)?.color ?? '#888'
   }
+
+  const availableMonths = useMemo(() =>
+    [...new Set(txns.filter(t => !!t.date).map(t => t.date.slice(0, 7)))].sort((a, b) => b.localeCompare(a)),
+  [txns])
 
   // All unique tags across all transactions
   const allTags = [...new Set(txns.flatMap(t => t.tags ?? []))].sort()
@@ -164,19 +183,48 @@ export default function Transactions() {
     const reader = new FileReader()
     reader.onload = ev => {
       const text = ev.target?.result as string
-      text.trim().split('\n').slice(1).forEach(line => {
-        const cols = line.split(',').map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"'))
-        const [date, description, category, type, amount, rawNotes] = cols
-        if (date && description && category && type && amount) {
-          let notes: string | undefined
-          const match = rawNotes?.match(/subcat:([^|;]+)/)
-          if (match) notes = rawNotes.replace(/subcat:[^|;]*/, '').replace(/^[|;\s]+/, '').trim() || undefined
-          else notes = rawNotes || undefined
-          addTxn({ date, description, category, type: type as 'expense' | 'income', amount: parseFloat(amount) || 0, notes })
+      const lines = text.trim().split(/\r?\n/).slice(1)
+      lines.forEach(line => {
+        // Proper RFC-4180 CSV parse (handles quoted fields with embedded commas)
+        const cols: string[] = []
+        let cur = '', inQ = false
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i]
+          if (inQ) {
+            if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++ }
+            else if (ch === '"') inQ = false
+            else cur += ch
+          } else {
+            if (ch === '"') inQ = true
+            else if (ch === ',') { cols.push(cur); cur = '' }
+            else cur += ch
+          }
         }
+        cols.push(cur)
+
+        let [date, description, category, type, amount, rawNotes] = cols
+        if (!date || !description || !type || !amount) return
+
+        // Normalise date: accept YYYY-MM-DD (pass through) or DD-MM-YYYY → YYYY-MM-DD
+        const ddmmyyyy = date.match(/^(\d{2})-(\d{2})-(\d{4})$/)
+        if (ddmmyyyy) date = `${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}`
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return  // skip unparseable dates
+
+        let notes: string | undefined
+        const match = rawNotes?.match(/subcat:([^|;]+)/)
+        if (match) notes = rawNotes.replace(/subcat:[^|;]*/, '').replace(/^[|;\s]+/, '').trim() || undefined
+        else notes = rawNotes || undefined
+
+        addTxn({ date, description, category: category || undefined, type: type as 'expense' | 'income', amount: parseFloat(amount) || 0, notes })
       })
     }
     reader.readAsText(file); e.target.value = ''
+  }
+
+  function toggleMonthCollapse(key: string) {
+    setCollapsedMonths(prev => {
+      const s = new Set(prev); s.has(key) ? s.delete(key) : s.add(key); return s
+    })
   }
 
   const btnStyle = (active: boolean): React.CSSProperties => ({
@@ -212,14 +260,23 @@ export default function Transactions() {
           placeholder="Search transactions…"
           style={{ flex: 1, minWidth: 160, padding: '8px 14px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontSize: 13, fontFamily: 'DM Sans', outline: 'none' }}
         />
+        {/* Month picker */}
+        <select value={selectedMonth} onChange={e => selectMonth(e.target.value)}
+          style={{ height: 36, padding: '0 10px', borderRadius: 10, border: `1px solid ${selectedMonth ? 'var(--accent)' : 'var(--border)'}`, background: selectedMonth ? 'var(--accent-dim)' : 'var(--surface2)', color: selectedMonth ? 'var(--accent)' : 'var(--text)', fontSize: 13, cursor: 'pointer', fontFamily: 'DM Sans', outline: 'none', fontWeight: selectedMonth ? 600 : 400 }}>
+          <option value=''>All months</option>
+          {availableMonths.map(ym => {
+            const [y, m] = ym.split('-')
+            return <option key={ym} value={ym}>{MONTHS_FULL[parseInt(m) - 1]} {y}</option>
+          })}
+        </select>
         {/* Date range */}
-        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+        <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setSelectedMonth('') }}
           style={{ padding: '7px 10px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface2)', color: dateFrom ? 'var(--text)' : 'var(--text-dim)', fontSize: 12, fontFamily: 'DM Sans', outline: 'none', cursor: 'pointer' }} />
         <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>–</span>
-        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+        <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setSelectedMonth('') }}
           style={{ padding: '7px 10px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface2)', color: dateTo ? 'var(--text)' : 'var(--text-dim)', fontSize: 12, fontFamily: 'DM Sans', outline: 'none', cursor: 'pointer' }} />
-        {(dateFrom || dateTo) && (
-          <button onClick={() => { setDateFrom(''); setDateTo('') }} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>✕ Clear</button>
+        {(dateFrom || dateTo || selectedMonth) && (
+          <button onClick={() => { setDateFrom(''); setDateTo(''); setSelectedMonth('') }} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>✕ Clear</button>
         )}
       </div>
 
@@ -360,12 +417,16 @@ export default function Transactions() {
 
             {monthGroups.map(g => (
               <Fragment key={g.key}>
-                <div style={{ padding: '7px 16px', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div
+                  onClick={() => toggleMonthCollapse(g.key)}
+                  style={{ padding: '7px 16px', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}
+                >
+                  <span style={{ fontSize: 11, color: 'var(--text-dim)', transition: 'transform 0.15s', display: 'inline-block', transform: collapsedMonths.has(g.key) ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▾</span>
                   <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{g.label}</span>
                   <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{g.items.length} transaction{g.items.length !== 1 ? 's' : ''}</span>
                   <span style={{ fontSize: 11, fontFamily: 'DM Mono', color: g.netTotal >= 0 ? 'var(--positive)' : 'var(--negative)', marginLeft: 'auto' }}>{g.netTotal >= 0 ? '+' : ''}{fmt(g.netTotal)}</span>
                 </div>
-                {g.items.map(t => {
+                {!collapsedMonths.has(g.key) && g.items.map(t => {
                   const isSel = selected.has(t.id)
                   return (
                     <div key={t.id} onClick={() => toggleRow(t.id)} style={{ display: 'grid', gridTemplateColumns: '44px 95px 110px 110px 1fr 90px 80px', gap: 12, padding: '11px 16px', borderBottom: '1px solid var(--border)', borderLeft: isSel ? '3px solid var(--accent)' : '3px solid transparent', alignItems: 'center', background: isSel ? 'var(--accent-dim)' : 'transparent', transition: 'background 0.12s, border-left-color 0.12s', cursor: 'pointer' }}
@@ -428,11 +489,17 @@ export default function Transactions() {
           <div className="txn-cards" style={{ gap: 0 }}>
             {monthGroups.map(g => (
               <Fragment key={g.key}>
-                <div style={{ padding: '8px 14px', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{g.label}</span>
+                <div
+                  onClick={() => toggleMonthCollapse(g.key)}
+                  style={{ padding: '8px 14px', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-dim)', transition: 'transform 0.15s', display: 'inline-block', transform: collapsedMonths.has(g.key) ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▾</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{g.label}</span>
+                  </div>
                   <span style={{ fontSize: 11, fontFamily: 'DM Mono', color: g.netTotal >= 0 ? 'var(--positive)' : 'var(--negative)' }}>{g.netTotal >= 0 ? '+' : ''}{fmt(g.netTotal)}</span>
                 </div>
-                {g.items.map(t => {
+                {!collapsedMonths.has(g.key) && g.items.map(t => {
                   const catColor = getCatColor(t.category, t.type)
                   const catLabel = getCatLabel(t.category, t.type)
                   return (

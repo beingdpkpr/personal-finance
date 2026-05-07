@@ -306,8 +306,7 @@ export default function Monthly() {
                           <button onClick={() => {
                             const mo = String(MONTHS.indexOf(row.month)+1).padStart(2,'0')
                             const mk = `${row.year}-${mo}`
-                            const lastDay = new Date(row.year, MONTHS.indexOf(row.month)+1, 0).getDate()
-                            navigate(`/transactions?from=${mk}-01&to=${mk}-${lastDay}`)
+                            navigate(`/transactions?month=${mk}`)
                           }} style={{ fontSize:10, padding:'2px 7px', borderRadius:6, border:'1px solid var(--border)', background:'none', color:'var(--text-dim)', cursor:'pointer', whiteSpace:'nowrap' }}>
                             Txns →
                           </button>

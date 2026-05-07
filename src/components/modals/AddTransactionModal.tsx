@@ -13,6 +13,7 @@ export default function AddTransactionModal() {
   const [date, setDate]         = useState(new Date().toISOString().slice(0, 10))
   const [notes, setNotes]       = useState('')
   const [tags, setTags]         = useState('')
+  const [dateError, setDateError] = useState(false)
 
   useEffect(() => {
     if (editItem) {
@@ -27,7 +28,7 @@ export default function AddTransactionModal() {
     } else {
       setType('expense'); setAmount(''); setGroup(''); setCat('')
       setDesc(''); setDate(new Date().toISOString().slice(0, 10))
-      setNotes(''); setTags('')
+      setNotes(''); setTags(''); setDateError(false)
     }
   }, [editItem, modalVisible])
 
@@ -39,6 +40,7 @@ export default function AddTransactionModal() {
     const amt = parseFloat(amount)
     if (!amt || !desc) return
     if (type === 'expense' && !group) return
+    if (!date) { setDateError(true); return }
     const validCat = type === 'income'
       ? (INCOME_CATS.find(c => c.id === cat) ? cat : undefined)
       : (categories.find(c => c.id === cat) ? cat : undefined)
@@ -87,7 +89,16 @@ export default function AddTransactionModal() {
 
         <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="Description *" style={inputStyle} />
         <input value={amount} onChange={e => setAmount(e.target.value)} placeholder="Amount *" type="number" min="0" step="0.01" style={inputStyle} />
-        <input value={date} onChange={e => setDate(e.target.value)} type="date" style={inputStyle} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <input value={date} onChange={e => { setDate(e.target.value); setDateError(false) }} type="date"
+            style={{ ...inputStyle, border: `1px solid ${dateError ? 'var(--negative)' : 'var(--border)'}` }} />
+          {dateError && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--negative)', padding: '4px 8px', borderRadius: 8, background: 'oklch(0.22 0.08 25)' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Date is required — please pick a date before saving.
+            </div>
+          )}
+        </div>
 
         {type === 'expense' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
