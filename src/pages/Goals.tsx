@@ -68,7 +68,7 @@ export default function Goals() {
   }
 
   return (
-    <div style={{ padding:28, display:'flex', flexDirection:'column', gap:20 }}>
+    <div className="page-pad">
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
         <div style={{ fontSize:16, fontWeight:700, color:'var(--text)' }}>Goals</div>
         <button onClick={openAdd} style={{ padding:'7px 16px', borderRadius:20, border:'none', background:'var(--accent)', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>+ New Goal</button>
@@ -77,7 +77,7 @@ export default function Goals() {
       {showForm && (
         <Card animate={false}>
           <div style={{ fontSize:14, fontWeight:600, color:'var(--text)', marginBottom:14 }}>{editId ? 'Edit Goal' : 'New Goal'}</div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+          <div className="grid-half" style={{ gap:10 }}>
             <div style={{ gridColumn:'1/-1' }}>
               <input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="Goal name *" style={inputStyle} />
             </div>
@@ -97,7 +97,7 @@ export default function Goals() {
       {goals.length === 0 && !showForm ? (
         <div style={{ color:'var(--text-dim)', fontSize:14, textAlign:'center', padding:'48px 0' }}>No goals yet. Create your first goal!</div>
       ) : (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:16 }}>
+        <div className="grid-half">
           {goals.map((g, i) => {
             const pct = g.target > 0 ? Math.min((g.current/g.target)*100, 100) : 0
             const color = GOAL_COLORS[i % GOAL_COLORS.length]
