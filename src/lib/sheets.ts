@@ -9,7 +9,7 @@ export const TAB_HEADERS: Record<TabName, string[]> = {
   Budgets:      ['group', 'mode', 'value'],
   Goals:        ['id', 'name', 'target', 'current', 'deadline'],
   Recurring:    ['id', 'type', 'amount', 'group', 'category', 'description', 'dayOfMonth'],
-  NetWorth:     ['id', 'name', 'type', 'value', 'institution', 'accountNumber', 'notes'],
+  NetWorth:     ['id', 'name', 'type', 'value', 'institution', 'accountNumber', 'notes', 'liquid'],
   Settings:     ['currency_code', 'currency_symbol', 'currency_locale', 'lastSyncedAt', 'dark_mode', 'theme_name', 'prefs'],
   Categories:   ['id', 'label', 'group', 'color'],
 };
