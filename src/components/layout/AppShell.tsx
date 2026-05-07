@@ -7,6 +7,7 @@ import { useFinanceContext } from '../../hooks/FinanceContext'
 
 export default function AppShell() {
   const [collapsed, setCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const { syncError } = useFinanceContext()
   const [visibleError, setVisibleError] = useState<string | null>(null)
 
@@ -17,11 +18,17 @@ export default function AppShell() {
     return () => clearTimeout(t)
   }, [syncError])
 
+  function handleToggle() {
+    if (window.innerWidth <= 768) setMobileOpen(o => !o)
+    else setCollapsed(c => !c)
+  }
+
   return (
     <div style={{ display:'flex', height:'100vh', background:'var(--bg)', overflow:'hidden' }}>
-      <Sidebar collapsed={collapsed} />
+      <div className={`sidebar-backdrop${mobileOpen ? ' open' : ''}`} onClick={() => setMobileOpen(false)} />
+      <Sidebar collapsed={collapsed} mobileOpen={mobileOpen} />
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
-        <Header onToggleSidebar={() => setCollapsed(c => !c)} />
+        <Header onToggleSidebar={handleToggle} />
         <main style={{ flex:1, overflowY:'auto', background:'var(--bg)' }}>
           <Outlet />
         </main>

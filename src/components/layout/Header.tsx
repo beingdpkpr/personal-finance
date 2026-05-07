@@ -70,7 +70,7 @@ export default function Header({ onToggleSidebar }: Props) {
 
   return (
     <>
-      <header style={{
+      <header className="header-root" style={{
         height: 72, borderBottom: '1px solid var(--border)',
         display: 'flex', alignItems: 'center',
         padding: '0 28px', gap: 12,
@@ -88,7 +88,7 @@ export default function Header({ onToggleSidebar }: Props) {
         </h1>
 
         {/* Search */}
-        <form onSubmit={handleSearch} style={{ position: 'relative' }}>
+        <form className="header-search" onSubmit={handleSearch} style={{ position: 'relative' }}>
           <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)', pointerEvents: 'none' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>

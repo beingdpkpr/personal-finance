@@ -270,7 +270,7 @@ export default function Transactions() {
         {filtered.length === 0 ? (
           <div style={{ color: 'var(--text-dim)', fontSize: 13, textAlign: 'center', padding: '32px 0' }}>No transactions found</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="txn-scroll"><div className="txn-min-width" style={{ display: 'flex', flexDirection: 'column' }}>
             {/* Header — transforms into bulk action bar when items are selected */}
             <div style={{
               display: 'grid', gridTemplateColumns: '44px 95px 110px 110px 1fr 90px 80px', gap: 12,
@@ -426,7 +426,7 @@ export default function Transactions() {
                 </button>
               </div>
             )}
-          </div>
+          </div></div>
         )}
       </Card>
 

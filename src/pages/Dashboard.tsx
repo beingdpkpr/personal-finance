@@ -79,9 +79,9 @@ export default function Dashboard() {
   ]
 
   return (
-    <div style={{ padding:28, display:'flex', flexDirection:'column', gap:22 }}>
+    <div className="page-pad">
       {/* Stat cards */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16 }}>
+      <div className="grid-stat-cards">
         <StatCard label="Net Worth" value={fmt(netWorth)} color="#7c6ef5" delay={0}
           sub={String(pctChange(netWorth, lastNW))} positive={netWorth >= lastNW}
           icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>} />
@@ -98,7 +98,7 @@ export default function Dashboard() {
       </div>
 
       {/* Charts row */}
-      <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:16 }}>
+      <div className="grid-chart-row">
         <Card>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
             <div>
@@ -138,7 +138,7 @@ export default function Dashboard() {
       </div>
 
       {/* Recent transactions + Accounts */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+      <div className="grid-half">
         {/* Recent Transactions */}
         <Card>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>

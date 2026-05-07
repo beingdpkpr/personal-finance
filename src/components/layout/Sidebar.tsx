@@ -15,14 +15,14 @@ const NAV = [
   { to: '/categories', label: 'Categories', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg> },
 ]
 
-interface Props { collapsed: boolean }
+interface Props { collapsed: boolean; mobileOpen?: boolean }
 
-export default function Sidebar({ collapsed }: Props) {
+export default function Sidebar({ collapsed, mobileOpen = false }: Props) {
   const { name, email, picture } = useFinanceContext()
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   return (
-    <aside style={{
+    <aside className={`app-sidebar${mobileOpen ? ' sidebar-open' : ''}`} style={{
       width: collapsed ? 64 : 220,
       height: '100%',
       background: 'var(--sidebar)',

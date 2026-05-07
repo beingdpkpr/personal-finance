@@ -60,7 +60,7 @@ export default function Accounts() {
             {sectionLabel === 'Liabilities' ? '-' : ''}{fmt(total)}
           </span>
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:18 }}>
+        <div className="grid-accounts">
           {items.map((item) => {
             const { color } = item
             const hov = hovId === item.id
@@ -128,7 +128,7 @@ export default function Accounts() {
   }
 
   return (
-    <div style={{ padding:28, display:'flex', flexDirection:'column', gap:24 }}>
+    <div className="page-pad" style={{ gap:24 }}>
       {/* Net worth header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
         <div style={{ display:'flex', flexDirection:'column', gap:6 }}>

@@ -55,9 +55,9 @@ export default function Analytics() {
   const avgSavings   = areaData.length > 0 ? Math.round(((totalIncome-totalExpense)/Math.max(totalIncome,1))*100) : 0
 
   return (
-    <div style={{ padding:28, display:'flex', flexDirection:'column', gap:20 }}>
+    <div className="page-pad">
       {/* Area chart + summary */}
-      <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:16 }}>
+      <div className="grid-chart-row">
         <Card>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
             <div>
