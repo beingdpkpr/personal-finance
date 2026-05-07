@@ -24,6 +24,7 @@ export function applyRecurring(
         id: uid(),
         type: r.type,
         amount: r.amount,
+        group: r.group,
         category: r.category,
         description: r.description,
         date,

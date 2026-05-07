@@ -28,21 +28,25 @@ function emptyForm(): Omit<Goal,'id'> {
 }
 
 export default function Goals() {
-  const { goals, setGoals, txns } = useFinanceContext()
+  const { goals, setGoals, txns, categories } = useFinanceContext()
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId]   = useState<string | null>(null)
   const [form, setForm]       = useState<Omit<Goal,'id'>>(emptyForm())
   const [contributeId, setContributeId] = useState<string | null>(null)
   const [contributeVal, setContributeVal] = useState('')
 
-  // Average monthly net savings from last 3 months
+  const transferCatIds = new Set(categories.filter(c => c.depositsToAccount).map(c => c.id))
+  const isTransfer = (t: { type: string; category?: string }) =>
+    t.type === 'expense' && transferCatIds.has(t.category ?? '')
+
+  // Average monthly net savings from last 3 months (excluding savings transfers)
   const now = new Date()
   const monthlySavings = Array.from({ length: 3 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - 1 - i, 1)
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
     const mt = txns.filter(t => t.date.startsWith(key))
     return mt.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-           - mt.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+           - mt.filter(t => t.type === 'expense' && !isTransfer(t)).reduce((s, t) => s + t.amount, 0)
   })
   const avgMonthlySavings = monthlySavings.reduce((s, v) => s + v, 0) / monthlySavings.length
 
