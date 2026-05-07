@@ -38,7 +38,7 @@ export default function Transactions() {
   const [filter, setFilter]           = useState<Filter>('all')
   const [groupFilter, setGroupFilter] = useState<Group | 'all'>('all')
   const [subCatFilter, setSubCatFilter] = useState<string | 'all'>('all')
-  const [tagFilter, setTagFilter]     = useState<string | 'all'>('all')
+  const [openFilter, setOpenFilter]   = useState<string | null>(null)
   const [dateFrom, setDateFrom]       = useState(searchParams.get('from') ?? '')
   const [dateTo, setDateTo]           = useState(searchParams.get('to') ?? '')
   const [sortCol, setSortCol]         = useState<'date' | 'amount'>('date')
@@ -84,7 +84,13 @@ export default function Transactions() {
       if (to   !== null) setDateTo(to)
     }
   }, [searchParams])
-  useEffect(() => { setSelected(new Set()); setPage(1) }, [search, filter, groupFilter, subCatFilter, tagFilter, dateFrom, dateTo, sortCol, sortDir])
+  useEffect(() => { setSelected(new Set()); setPage(1) }, [search, filter, groupFilter, subCatFilter, dateFrom, dateTo, sortCol, sortDir])
+  useEffect(() => {
+    if (!openFilter) return
+    function handle() { setOpenFilter(null) }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [openFilter])
 
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -114,14 +120,10 @@ export default function Transactions() {
     [...new Set(txns.filter(t => !!t.date).map(t => t.date.slice(0, 7)))].sort((a, b) => b.localeCompare(a)),
   [txns])
 
-  // All unique tags across all transactions
-  const allTags = [...new Set(txns.flatMap(t => t.tags ?? []))].sort()
-
   const filtered = txns
     .filter(t => filter === 'all' || t.type === filter)
     .filter(t => groupFilter === 'all' || (t.type === 'expense' && t.group === groupFilter))
     .filter(t => subCatFilter === 'all' || t.category === subCatFilter)
-    .filter(t => tagFilter === 'all' || (t.tags ?? []).includes(tagFilter))
     .filter(t => !dateFrom || t.date >= dateFrom)
     .filter(t => !dateTo   || t.date <= dateTo)
     .filter(t => {
@@ -251,14 +253,6 @@ export default function Transactions() {
     })
   }
 
-  const btnStyle = (active: boolean): React.CSSProperties => ({
-    padding: '6px 16px', borderRadius: 20,
-    border: active ? '1px solid var(--accent)' : '1px solid var(--border)',
-    background: active ? 'var(--accent-dim)' : 'transparent',
-    color: active ? 'var(--accent)' : 'var(--text-dim)',
-    cursor: 'pointer', fontSize: 13, fontWeight: active ? 600 : 400, transition: 'all 0.15s',
-  })
-
   const selectedExpenses = [...selected].filter(id => txns.find(t => t.id === id)?.type === 'expense')
 
   return (
@@ -279,11 +273,18 @@ export default function Transactions() {
 
       {/* Toolbar */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-        <input
-          value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search transactions…"
-          style={{ flex: 1, minWidth: 160, padding: '8px 14px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontSize: 13, fontFamily: 'DM Sans', outline: 'none' }}
-        />
+        <div style={{ flex: 1, minWidth: 160, position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <input
+            value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search transactions…"
+            style={{ width: '100%', padding: '8px 32px 8px 14px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontSize: 13, fontFamily: 'DM Sans', outline: 'none', boxSizing: 'border-box' }}
+          />
+          {search && (
+            <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 10, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', padding: 2, borderRadius: '50%', lineHeight: 1 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          )}
+        </div>
         {/* Month picker */}
         <select value={selectedMonth} onChange={e => selectMonth(e.target.value)}
           style={{ height: 36, padding: '0 10px', borderRadius: 10, border: `1px solid ${selectedMonth ? 'var(--accent)' : 'var(--border)'}`, background: selectedMonth ? 'var(--accent-dim)' : 'var(--surface2)', color: selectedMonth ? 'var(--accent)' : 'var(--text)', fontSize: 13, cursor: 'pointer', fontFamily: 'DM Sans', outline: 'none', fontWeight: selectedMonth ? 600 : 400 }}>
@@ -302,42 +303,6 @@ export default function Transactions() {
         {(dateFrom || dateTo || selectedMonth) && (
           <button onClick={() => { setDateFrom(''); setDateTo(''); setSelectedMonth('') }} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>✕ Clear</button>
         )}
-      </div>
-
-      {/* Filter row */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button style={btnStyle(filter === 'all')}     onClick={() => { setFilter('all'); setGroupFilter('all'); setSubCatFilter('all') }}>All</button>
-          <button style={btnStyle(filter === 'income')}  onClick={() => { setFilter('income'); setGroupFilter('all'); setSubCatFilter('all') }}>Income</button>
-          <button style={btnStyle(filter === 'expense')} onClick={() => setFilter('expense')}>Expense</button>
-        </div>
-        {(filter === 'expense' || filter === 'all') && GROUPS.map(g => {
-          const active = groupFilter === g; const gc = GROUP_COLORS[g]
-          return (
-            <button key={g} onClick={() => { setGroupFilter(groupFilter === g ? 'all' : g); setSubCatFilter('all') }} style={{
-              padding: '6px 14px', borderRadius: 20, cursor: 'pointer', fontSize: 12, fontWeight: active ? 600 : 400, transition: 'all 0.15s',
-              border: active ? `1px solid ${gc}` : '1px solid var(--border)',
-              background: active ? `${gc}22` : 'transparent', color: active ? gc : 'var(--text-dim)',
-            }}>{GROUP_LABELS[g]}</button>
-          )
-        })}
-        {groupFilter !== 'all' && categories.filter(c => c.group === groupFilter).map(c => (
-          <button key={c.id} onClick={() => setSubCatFilter(subCatFilter === c.id ? 'all' : c.id)} style={{
-            padding: '5px 12px', borderRadius: 20, cursor: 'pointer', fontSize: 12, fontWeight: subCatFilter === c.id ? 600 : 400,
-            border: subCatFilter === c.id ? `1px solid ${c.color}` : '1px solid var(--border)',
-            background: subCatFilter === c.id ? `${c.color}22` : 'var(--surface2)',
-            color: subCatFilter === c.id ? c.color : 'var(--text-dim)', transition: 'all 0.12s',
-          }}>{c.label}</button>
-        ))}
-        {/* Tag filter chips */}
-        {allTags.length > 0 && allTags.map(tag => (
-          <button key={tag} onClick={() => setTagFilter(tagFilter === tag ? 'all' : tag)} style={{
-            padding: '4px 10px', borderRadius: 20, cursor: 'pointer', fontSize: 11, fontWeight: tagFilter === tag ? 600 : 400, transition: 'all 0.12s',
-            border: tagFilter === tag ? '1px solid var(--accent)' : '1px dashed var(--border)',
-            background: tagFilter === tag ? 'var(--accent-dim)' : 'transparent',
-            color: tagFilter === tag ? 'var(--accent)' : 'var(--text-dim)',
-          }}>#{tag}</button>
-        ))}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
           <button onClick={exportCSV} style={{ padding: '7px 14px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12 }}>↓ Export</button>
           <button onClick={() => fileRef.current?.click()} style={{ padding: '7px 14px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12 }}>↑ Import CSV</button>
@@ -430,8 +395,42 @@ export default function Transactions() {
               ) : (
                 <>
                   <button onClick={() => { if (sortCol === 'date') setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortCol('date'); setSortDir('desc') } }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 11, color: sortCol === 'date' ? 'var(--accent)' : 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'DM Sans', display: 'flex', alignItems: 'center', gap: 3 }}>Date {sortCol === 'date' ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</button>
-                  <span style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Category</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sub-category</span>
+                  <div style={{ position: 'relative' }} onMouseDown={e => e.stopPropagation()}>
+                    <button onClick={() => setOpenFilter(openFilter === 'cat' ? null : 'cat')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 11, letterSpacing: '0.06em', fontFamily: 'DM Sans', textTransform: 'uppercase', color: (filter !== 'all' || groupFilter !== 'all') ? 'var(--accent)' : 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      Category
+                      {(filter !== 'all' || groupFilter !== 'all') && <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)', display: 'inline-block', flexShrink: 0 }} />}
+                      <svg width="10" height="7" viewBox="0 0 10 7" fill="none"><path d="M1 1.5h8M2.5 3.75h5M4 6h2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                    </button>
+                    {openFilter === 'cat' && (
+                      <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 300, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, minWidth: 150, boxShadow: '0 8px 24px rgba(0,0,0,0.35)', overflow: 'hidden' }}>
+                        <button onClick={() => { setFilter('all'); setGroupFilter('all'); setSubCatFilter('all'); setOpenFilter(null) }} style={{ display: 'block', width: '100%', padding: '9px 14px', background: filter === 'all' && groupFilter === 'all' ? 'var(--accent-dim)' : 'transparent', border: 'none', borderBottom: '1px solid var(--border)', textAlign: 'left', cursor: 'pointer', fontSize: 12, color: filter === 'all' && groupFilter === 'all' ? 'var(--accent)' : 'var(--text)', fontWeight: filter === 'all' && groupFilter === 'all' ? 600 : 400, fontFamily: 'DM Sans' }}>All</button>
+                        <button onClick={() => { setFilter('income'); setGroupFilter('all'); setSubCatFilter('all'); setOpenFilter(null) }} style={{ display: 'block', width: '100%', padding: '9px 14px', background: filter === 'income' ? 'var(--accent-dim)' : 'transparent', border: 'none', borderBottom: '1px solid var(--border)', textAlign: 'left', cursor: 'pointer', fontSize: 12, color: filter === 'income' ? 'var(--accent)' : 'var(--positive)', fontWeight: filter === 'income' ? 600 : 400, fontFamily: 'DM Sans' }}>Income</button>
+                        {GROUPS.map((g, i) => (
+                          <button key={g} onClick={() => { setFilter('expense'); setGroupFilter(g); setSubCatFilter('all'); setOpenFilter(null) }} style={{ display: 'block', width: '100%', padding: '9px 14px', background: groupFilter === g ? 'var(--accent-dim)' : 'transparent', border: 'none', borderBottom: i < GROUPS.length - 1 ? '1px solid var(--border)' : 'none', textAlign: 'left', cursor: 'pointer', fontSize: 12, color: groupFilter === g ? 'var(--accent)' : GROUP_COLORS[g], fontWeight: groupFilter === g ? 600 : 400, fontFamily: 'DM Sans' }}>{GROUP_LABELS[g]}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ position: 'relative' }} onMouseDown={e => e.stopPropagation()}>
+                    <button onClick={() => setOpenFilter(openFilter === 'subcat' ? null : 'subcat')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 11, letterSpacing: '0.06em', fontFamily: 'DM Sans', textTransform: 'uppercase', color: subCatFilter !== 'all' ? 'var(--accent)' : 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      Sub-category
+                      {subCatFilter !== 'all' && <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)', display: 'inline-block', flexShrink: 0 }} />}
+                      <svg width="10" height="7" viewBox="0 0 10 7" fill="none"><path d="M1 1.5h8M2.5 3.75h5M4 6h2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                    </button>
+                    {openFilter === 'subcat' && (
+                      <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 300, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, minWidth: 160, boxShadow: '0 8px 24px rgba(0,0,0,0.35)', overflow: 'hidden', maxHeight: 280, overflowY: 'auto' }}>
+                        {(() => {
+                          const opts = filter === 'income' ? INCOME_CATS : groupFilter !== 'all' ? categories.filter(c => c.group === groupFilter) : categories
+                          return <>
+                            <button onClick={() => { setSubCatFilter('all'); setOpenFilter(null) }} style={{ display: 'block', width: '100%', padding: '9px 14px', background: subCatFilter === 'all' ? 'var(--accent-dim)' : 'transparent', border: 'none', borderBottom: '1px solid var(--border)', textAlign: 'left', cursor: 'pointer', fontSize: 12, color: subCatFilter === 'all' ? 'var(--accent)' : 'var(--text)', fontWeight: subCatFilter === 'all' ? 600 : 400, fontFamily: 'DM Sans' }}>All</button>
+                            {opts.map((c, i) => (
+                              <button key={c.id} onClick={() => { setSubCatFilter(c.id); setOpenFilter(null) }} style={{ display: 'block', width: '100%', padding: '9px 14px', background: subCatFilter === c.id ? 'var(--accent-dim)' : 'transparent', border: 'none', borderBottom: i < opts.length - 1 ? '1px solid var(--border)' : 'none', textAlign: 'left', cursor: 'pointer', fontSize: 12, color: subCatFilter === c.id ? 'var(--accent)' : c.color, fontWeight: subCatFilter === c.id ? 600 : 400, fontFamily: 'DM Sans' }}>{c.label}</button>
+                            ))}
+                          </>
+                        })()}
+                      </div>
+                    )}
+                  </div>
                   <span style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Description</span>
                   <button onClick={() => { if (sortCol === 'amount') setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortCol('amount'); setSortDir('desc') } }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 11, color: sortCol === 'amount' ? 'var(--accent)' : 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'DM Sans', textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 3 }}>Amount {sortCol === 'amount' ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</button>
                   <span style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right' }}>Actions</span>
