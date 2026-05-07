@@ -124,7 +124,7 @@ export default function Monthly() {
   })
 
   return (
-    <div style={{ padding:28, display:'flex', flexDirection:'column', gap:20 }}>
+    <div className="page-pad">
       {/* Contained toggle + month/year pickers */}
       <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
         {/* Toggle pill container */}
@@ -154,7 +154,7 @@ export default function Monthly() {
       {view === 'monthly' ? (
         <>
           {/* Stat cards */}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14 }}>
+          <div className="grid-stat-cards" style={{ gap:14 }}>
             {[
               { label:'Monthly Income',  value: fmt(income),  color:'var(--positive)', icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="18 15 12 9 6 15"/></svg> },
               { label:'Monthly Spending',value: fmt(expense), color:'var(--negative)', icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg> },
@@ -172,7 +172,7 @@ export default function Monthly() {
           </div>
 
           {/* Income sources + Spending breakdown */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+          <div className="grid-half">
             <Card>
               <div style={{ fontSize:14, fontWeight:600, color:'var(--text)', marginBottom:14 }}>Income Sources</div>
               {incomeSources.length === 0 ? (
@@ -311,7 +311,7 @@ export default function Monthly() {
       ) : (
         <>
           {/* Year stat cards */}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14 }}>
+          <div className="grid-stat-cards" style={{ gap:14 }}>
             {[
               { label:'Annual Income',  value: fmt(yearIncome),      color:'var(--positive)' },
               { label:'Annual Expenses',value: fmt(yearExpense),     color:'var(--negative)' },
