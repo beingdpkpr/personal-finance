@@ -15,9 +15,9 @@ const NAV = [
   { to: '/categories', label: 'Categories', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg> },
 ]
 
-interface Props { collapsed: boolean; mobileOpen?: boolean }
+interface Props { collapsed: boolean; mobileOpen?: boolean; onMobileClose?: () => void }
 
-export default function Sidebar({ collapsed, mobileOpen = false }: Props) {
+export default function Sidebar({ collapsed, mobileOpen = false, onMobileClose }: Props) {
   const { name, email, picture } = useFinanceContext()
   const [settingsOpen, setSettingsOpen] = useState(false)
 
@@ -40,7 +40,7 @@ export default function Sidebar({ collapsed, mobileOpen = false }: Props) {
 
       <nav style={{ flex:1, padding:'12px 8px', display:'flex', flexDirection:'column', gap:2 }}>
         {NAV.map(item => (
-          <NavLink key={item.to} to={item.to} style={({ isActive }) => ({
+          <NavLink key={item.to} to={item.to} onClick={onMobileClose} style={({ isActive }) => ({
             display:'flex', alignItems:'center', gap:10,
             padding: collapsed ? '10px 0' : '10px 12px',
             justifyContent: collapsed ? 'center' : 'flex-start',

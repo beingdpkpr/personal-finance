@@ -33,7 +33,7 @@ export default function AppShell() {
   return (
     <div style={{ display:'flex', height:'100vh', background:'var(--bg)', overflow:'hidden' }}>
       <div className={`sidebar-backdrop${mobileOpen ? ' open' : ''}`} onClick={() => setMobileOpen(false)} />
-      <Sidebar collapsed={collapsed} mobileOpen={mobileOpen} />
+      <Sidebar collapsed={collapsed} mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} />
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
         <Header onToggleSidebar={handleToggle} />
         <main style={{ flex:1, overflowY:'auto', background:'var(--bg)' }}>
