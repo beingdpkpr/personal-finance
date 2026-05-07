@@ -53,10 +53,17 @@ export default function Monthly() {
   const [selYear, setSelYear]   = useState(latestYear)
 
   /* â”€â”€â”€â”€â”€â”€â”€â”€ MONTHLY view data â”€â”€â”€â”€â”€â”€â”€â”€ */
+  const transferCatIds = useMemo(
+    () => new Set(categories.filter(c => c.depositsToAccount).map(c => c.id)),
+    [categories],
+  )
+  const isTransfer = (t: { type: string; category?: string }) =>
+    t.type === 'expense' && transferCatIds.has(t.category ?? '')
+
   const monthKey  = `${selYear}-${String(selMonth+1).padStart(2,'0')}`
   const monthTxns = txns.filter(t => t.date.startsWith(monthKey))
   const income    = monthTxns.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0)
-  const expense   = monthTxns.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0)
+  const expense   = monthTxns.filter(t=>t.type==='expense'&&!isTransfer(t)).reduce((s,t)=>s+t.amount,0)
   const savings   = income - expense
   const savingsRate = income > 0 ? Math.round((savings/income)*100) : 0
 
@@ -64,7 +71,7 @@ export default function Monthly() {
     ...c, amount: monthTxns.filter(t=>t.type==='income'&&t.category===c.id).reduce((s,t)=>s+t.amount,0)
   })).filter(c=>c.amount>0)
 
-  const expenseBycat = categories.map(c => ({
+  const expenseBycat = categories.filter(c=>!c.depositsToAccount).map(c => ({
     ...c, amount: monthTxns.filter(t=>t.type==='expense'&&t.category===c.id).reduce((s,t)=>s+t.amount,0)
   })).filter(c=>c.amount>0).sort((a,b)=>b.amount-a.amount)
 
@@ -72,7 +79,7 @@ export default function Monthly() {
     needs: '#5a9fff', family: '#60d0e0', savings: '#2ed18a', wants: '#f05060',
   }
   const spendingByGroup = GROUPS.map(group => {
-    const cats = categories.filter(c => c.group === group)
+    const cats = categories.filter(c => c.group === group && !c.depositsToAccount)
     const amount = cats.reduce((s, c) => {
       return s + monthTxns.filter(t => t.type==='expense' && t.category===c.id).reduce((ss,t)=>ss+t.amount,0)
     }, 0)
@@ -85,7 +92,7 @@ export default function Monthly() {
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
     const mt  = txns.filter(t => t.date.startsWith(key))
     const inc = mt.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0)
-    const sp  = mt.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0)
+    const sp  = mt.filter(t=>t.type==='expense'&&!isTransfer(t)).reduce((s,t)=>s+t.amount,0)
     const sav = inc - sp
     return { month: MONTHS[d.getMonth()], year: d.getFullYear(), inc, sp, sav, rate: inc>0?Math.round((sav/inc)*100):0 }
   })
@@ -95,13 +102,13 @@ export default function Monthly() {
 
   const yearTxns    = txns.filter(t=>t.date.startsWith(String(selYear)))
   const yearIncome  = yearTxns.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0)
-  const yearExpense = yearTxns.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0)
+  const yearExpense = yearTxns.filter(t=>t.type==='expense'&&!isTransfer(t)).reduce((s,t)=>s+t.amount,0)
   const yearSavings = yearIncome - yearExpense
   const yearSavingsRate = yearIncome > 0 ? Math.round((yearSavings/yearIncome)*100) : 0
 
   const yearBarData = Array.from({length:12}, (_,i) => {
     const key = `${selYear}-${String(i+1).padStart(2,'0')}`
-    return { month: MONTHS[i], amount: txns.filter(t=>t.date.startsWith(key)&&t.type==='expense').reduce((s,t)=>s+t.amount,0) }
+    return { month: MONTHS[i], amount: txns.filter(t=>t.date.startsWith(key)&&t.type==='expense'&&!isTransfer(t)).reduce((s,t)=>s+t.amount,0) }
   })
 
   const yr2 = String(selYear).slice(2)
@@ -349,7 +356,7 @@ export default function Monthly() {
               {availYears.map(y => {
                 const yt  = txns.filter(t=>t.date.startsWith(String(y)))
                 const yi  = yt.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0)
-                const ys  = yi - yt.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0)
+                const ys  = yi - yt.filter(t=>t.type==='expense'&&!isTransfer(t)).reduce((s,t)=>s+t.amount,0)
                 const rate = yi > 0 ? Math.round((ys/yi)*100) : 0
                 const isActive = y === selYear
                 return (
