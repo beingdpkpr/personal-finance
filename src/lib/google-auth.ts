@@ -101,32 +101,47 @@ declare global {
   }
 }
 
+function makeTokenClient(
+  resolve: (r: { accessToken: string; expiresIn: number }) => void,
+  reject: (e: Error) => void,
+  prompt: string,
+) {
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
+  if (!clientId) { reject(new Error('VITE_GOOGLE_CLIENT_ID is not set.')); return; }
+  const client = window.google!.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: SCOPES,
+    callback: (response) => {
+      if (response.access_token) {
+        resolve({ accessToken: response.access_token, expiresIn: response.expires_in ?? 3600 });
+      } else {
+        reject(new Error(response.error_description ?? response.error ?? 'Google sign-in failed'));
+      }
+    },
+    error_callback: (err) => {
+      if (err.type === 'popup_closed') reject(new Error('Sign-in popup was closed'));
+      else reject(new Error(`Sign-in error: ${err.type}`));
+    },
+  });
+  client.requestAccessToken({ prompt });
+}
+
 export function openGoogleOAuthPopup(): Promise<{ accessToken: string; expiresIn: number }> {
   return new Promise((resolve, reject) => {
     if (!window.google?.accounts?.oauth2) {
       reject(new Error('Google Identity Services not loaded. Check your internet connection and try again.'));
       return;
     }
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
-    if (!clientId) {
-      reject(new Error('VITE_GOOGLE_CLIENT_ID is not set.'));
+    makeTokenClient(resolve, reject, 'consent');
+  });
+}
+
+export function silentTokenRefresh(): Promise<{ accessToken: string; expiresIn: number }> {
+  return new Promise((resolve, reject) => {
+    if (!window.google?.accounts?.oauth2) {
+      reject(new Error('GIS not loaded'));
       return;
     }
-    const client = window.google.accounts.oauth2.initTokenClient({
-      client_id: clientId,
-      scope: SCOPES,
-      callback: (response) => {
-        if (response.access_token) {
-          resolve({ accessToken: response.access_token, expiresIn: response.expires_in ?? 3600 });
-        } else {
-          reject(new Error(response.error_description ?? response.error ?? 'Google sign-in failed'));
-        }
-      },
-      error_callback: (err) => {
-        if (err.type === 'popup_closed') reject(new Error('Sign-in popup was closed'));
-        else reject(new Error(`Sign-in error: ${err.type}`));
-      },
-    });
-    client.requestAccessToken({ prompt: 'consent' });
+    makeTokenClient(resolve, reject, '');
   });
 }

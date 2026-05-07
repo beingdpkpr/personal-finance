@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useFinanceContext } from '../../hooks/FinanceContext'
 import { useTheme } from '../../hooks/ThemeContext'
 import { CURRENCIES } from '../../constants/categories'
@@ -6,13 +7,23 @@ import { useNavigate } from 'react-router-dom'
 interface Props { onClose: () => void }
 
 export default function SettingsModal({ onClose }: Props) {
-  const { name, email, picture, currency, setCurrencyPref, logout } = useFinanceContext()
+  const { name, email, picture, currency, setCurrencyPref, logout, syncNow, user } = useFinanceContext()
   const { darkMode, themeName, toggleDarkMode, setTheme } = useTheme()
   const navigate = useNavigate()
+  const [syncing, setSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState<{ ok: boolean; msg: string } | null>(null)
 
   async function handleLogout() {
     await logout()
     navigate('/login', { replace: true })
+  }
+
+  async function handleSync() {
+    setSyncing(true); setSyncResult(null)
+    const err = await syncNow()
+    setSyncing(false)
+    setSyncResult(err ? { ok: false, msg: err } : { ok: true, msg: 'Synced successfully.' })
+    setTimeout(() => setSyncResult(null), 4000)
   }
 
   return (
@@ -74,6 +85,42 @@ export default function SettingsModal({ onClose }: Props) {
               {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.symbol} {c.code}</option>)}
             </select>
           </div>
+
+          <div style={{ height:1, background:'var(--border)' }} />
+
+          {/* Sync */}
+          {user && user !== 'demo' && (
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <div>
+                  <div style={{ fontSize:14, color:'var(--text)', fontWeight:500 }}>Google Sheets Sync</div>
+                  <div style={{ fontSize:12, color:'var(--text-dim)', marginTop:2 }}>Push all local data to your sheet now</div>
+                </div>
+                <button onClick={handleSync} disabled={syncing} style={{ display:'flex', alignItems:'center', gap:7, padding:'8px 16px', borderRadius:10, border:'1px solid var(--border)', background: syncing ? 'var(--surface2)' : 'var(--accent-dim)', color: syncing ? 'var(--text-dim)' : 'var(--accent)', cursor: syncing ? 'default' : 'pointer', fontSize:13, fontWeight:600, transition:'all 0.15s', opacity: syncing ? 0.7 : 1 }}>
+                  {syncing ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation:'spin 1s linear infinite' }}>
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                    </svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                    </svg>
+                  )}
+                  {syncing ? 'Syncing…' : 'Sync Now'}
+                </button>
+              </div>
+              {syncResult && (
+                <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, padding:'7px 10px', borderRadius:8, background: syncResult.ok ? 'oklch(0.2 0.06 145)' : 'oklch(0.22 0.08 25)', color: syncResult.ok ? 'var(--positive)' : 'var(--negative)', border:`1px solid ${syncResult.ok ? 'var(--positive)' : 'var(--negative)'}` }}>
+                  {syncResult.ok
+                    ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  }
+                  {syncResult.msg}
+                </div>
+              )}
+            </div>
+          )}
 
           <div style={{ height:1, background:'var(--border)' }} />
 

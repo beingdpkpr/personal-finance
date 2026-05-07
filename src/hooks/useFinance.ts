@@ -9,7 +9,7 @@ import { setCurrency } from '../lib/format';
 import { applyRecurring } from '../lib/recurring';
 import {
   saveGoogleSession, getGoogleSession, clearGoogleSession,
-  isTokenExpired, hasMigrated, setMigrated,
+  isTokenExpired, hasMigrated, setMigrated, silentTokenRefresh,
 } from '../lib/google-auth';
 import { ensureSpreadsheet, pushAll, pullAll } from '../lib/sync';
 import { runMigrationIfNeeded } from '../lib/migration';
@@ -34,6 +34,7 @@ export interface FinanceState {
   googleSignIn:    (accessToken: string, expiresIn: number) => Promise<string | null>;
   logout:          () => Promise<void>;
   loadDemoData:    () => Promise<void>;
+  syncNow:         () => Promise<string | null>;
   addTxn:          (t: Omit<Transaction, 'id'>) => void;
   editTxn:         (t: Transaction) => void;
   editTxns:        (ts: Transaction[]) => void;
@@ -71,18 +72,23 @@ export function useFinance(): FinanceState {
   const scheduleSync = useCallback(() => {
     if (syncTimer.current) clearTimeout(syncTimer.current);
     syncTimer.current = setTimeout(async () => {
-      const session = await getGoogleSession();
+      let session = await getGoogleSession();
       if (!session) return;
       if (isTokenExpired(session)) {
-        await clearGoogleSession();
-        setSessionNote('Your session expired. Please sign in again to keep your data backed up.');
-        setUser(null);
-        return;
+        try {
+          const { accessToken, expiresIn } = await silentTokenRefresh();
+          await saveGoogleSession(accessToken, expiresIn, session.email, session.userId, session.name, session.picture);
+          session = { ...session, accessToken, expiry: Date.now() + expiresIn * 1000 };
+        } catch {
+          setSessionNote('Your Google session expired. Open Settings to re-sync.');
+          return;
+        }
       }
       if (!session.spreadsheetId) return;
       try {
         await pushAll(session.accessToken, session.spreadsheetId, session.userId);
         setSyncError(null);
+        setSessionNote(null);
       } catch (e) {
         setSyncError(e instanceof Error ? e.message : 'Sync failed. Changes are saved locally.');
       }
@@ -230,6 +236,31 @@ export function useFinance(): FinanceState {
   const setCategories   = useCallback((c: Category[]) => setCategoriesState(c), []);
   const setPrefs        = useCallback((p: UserPrefs) => setPrefsState(p), []);
 
+  const syncNow = useCallback(async (): Promise<string | null> => {
+    let session = await getGoogleSession();
+    if (!session) return 'Not signed in to Google.';
+    if (isTokenExpired(session)) {
+      try {
+        const { accessToken, expiresIn } = await silentTokenRefresh();
+        await saveGoogleSession(accessToken, expiresIn, session.email, session.userId, session.name, session.picture);
+        session = { ...session, accessToken, expiry: Date.now() + expiresIn * 1000 };
+      } catch {
+        return 'Session expired. Please sign out and sign in again.';
+      }
+    }
+    if (!session.spreadsheetId) return 'No spreadsheet linked.';
+    try {
+      await pushAll(session.accessToken, session.spreadsheetId, session.userId);
+      setSyncError(null);
+      setSessionNote(null);
+      return null;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Sync failed.';
+      setSyncError(msg);
+      return msg;
+    }
+  }, []);
+
   const loadDemoData = useCallback(async () => {
     const DEMO_TXNS: Transaction[] = [
       // April 2026
@@ -333,7 +364,7 @@ export function useFinance(): FinanceState {
   return {
     user, email, name, picture, loading, txns, budgets, goals, nw, recurring, currency, categories,
     syncError, sessionNote,
-    googleSignIn, logout, loadDemoData,
+    googleSignIn, logout, loadDemoData, syncNow,
     addTxn, editTxn, editTxns, deleteTxn, deleteTxns,
     setBudgets, setGoals, setNw, setRecurring, setCurrencyPref, setCategories, setPrefs,
     prefs,
