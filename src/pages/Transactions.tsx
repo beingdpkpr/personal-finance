@@ -54,6 +54,14 @@ export default function Transactions() {
   const [recatGroup, setRecatGroup]   = useState<Group | ''>('')
   const [recatCat, setRecatCat]       = useState('')
   const [selectedMonth, setSelectedMonth] = useState(searchParams.get('month') ?? '')
+  const [toast, setToast]             = useState<{ msg: string; ok: boolean } | null>(null)
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function showToast(msg: string, ok: boolean) {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    setToast({ msg, ok })
+    toastTimer.current = setTimeout(() => setToast(null), 5000)
+  }
 
   function selectMonth(ym: string) {
     setSelectedMonth(ym)
@@ -182,42 +190,58 @@ export default function Transactions() {
     const file = e.target.files?.[0]; if (!file) return
     const reader = new FileReader()
     reader.onload = ev => {
-      const text = ev.target?.result as string
-      const lines = text.trim().split(/\r?\n/).slice(1)
-      lines.forEach(line => {
-        // Proper RFC-4180 CSV parse (handles quoted fields with embedded commas)
-        const cols: string[] = []
-        let cur = '', inQ = false
-        for (let i = 0; i < line.length; i++) {
-          const ch = line[i]
-          if (inQ) {
-            if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++ }
-            else if (ch === '"') inQ = false
-            else cur += ch
-          } else {
-            if (ch === '"') inQ = true
-            else if (ch === ',') { cols.push(cur); cur = '' }
-            else cur += ch
+      try {
+        const text = ev.target?.result as string
+        const lines = text.trim().split(/\r?\n/).slice(1)
+        const existingKeys = new Set(txns.map(t => `${t.date}|${t.amount}|${t.description.toLowerCase()}`))
+        let imported = 0, skipped = 0
+        lines.forEach(line => {
+          // Proper RFC-4180 CSV parse (handles quoted fields with embedded commas)
+          const cols: string[] = []
+          let cur = '', inQ = false
+          for (let i = 0; i < line.length; i++) {
+            const ch = line[i]
+            if (inQ) {
+              if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++ }
+              else if (ch === '"') inQ = false
+              else cur += ch
+            } else {
+              if (ch === '"') inQ = true
+              else if (ch === ',') { cols.push(cur); cur = '' }
+              else cur += ch
+            }
           }
-        }
-        cols.push(cur)
+          cols.push(cur)
 
-        let [date, description, category, type, amount, rawNotes] = cols
-        if (!date || !description || !type || !amount) return
+          let [date, description, category, type, amount, rawNotes] = cols
+          if (!date || !description || !type || !amount) return
 
-        // Normalise date: accept YYYY-MM-DD (pass through) or DD-MM-YYYY → YYYY-MM-DD
-        const ddmmyyyy = date.match(/^(\d{2})-(\d{2})-(\d{4})$/)
-        if (ddmmyyyy) date = `${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}`
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return  // skip unparseable dates
+          // Normalise date: accept YYYY-MM-DD (pass through) or DD-MM-YYYY → YYYY-MM-DD
+          const ddmmyyyy = date.match(/^(\d{2})-(\d{2})-(\d{4})$/)
+          if (ddmmyyyy) date = `${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}`
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return
 
-        let notes: string | undefined
-        const match = rawNotes?.match(/subcat:([^|;]+)/)
-        if (match) notes = rawNotes.replace(/subcat:[^|;]*/, '').replace(/^[|;\s]+/, '').trim() || undefined
-        else notes = rawNotes || undefined
+          let notes: string | undefined
+          const match = rawNotes?.match(/subcat:([^|;]+)/)
+          if (match) notes = rawNotes.replace(/subcat:[^|;]*/, '').replace(/^[|;\s]+/, '').trim() || undefined
+          else notes = rawNotes || undefined
 
-        addTxn({ date, description, category: category || undefined, type: type as 'expense' | 'income', amount: parseFloat(amount) || 0, notes })
-      })
+          const key = `${date}|${parseFloat(amount)}|${description.toLowerCase()}`
+          if (existingKeys.has(key)) { skipped++; return }
+          existingKeys.add(key)
+          addTxn({ date, description, category: category || undefined, type: type as 'expense' | 'income', amount: parseFloat(amount) || 0, notes })
+          imported++
+        })
+        const parts = []
+        if (imported > 0) parts.push(`${imported} imported`)
+        if (skipped > 0) parts.push(`${skipped} duplicate${skipped !== 1 ? 's' : ''} skipped`)
+        if (parts.length > 0) showToast(parts.join(', ') + '.', imported > 0)
+        else showToast('No valid transactions found in the file.', false)
+      } catch {
+        showToast('Import failed — could not parse the CSV file.', false)
+      }
     }
+    reader.onerror = () => showToast('Import failed — could not read the file.', false)
     reader.readAsText(file); e.target.value = ''
   }
 
@@ -534,6 +558,26 @@ export default function Transactions() {
       </Card>
 
       {gpayOpen && <GooglePayImportModal onClose={() => setGpayOpen(false)} />}
+
+      {/* Import toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--surface)', border: `1px solid ${toast.ok ? 'var(--positive)' : 'var(--negative)'}`,
+          borderRadius: 12, padding: '12px 18px', display: 'flex', alignItems: 'center',
+          gap: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 2000,
+          animation: 'slideUp 0.2s ease both', maxWidth: 420,
+        }}>
+          <span style={{ color: toast.ok ? 'var(--positive)' : 'var(--negative)', display: 'flex', flexShrink: 0 }}>
+            {toast.ok
+              ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            }
+          </span>
+          <span style={{ fontSize: 13, color: 'var(--text)', flex: 1, lineHeight: 1.4 }}>{toast.msg}</span>
+          <button onClick={() => setToast(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', fontSize: 16, padding: '0 2px', flexShrink: 0 }}>×</button>
+        </div>
+      )}
     </div>
   )
 }

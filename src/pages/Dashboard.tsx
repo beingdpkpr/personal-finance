@@ -53,15 +53,12 @@ export default function Dashboard() {
 
   const totalAssets   = nw.assets.reduce((s,a) => s+a.value, 0)
   const totalLiab     = nw.liabilities.reduce((s,l) => s+l.value, 0)
-  const netWorth      = totalAssets - totalLiab
 
   const liquidAssets  = nw.assets.filter(a => a.liquid !== false).reduce((s,a) => s+a.value, 0)
   const liquidLiab    = nw.liabilities.filter(l => l.liquid !== false).reduce((s,l) => s+l.value, 0)
   const liquidNW      = liquidAssets - liquidLiab
   const illiquidTotal = totalAssets - liquidAssets
   const lastLiquidNW  = liquidNW - netSavings
-
-  const lastNW      = netWorth - netSavings
 
   const areaData = Array.from({length: cashFlowMonths}, (_,i) => {
     const d = new Date(ty, tm-1-(cashFlowMonths-1)+i, 1)

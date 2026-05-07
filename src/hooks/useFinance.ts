@@ -102,12 +102,17 @@ export function useFinance(): FinanceState {
       storage.getPrefs(userId),
     ]);
     const applied = applyRecurring(r, t);
+    // Normalise any DD-MM-YYYY dates stored from old imports → YYYY-MM-DD
+    const normalised = applied.map(txn => {
+      const m = txn.date?.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+      return m ? { ...txn, date: `${m[3]}-${m[2]}-${m[1]}` } : txn;
+    });
     setCurrency(c);
     setUser(userId);
     setEmail(userEmail ?? null);
     setName(userName ?? null);
     setPicture(userPicture ?? null);
-    setTxnsState(applied);
+    setTxnsState(normalised);
     setBudgetsState(b);
     setRecurringState(r);
     setGoalsState(g);
