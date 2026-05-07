@@ -36,6 +36,7 @@ export interface FinanceState {
   loadDemoData:    () => Promise<void>;
   addTxn:          (t: Omit<Transaction, 'id'>) => void;
   editTxn:         (t: Transaction) => void;
+  editTxns:        (ts: Transaction[]) => void;
   deleteTxn:       (id: string) => void;
   deleteTxns:      (ids: string[]) => void;
   setBudgets:      (b: BudgetMap) => void;
@@ -213,6 +214,7 @@ export function useFinance(): FinanceState {
 
   const addTxn      = useCallback((t: Omit<Transaction, 'id'>) => setTxnsState(prev => [...prev, { ...t, id: uid() }]), []);
   const editTxn     = useCallback((t: Transaction) => setTxnsState(prev => prev.map(x => x.id === t.id ? t : x)), []);
+  const editTxns    = useCallback((ts: Transaction[]) => { const map = new Map(ts.map(t => [t.id, t])); setTxnsState(prev => prev.map(x => map.has(x.id) ? map.get(x.id)! : x)); }, []);
   const deleteTxn   = useCallback((id: string) => setTxnsState(prev => prev.filter(x => x.id !== id)), []);
   const deleteTxns  = useCallback((ids: string[]) => { const set = new Set(ids); setTxnsState(prev => prev.filter(x => !set.has(x.id))); }, []);
   const setBudgets  = useCallback((b: BudgetMap) => setBudgetsState(b), []);
@@ -327,7 +329,7 @@ export function useFinance(): FinanceState {
     user, email, name, picture, loading, txns, budgets, goals, nw, recurring, currency, categories,
     syncError, sessionNote,
     googleSignIn, logout, loadDemoData,
-    addTxn, editTxn, deleteTxn, deleteTxns,
+    addTxn, editTxn, editTxns, deleteTxn, deleteTxns,
     setBudgets, setGoals, setNw, setRecurring, setCurrencyPref, setCategories, setPrefs,
     prefs,
   };

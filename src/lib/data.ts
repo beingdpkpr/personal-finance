@@ -72,6 +72,7 @@ export interface NetWorthItem {
   institution?:   string;
   accountNumber?: string;
   notes?:         string;
+  liquid?:        boolean;
 }
 
 export interface NetWorthData {

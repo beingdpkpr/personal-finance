@@ -15,9 +15,13 @@ export default function Accounts() {
   const [modal, setModal] = useState<ModalState>({ open: false })
   const [hovId, setHovId] = useState<string | null>(null)
 
-  const totalAssets = nw.assets.reduce((s,a) => s+a.value, 0)
-  const totalLiab   = nw.liabilities.reduce((s,l) => s+l.value, 0)
-  const netWorth    = totalAssets - totalLiab
+  const totalAssets  = nw.assets.reduce((s,a) => s+a.value, 0)
+  const totalLiab    = nw.liabilities.reduce((s,l) => s+l.value, 0)
+  const netWorth     = totalAssets - totalLiab
+  const liquidAssets = nw.assets.filter(a => a.liquid !== false).reduce((s,a) => s+a.value, 0)
+  const liquidLiab   = nw.liabilities.filter(l => l.liquid !== false).reduce((s,l) => s+l.value, 0)
+  const liquidNW     = liquidAssets - liquidLiab
+  const illiquidTotal = totalAssets - liquidAssets
 
   // Approximate last month NW using this month's net savings
   const now = new Date()
@@ -110,6 +114,12 @@ export default function Accounts() {
                       {!item.institution && !item.accountNumber && <span>{item.isLiability ? 'Liability' : 'Asset'}</span>}
                     </div>
                     {item.notes && <div style={{ fontSize:11, color:'var(--text-dim)', marginTop:3, opacity:0.7, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.notes}</div>}
+                    {item.liquid === false && (
+                      <div style={{ marginTop:4, display:'inline-flex', alignItems:'center', gap:4, fontSize:10, color:'#f59e0b', background:'#f59e0b18', border:'1px solid #f59e0b33', borderRadius:20, padding:'2px 7px', fontWeight:600 }}>
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        Illiquid
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end' }}>
@@ -140,9 +150,9 @@ export default function Accounts() {
       {/* Net worth header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
         <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-          <div style={{ fontSize:12, color:'var(--text-dim)', textTransform:'uppercase', letterSpacing:'0.06em' }}>Total Net Worth</div>
+          <div style={{ fontSize:12, color:'var(--text-dim)', textTransform:'uppercase', letterSpacing:'0.06em' }}>Liquid Net Worth</div>
           <div style={{ display:'flex', alignItems:'baseline', gap:12 }}>
-            <div style={{ fontSize:32, fontWeight:700, fontFamily:'DM Mono', color:'var(--text)', letterSpacing:'-0.02em' }}>{fmt(netWorth)}</div>
+            <div style={{ fontSize:32, fontWeight:700, fontFamily:'DM Mono', color:'var(--text)', letterSpacing:'-0.02em' }}>{fmt(liquidNW)}</div>
             {nwDelta > 0 && (
               <span style={{ fontSize:12, fontWeight:600, borderRadius:20, padding:'3px 8px', color: nwUp ? 'oklch(0.68 0.18 145)' : 'oklch(0.64 0.2 25)', background: nwUp ? 'oklch(0.22 0.08 145)' : 'oklch(0.22 0.08 25)', display:'flex', alignItems:'center', gap:3 }}>
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -152,6 +162,12 @@ export default function Accounts() {
               </span>
             )}
           </div>
+          {illiquidTotal > 0 && (
+            <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'#f59e0b', marginTop:2 }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              +{fmt(illiquidTotal)} in illiquid assets · Total NW {fmt(netWorth)}
+            </div>
+          )}
           {/* Composition bar */}
           <div style={{ display:'flex', flexDirection:'column', gap:6, marginTop:2 }}>
             <div style={{ height:6, borderRadius:3, overflow:'hidden', display:'flex', gap:1, maxWidth:360 }}>

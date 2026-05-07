@@ -14,6 +14,7 @@ export default function AddAccountModal({ type, onClose, onSave, editItem }: Pro
   const [institution, setInstitution] = useState(editItem?.institution ?? '')
   const [accountNumber, setAccountNumber] = useState(editItem?.accountNumber ?? '')
   const [notes, setNotes]             = useState(editItem?.notes ?? '')
+  const [liquid, setLiquid]           = useState(editItem?.liquid ?? true)
 
   useEffect(() => {
     setName(editItem?.name ?? '')
@@ -21,6 +22,7 @@ export default function AddAccountModal({ type, onClose, onSave, editItem }: Pro
     setInstitution(editItem?.institution ?? '')
     setAccountNumber(editItem?.accountNumber ?? '')
     setNotes(editItem?.notes ?? '')
+    setLiquid(editItem?.liquid ?? true)
   }, [editItem])
 
   function handleSave() {
@@ -31,6 +33,7 @@ export default function AddAccountModal({ type, onClose, onSave, editItem }: Pro
       institution: institution.trim() || undefined,
       accountNumber: accountNumber.trim() || undefined,
       notes: notes.trim() || undefined,
+      liquid,
     })
   }
 
@@ -52,6 +55,19 @@ export default function AddAccountModal({ type, onClose, onSave, editItem }: Pro
         <input value={accountNumber} onChange={e=>setAccountNumber(e.target.value)} placeholder="Account number (optional)" style={inputStyle} />
         <input value={value} onChange={e=>setValue(e.target.value)} placeholder="Current value / balance" type="number" min="0" step="0.01" style={inputStyle} />
         <input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Notes (optional)" style={inputStyle} />
+
+        {/* Liquid toggle */}
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'4px 0' }}>
+          <div>
+            <div style={{ fontSize:13, color:'var(--text)', fontWeight:500 }}>Liquid asset</div>
+            <div style={{ fontSize:11, color:'var(--text-dim)', marginTop:2 }}>Uncheck for pensions, property, locked investments</div>
+          </div>
+          <button type="button" onClick={() => setLiquid(l => !l)}
+            style={{ width:44, height:24, borderRadius:12, border:'none', cursor:'pointer', background: liquid ? 'var(--accent)' : 'var(--border)', position:'relative', transition:'background 0.2s', flexShrink:0 }}>
+            <span style={{ position:'absolute', top:3, left: liquid ? 20 : 3, width:18, height:18, borderRadius:9, background:'white', transition:'left 0.2s', display:'block' }} />
+          </button>
+        </div>
+
         <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
           <button onClick={onClose} style={{ padding:'9px 18px', borderRadius:10, border:'1px solid var(--border)', background:'none', color:'var(--text-dim)', cursor:'pointer', fontSize:13 }}>Cancel</button>
           <button onClick={handleSave} disabled={!name||!value} style={{ padding:'9px 18px', borderRadius:10, border:'none', background: type==='asset'?'var(--positive)':'var(--negative)', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600, opacity:(!name||!value)?0.5:1 }}>Save</button>

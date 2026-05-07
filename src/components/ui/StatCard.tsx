@@ -5,6 +5,7 @@ interface Props {
   label: string
   value: string
   sub?: string
+  note?: string
   icon: React.ReactNode
   color: string
   positive?: boolean
@@ -13,7 +14,7 @@ interface Props {
   rate?: number
 }
 
-export default function StatCard({ label, value, sub, icon, color, positive, delay, animate, rate }: Props) {
+export default function StatCard({ label, value, sub, note, icon, color, positive, delay, animate, rate }: Props) {
   return (
     <Card delay={delay} animate={animate} style={{ display:'flex', flexDirection:'column', gap:14 }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
@@ -31,6 +32,12 @@ export default function StatCard({ label, value, sub, icon, color, positive, del
             <div style={{ height:'100%', borderRadius:2, background: rate >= 20 ? 'var(--positive)' : rate >= 10 ? '#f59e0b' : 'var(--negative)', width:`${Math.min(Math.max(rate,0),100)}%`, transition:'width 0.8s ease' }} />
           </div>
           <span style={{ fontSize:10, color:'var(--text-dim)' }}>{rate}% savings rate</span>
+        </div>
+      )}
+      {note && (
+        <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:-6 }}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span style={{ fontSize:11, color:'#f59e0b' }}>{note}</span>
         </div>
       )}
       {sub !== undefined && (

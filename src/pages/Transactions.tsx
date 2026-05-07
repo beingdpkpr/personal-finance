@@ -32,7 +32,7 @@ function Checkbox({ checked, indeterminate, onChange }: { checked: boolean; inde
 }
 
 export default function Transactions() {
-  const { txns, deleteTxn, deleteTxns, openAdd, openEdit, addTxn, editTxn, categories } = useFinanceContext()
+  const { txns, deleteTxn, deleteTxns, openAdd, openEdit, addTxn, editTxn, editTxns, categories } = useFinanceContext()
   const [searchParams] = useSearchParams()
   const [search, setSearch]           = useState(searchParams.get('q') ?? '')
   const [filter, setFilter]           = useState<Filter>('all')
@@ -53,7 +53,14 @@ export default function Transactions() {
   const [recatGroup, setRecatGroup]   = useState<Group | ''>('')
   const [recatCat, setRecatCat]       = useState('')
 
-  useEffect(() => { const q = searchParams.get('q'); if (q) setSearch(q) }, [searchParams])
+  useEffect(() => {
+    const q    = searchParams.get('q')
+    const from = searchParams.get('from')
+    const to   = searchParams.get('to')
+    if (q    !== null) setSearch(q)
+    if (from !== null) setDateFrom(from)
+    if (to   !== null) setDateTo(to)
+  }, [searchParams])
   useEffect(() => { setSelected(new Set()); setPage(1) }, [search, filter, groupFilter, subCatFilter, tagFilter, dateFrom, dateTo, sortCol, sortDir])
 
   const fileRef = useRef<HTMLInputElement>(null)
@@ -134,15 +141,16 @@ export default function Transactions() {
   function bulkRecategorize() {
     if (!recatGroup) return
     const validCat = categories.find(c => c.id === recatCat && c.group === recatGroup)?.id
-    txns.filter(t => selected.has(t.id) && t.type === 'expense').forEach(t => {
-      editTxn({ ...t, group: recatGroup as Group, category: validCat })
-    })
+    const updated = txns
+      .filter(t => selected.has(t.id) && t.type === 'expense')
+      .map(t => ({ ...t, group: recatGroup as Group, category: validCat }))
+    editTxns(updated)
     setSelected(new Set()); setShowRecat(false); setRecatGroup(''); setRecatCat('')
   }
 
   function exportCSV() {
     const headers = ['Date', 'Description', 'Category', 'Type', 'Amount', 'Notes', 'Tags']
-    const rows = filtered.map(t => [t.date, t.description, t.category, t.type, t.amount, t.notes ?? '', (t.tags ?? []).join(';')])
+    const rows = filtered.map(t => [t.date, t.description, getCatLabel(t.category, t.type), t.type, t.amount, t.notes ?? '', (t.tags ?? []).join(';')])
     const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url  = URL.createObjectURL(blob)

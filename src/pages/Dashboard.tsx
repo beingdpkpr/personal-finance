@@ -51,9 +51,16 @@ export default function Dashboard() {
   const lastNetSavings = lastIncome - lastExpense
   const savingsRate   = monthIncome > 0 ? Math.round((netSavings / monthIncome) * 100) : 0
 
-  const totalAssets = nw.assets.reduce((s,a) => s+a.value, 0)
-  const totalLiab   = nw.liabilities.reduce((s,l) => s+l.value, 0)
-  const netWorth    = totalAssets - totalLiab
+  const totalAssets   = nw.assets.reduce((s,a) => s+a.value, 0)
+  const totalLiab     = nw.liabilities.reduce((s,l) => s+l.value, 0)
+  const netWorth      = totalAssets - totalLiab
+
+  const liquidAssets  = nw.assets.filter(a => a.liquid !== false).reduce((s,a) => s+a.value, 0)
+  const liquidLiab    = nw.liabilities.filter(l => l.liquid !== false).reduce((s,l) => s+l.value, 0)
+  const liquidNW      = liquidAssets - liquidLiab
+  const illiquidTotal = totalAssets - liquidAssets
+  const lastLiquidNW  = liquidNW - netSavings
+
   const lastNW      = netWorth - netSavings
 
   const areaData = Array.from({length: cashFlowMonths}, (_,i) => {
@@ -77,7 +84,7 @@ export default function Dashboard() {
   const donutEntries = otherAmt > 0 ? [...top5, { label:'Other', color:'#6b7280', amount: otherAmt }] : top5
   const donutSegs = donutEntries.map(c=>({ label:c.label, color:c.color, pct: totalCatSpend>0?(c.amount/totalCatSpend)*100:0 }))
 
-  // Net worth trend: reconstruct NW for last 6 months by reversing monthly net savings
+  // Liquid NW trend: reconstruct for last 6 months by reversing monthly net savings
   const nwTrend = Array.from({ length: 6 }, (_, i) => {
     const d = new Date(ty, tm - 1 - (5 - i), 1)
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -85,7 +92,7 @@ export default function Dashboard() {
     return mt.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
          - mt.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
   }).reduce<number[]>((acc, delta, i) => {
-    acc.push(i === 0 ? netWorth - areaData.slice(0, 5).reduce((s, d) => s + d.income - d.expense, 0) : acc[i - 1] + delta)
+    acc.push(i === 0 ? liquidNW - areaData.slice(0, 5).reduce((s, d) => s + d.income - d.expense, 0) : acc[i - 1] + delta)
     return acc
   }, [])
 
@@ -99,8 +106,9 @@ export default function Dashboard() {
     <div className="page-pad">
       {/* Stat cards */}
       <div className="grid-stat-cards">
-        <StatCard label="Net Worth" value={fmt(netWorth)} color="#7c6ef5" delay={0}
-          sub={String(pctChange(netWorth, lastNW))} positive={netWorth >= lastNW}
+        <StatCard label="Liquid Net Worth" value={fmt(liquidNW)} color="#7c6ef5" delay={0}
+          sub={String(pctChange(liquidNW, lastLiquidNW))} positive={liquidNW >= lastLiquidNW}
+          note={illiquidTotal > 0 ? `+${fmt(illiquidTotal)} illiquid` : undefined}
           icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>} />
         <StatCard label={`Income · ${monthLabel}`} value={fmt(monthIncome)} color="#22c55e" delay={0.05}
           sub={String(pctChange(monthIncome, lastIncome))} positive={monthIncome >= lastIncome}
@@ -142,7 +150,7 @@ export default function Dashboard() {
             <DonutChart segments={donutSegs} size={110} centerLabel={fmt(totalCatSpend)} centerSub={`${MONTHS[tm-1]} spend`}
               onSegmentClick={i => navigate(`/transactions?q=${encodeURIComponent(donutSegs[i].label)}`)} />
             <div style={{ flex:1, display:'flex', flexDirection:'column', gap:7 }}>
-              {donutSegs.map((c, i) => (
+              {donutSegs.map((c) => (
                 <div key={c.label} onClick={() => navigate(`/transactions?q=${encodeURIComponent(c.label)}`)}
                   style={{ display:'flex', alignItems:'center', gap:7, cursor:'pointer', borderRadius:6, padding:'2px 4px', transition:'background 0.12s' }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface3)')}
