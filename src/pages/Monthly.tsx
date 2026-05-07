@@ -91,8 +91,7 @@ export default function Monthly() {
   })
 
   /* â”€â”€â”€â”€â”€â”€â”€â”€ YEARLY view data â”€â”€â”€â”€â”€â”€â”€â”€ */
-  const availYears = Array.from(new Set(txns.map(t=>Number(t.date.slice(0,4))))).sort((a,b)=>b-a).slice(0,4)
-  if (!availYears.includes(now.getFullYear())) availYears.unshift(now.getFullYear())
+  const availYears = Array.from(new Set(txns.filter(t=>!!t.date).map(t=>Number(t.date.slice(0,4))))).sort((a,b)=>b-a)
 
   const yearTxns    = txns.filter(t=>t.date.startsWith(String(selYear)))
   const yearIncome  = yearTxns.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0)
@@ -140,7 +139,7 @@ export default function Monthly() {
         {view === 'monthly' && (
           <>
             <select value={selYear} onChange={e=>setSelYear(Number(e.target.value))} style={{ padding:'7px 10px', borderRadius:10, border:'1px solid var(--border)', background:'var(--surface2)', color:'var(--text)', fontSize:13, cursor:'pointer', outline:'none' }}>
-              {Array.from({length:5},(_,i)=>now.getFullYear()-i).map(y=><option key={y} value={y}>{y}</option>)}
+              {availYears.map(y=><option key={y} value={y}>{y}</option>)}
             </select>
             {MONTHS.map((m,i) => (
               <button key={i} style={monthPill(selMonth===i)} onClick={()=>setSelMonth(i)}>{m} '{yr2}</button>
