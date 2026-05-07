@@ -14,11 +14,14 @@ export const TAB_HEADERS: Record<TabName, string[]> = {
   Categories:   ['id', 'label', 'group', 'color'],
 };
 
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
 async function sheetsRequest(
   method: string,
   url: string,
   accessToken: string,
   body?: unknown,
+  attempt = 0,
 ): Promise<unknown> {
   const res = await fetch(url, {
     method,
@@ -28,6 +31,12 @@ async function sheetsRequest(
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
+  if (res.status === 429 && attempt < 4) {
+    const retryAfter = parseInt(res.headers.get('Retry-After') ?? '0', 10);
+    const wait = retryAfter > 0 ? retryAfter * 1000 : Math.min(4000 * 2 ** attempt + Math.random() * 1000, 60_000);
+    await delay(wait);
+    return sheetsRequest(method, url, accessToken, body, attempt + 1);
+  }
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(`Sheets API ${method} ${res.status}: ${text}`);

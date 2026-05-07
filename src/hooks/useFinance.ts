@@ -92,7 +92,7 @@ export function useFinance(): FinanceState {
       } catch (e) {
         setSyncError(e instanceof Error ? e.message : 'Sync failed. Changes are saved locally.');
       }
-    }, 2000);
+    }, 15_000);
   }, []);
 
   async function loadUser(userId: string, userEmail?: string | null, userName?: string | null, userPicture?: string | null) {
