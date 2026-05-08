@@ -20,6 +20,7 @@ export default function Header({ onToggleSidebar }: Props) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [searchVal, setSearchVal] = useState('')
   const [notifOpen, setNotifOpen] = useState(false)
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const notifRef = useRef<HTMLDivElement>(null)
 
   const initials = name
@@ -40,7 +41,7 @@ export default function Header({ onToggleSidebar }: Props) {
     const pct = limit > 0 ? (spent / limit) * 100 : 0
     const color = categories.find(c => c.group === group)?.color ?? '#888'
     return { id: group, label: GROUP_LABELS[group], color, spent, limit, pct }
-  }).filter(a => a.pct >= 80 && a.limit > 0)
+  }).filter(a => a.pct >= 80 && a.limit > 0 && !dismissed.has(a.id))
 
   // Close notification panel on outside click
   useEffect(() => {
@@ -128,8 +129,14 @@ export default function Header({ onToggleSidebar }: Props) {
               borderRadius: 14, boxShadow: '0 12px 40px rgba(0,0,0,0.3)',
               zIndex: 200, overflow: 'hidden', animation: 'scaleIn 0.15s ease both',
             }}>
-              <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
-                Notifications
+              <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Notifications</span>
+                {alerts.length > 0 && (
+                  <button onClick={() => setDismissed(new Set(alerts.map(a => a.id)))}
+                    style={{ fontSize: 11, color: 'var(--text-dim)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px', borderRadius: 6 }}>
+                    Clear all
+                  </button>
+                )}
               </div>
               {alerts.length === 0 ? (
                 <div style={{ padding: '20px 16px', fontSize: 13, color: 'var(--text-dim)', textAlign: 'center' }}>
@@ -160,6 +167,12 @@ export default function Header({ onToggleSidebar }: Props) {
                           {fmt(a.spent)} spent of {fmt(a.limit)} · <span style={{ color: a.pct >= 100 ? 'var(--negative)' : 'var(--warning)', fontWeight: 600 }}>{Math.round(a.pct)}%</span>
                         </div>
                       </div>
+                      <button
+                        onClick={e => { e.stopPropagation(); setDismissed(d => new Set([...d, a.id])) }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '2px', flexShrink: 0, display: 'flex', alignItems: 'center' }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
                     </div>
                   ))}
                 </div>
