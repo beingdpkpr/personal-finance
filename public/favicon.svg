@@ -1,16 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs>
-    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#6d5ce6"/>
-      <stop offset="100%" stop-color="#a78bfa"/>
-    </linearGradient>
-  </defs>
-  <rect width="64" height="64" rx="14" fill="url(#g)"/>
-  <!-- Rupee symbol styled as ₹ -->
-  <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle"
-        font-family="Georgia, serif" font-size="36" font-weight="700"
-        fill="white" opacity="0.95">₹</text>
-  <!-- Small upward tick on top-right -->
-  <polyline points="42,18 48,12 48,20" fill="none" stroke="white" stroke-width="2.5"
-            stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="6" fill="#08080a"/>
+  <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle"
+        font-family="sans-serif" font-weight="800" font-size="13"
+        letter-spacing="-0.5" fill="#ffffff">DKP</text>
 </svg>
