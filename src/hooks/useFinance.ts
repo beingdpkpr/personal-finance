@@ -10,7 +10,7 @@ import {
   saveGoogleSession, getGoogleSession, clearGoogleSession,
   isTokenExpired, hasMigrated, setMigrated, silentTokenRefresh,
 } from '../lib/google-auth';
-import { ensureSpreadsheet, pushAll, pullAll, needsSchemaMigration } from '../lib/sync';
+import { ensureSpreadsheet, pushAll, pullAll, needsSchemaMigration, applySheetMigrations } from '../lib/sync';
 import { runMigrationIfNeeded } from '../lib/migration';
 
 const DEFAULT_CURRENCY: Currency = { code: 'INR', symbol: '₹', locale: 'en-IN' };
@@ -205,8 +205,18 @@ export function useFinance(): FinanceState {
         localStorage.setItem('pf_theme_name', data.prefs.themeName);
         window.dispatchEvent(new CustomEvent('artha:theme-restored'));
         if (!migrated) await setMigrated();
-        // If the sheet schema is older than the current version, push upgraded schema back
+        // If the sheet schema is older than the current version, migrate data and push back
         if (needsSchemaMigration(data.schemaVersion)) {
+          const migrated = applySheetMigrations(data);
+          // Re-save migrated data to localStorage before pushing
+          await Promise.all([
+            storage.saveTxns(info.sub, migrated.txns),
+            storage.saveBudgets(info.sub, migrated.budgets),
+            storage.saveGoals(info.sub, migrated.goals),
+            storage.saveNetWorth(info.sub, migrated.nw),
+            storage.saveCategories(info.sub, migrated.categories),
+            storage.saveIncomeCats(info.sub, migrated.incomeCats),
+          ]);
           await pushAll(accessToken, spreadsheetId, info.sub);
         }
       }

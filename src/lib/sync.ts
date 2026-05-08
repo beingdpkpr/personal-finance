@@ -242,15 +242,45 @@ export async function pullAll(
 }
 
 // ── Sheet migrations ──────────────────────────────────────────────────────────
-// Call after pullAll when schemaVersion < SHEET_SCHEMA_VERSION.
-// Each case transforms the pulled data in-place and returns it ready to push.
 //
-// How to add a future migration:
+// SAFE changes (no migration needed):
+//   - Adding a new column at the end of TAB_HEADERS
+//   - Adding a new tab
+//   → old sheets just get the column/tab on the next pushAll
+//
+// REQUIRES a migration case:
+//   - Renaming a column  (old name → new name, must remap the value)
+//   - Changing value format (e.g. '1'/'0' → 'true'/'false')
+//   - Splitting or merging columns
+//
+// HOW TO ADD A MIGRATION:
 //   1. Bump SHEET_SCHEMA_VERSION in sheets.ts
-//   2. Add a new `case N:` below (fall-through is intentional — runs all
-//      migrations from the sheet's current version up to the latest)
-//   3. In useFinance.ts: after pullAll, if data.schemaVersion < SHEET_SCHEMA_VERSION,
-//      call migrateSheetData(data) then pushAll to write the upgraded schema back.
+//   2. Add `case N:` below — transform `data` in-place, then fall through
+//      (switch fall-through runs all migrations from current → latest)
+//   3. useFinance.ts already calls pushAll when needsSchemaMigration() is true
+//
+// DATA SAFETY:
+//   - pullAll reads ALL data into typed objects before any write happens
+//   - pushAll only runs after a successful pull — no partial-write risk
+//   - The Sheet itself is the source of truth; the user can inspect it any time
+//   - For destructive renames, back up the raw row data BEFORE deserializing:
+//       const raw = await readTab(accessToken, spreadsheetId, 'TabName')
+//       await writeTab(accessToken, spreadsheetId, 'TabName_backup', raw.map(Object.values))
+
+type PullResult = Awaited<ReturnType<typeof pullAll>>;
+
+export function applySheetMigrations(data: PullResult): PullResult {
+  const from = data.schemaVersion;
+  // eslint-disable-next-line no-fallthrough
+  switch (true) {
+    // Example for a future v4 rename (uncomment and adapt):
+    // case from < 4:
+    //   data.txns = data.txns.map(t => ({ ...t, newField: (t as any).oldField }))
+    //   // fall through to apply subsequent migrations too
+  }
+  void from; // suppress unused-variable warning when no cases are active
+  return data;
+}
 
 export function needsSchemaMigration(schemaVersion: number): boolean {
   return schemaVersion < SHEET_SCHEMA_VERSION;
