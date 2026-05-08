@@ -12,6 +12,8 @@ import Goals from './pages/Goals'
 import Monthly from './pages/Monthly'
 import CategorySetup from './pages/CategorySetup'
 import Recurring from './pages/Recurring'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import TermsOfService from './pages/TermsOfService'
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useFinanceContext()
@@ -30,6 +32,8 @@ export default function App() {
     <BrowserRouter basename={base}>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
         <Route path="/" element={<AuthGuard><AppShell /></AuthGuard>}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard"    element={<Dashboard />} />

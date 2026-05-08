@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { openGoogleOAuthPopup } from '../lib/google-auth'
 import AppLogo from '../components/ui/AppLogo'
@@ -71,6 +71,13 @@ export default function Login() {
         <button onClick={handleDemo} disabled={demoBusy} style={{ background:'none', border:'1px solid #e0e4f2', borderRadius:100, padding:'12px 32px', cursor:'pointer', fontSize:14, color:'#8891b0', opacity: demoBusy?0.6:1 }}>
           {demoBusy ? 'Loading demo…' : 'Try Demo'}
         </button>
+
+        <p style={{ fontSize:11.5, color:'#a0a8c0', textAlign:'center', lineHeight:1.6 }}>
+          By signing in you agree to our{' '}
+          <Link to="/terms" style={{ color:'#6b7280', textDecoration:'underline' }}>Terms of Service</Link>
+          {' '}and{' '}
+          <Link to="/privacy" style={{ color:'#6b7280', textDecoration:'underline' }}>Privacy Policy</Link>.
+        </p>
       </div>
     </div>
   )
