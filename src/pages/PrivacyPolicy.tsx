@@ -20,7 +20,7 @@ export default function PrivacyPolicy() {
 
       <Section title="1. Who operates the App">
         <p>DKP Finance is operated by Deepak Prasad ("I", "me", "the developer") as a personal project. Contact:
-        &nbsp;<a href="mailto:deepak.prasad@o9solutions.com" style={{ color: 'var(--accent)' }}>deepak.prasad@o9solutions.com</a></p>
+        &nbsp;<a href="mailto:deepak.prasad.ai@gmail.com" style={{ color: 'var(--accent)' }}>deepak.prasad.ai@gmail.com</a></p>
       </Section>
 
       <Section title="2. Information the App accesses">
@@ -77,7 +77,7 @@ export default function PrivacyPolicy() {
       </Section>
 
       <Section title="8. Contact">
-        <p>Questions or concerns about privacy: <a href="mailto:deepak.prasad@o9solutions.com" style={{ color: 'var(--accent)' }}>deepak.prasad@o9solutions.com</a></p>
+        <p>Questions or concerns about privacy: <a href="mailto:deepak.prasad.ai@gmail.com" style={{ color: 'var(--accent)' }}>deepak.prasad.ai@gmail.com</a></p>
       </Section>
     </div>
   )

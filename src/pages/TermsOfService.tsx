@@ -87,7 +87,7 @@ export default function TermsOfService() {
       </Section>
 
       <Section title="11. Contact">
-        <p>Questions about these Terms: <a href="mailto:deepak.prasad@o9solutions.com" style={{ color: 'var(--accent)' }}>deepak.prasad@o9solutions.com</a></p>
+        <p>Questions about these Terms: <a href="mailto:deepak.prasad.ai@gmail.com" style={{ color: 'var(--accent)' }}>deepak.prasad.ai@gmail.com</a></p>
       </Section>
     </div>
   )
