@@ -1,14 +1,30 @@
-# Mobile Implementation Placeholder
+# Mobile
 
-This repo is the React + Vite **web app**. A future React Native mobile app will share the `src/lib/` and `src/hooks/` business logic layers.
+DKP Finance is a **Progressive Web App (PWA)** — no separate native app is needed.
 
-## What to build
-- React Native app using Expo Router
-- Import `src/lib/` and `src/hooks/` as a shared package
-- Implement screens: Login, Dashboard, Transactions, Budget, Goals, Monthly, Accounts
-- Bottom tab navigation (DockNav stub in `src/components/layout/DockNav.tsx`)
-- Adapt AddTransactionModal → React Native modal
+## Install on Android
 
-## Screens marked TODO (logic preserved, no screen yet)
-- **Planning** — spend type allocation (`SpendType` + `SpendTypeMap` in `useFinance` state, `lib/data.ts`)
-- **Recurring transactions** — rules run automatically via `lib/recurring.ts`; accessible via AddTransactionModal
+1. Open the app in Chrome
+2. Tap the three-dot menu → **Add to Home screen**
+3. The app opens full-screen with a dark status bar matching the UI
+
+## Install on iOS
+
+1. Open the app in Safari
+2. Tap the Share icon → **Add to Home Screen**
+
+## What's included
+
+- Offline shell — Workbox service worker precaches all JS/CSS/HTML/fonts at build time
+- Google Fonts cached for 1 year (CacheFirst)
+- `display: standalone` — no browser chrome when launched from home screen
+- Theme colour `#08080a` matches the app on Android
+
+## Icons
+
+| File | Size | Use |
+|---|---|---|
+| `public/icon-192.png` | 192×192 | Android home screen |
+| `public/icon-512.png` | 512×512 | Android splash / maskable adaptive icon |
+| `public/apple-touch-icon.png` | 180×180 | iOS home screen |
+| `public/favicon.svg` | 32×32 | Browser tab |
