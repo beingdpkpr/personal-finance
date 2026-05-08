@@ -8,7 +8,7 @@ import SettingsModal from './SettingsModal'
 const TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard', '/accounts': 'Accounts',
   '/transactions': 'Transactions', '/analytics': 'Analytics',
-  '/budget': 'Budget', '/goals': 'Goals', '/monthly': 'Monthly', '/recurring': 'Recurring',
+  '/budget': 'Budget', '/goals': 'Goals', '/monthly': 'Monthly',
 }
 
 interface Props { onToggleSidebar: () => void }

@@ -11,7 +11,6 @@ import Budget from './pages/Budget'
 import Goals from './pages/Goals'
 import Monthly from './pages/Monthly'
 import CategorySetup from './pages/CategorySetup'
-import Recurring from './pages/Recurring'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import TermsOfService from './pages/TermsOfService'
 
@@ -44,7 +43,6 @@ export default function App() {
           <Route path="goals"        element={<Goals />} />
           <Route path="monthly"      element={<Monthly />} />
           <Route path="categories"   element={<CategorySetup />} />
-          <Route path="recurring"    element={<Recurring />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

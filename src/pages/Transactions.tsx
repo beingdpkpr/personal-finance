@@ -55,6 +55,8 @@ export default function Transactions() {
   const [recatCat, setRecatCat]       = useState('')
   const [selectedMonth, setSelectedMonth] = useState(searchParams.get('month') ?? '')
   const [toast, setToast]             = useState<{ msg: string; ok: boolean } | null>(null)
+  const [showDupes, setShowDupes]     = useState(false)
+  const [selectedDupes, setSelectedDupes] = useState<Set<string>>(new Set())
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function showToast(msg: string, ok: boolean) {
@@ -119,6 +121,17 @@ export default function Transactions() {
   const availableMonths = useMemo(() =>
     [...new Set(txns.filter(t => !!t.date).map(t => t.date.slice(0, 7)))].sort((a, b) => b.localeCompare(a)),
   [txns])
+
+  const dupeGroups = useMemo(() => {
+    const seen = new Map<string, typeof txns>()
+    for (const t of txns) {
+      const key = `${t.date}|${t.amount}|${t.description.toLowerCase().trim()}|${t.type}`
+      const g = seen.get(key) ?? []
+      g.push(t)
+      seen.set(key, g)
+    }
+    return [...seen.values()].filter(g => g.length > 1).sort((a, b) => b[0].date.localeCompare(a[0].date))
+  }, [txns])
 
   const usedGroups = useMemo(() => GROUPS.filter(g => txns.some(t => t.type === 'expense' && t.group === g)), [txns])
   const hasIncome = useMemo(() => txns.some(t => t.type === 'income'), [txns])
@@ -239,7 +252,9 @@ export default function Transactions() {
           const key = `${date}|${parseFloat(amount)}|${description.toLowerCase()}`
           if (existingKeys.has(key)) { skipped++; return }
           existingKeys.add(key)
-          addTxn({ date, description, category: category || undefined, type: type as 'expense' | 'income', amount: parseFloat(amount) || 0, notes })
+          const derivedCat = type === 'expense' ? categories.find(c => c.id === category) : undefined
+          const group = derivedCat?.group
+          addTxn({ date, description, category: category || undefined, type: type as 'expense' | 'income', amount: parseFloat(amount) || 0, notes, ...(group ? { group } : {}) })
           imported++
         })
         const parts = []
@@ -315,12 +330,58 @@ export default function Transactions() {
           <button onClick={exportCSV} style={{ padding: '7px 14px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12 }}>↓ Export</button>
           <button onClick={() => fileRef.current?.click()} style={{ padding: '7px 14px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12 }}>↑ Import CSV</button>
           <input ref={fileRef} type="file" accept=".csv" onChange={importCSV} style={{ display: 'none' }} />
+          {dupeGroups.length > 0 && (
+            <button onClick={() => { setShowDupes(true); setSelectedDupes(new Set(dupeGroups.flatMap(g => g.slice(1).map(t => t.id)))) }} style={{ padding: '7px 14px', borderRadius: 20, border: '1px solid var(--negative)', background: 'rgba(240,80,96,0.1)', color: 'var(--negative)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+              ⚠ {dupeGroups.reduce((s, g) => s + g.length - 1, 0)} duplicates
+            </button>
+          )}
           <button onClick={() => setGpayOpen(true)} style={{ padding: '7px 14px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 5 }}>
             <span style={{ fontWeight: 700, color: '#4285f4', fontSize: 13 }}>G</span> GPay
           </button>
           <button onClick={openAdd} style={{ padding: '7px 14px', borderRadius: 20, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>+ Add</button>
         </div>
       </div>
+
+      {/* Duplicates modal */}
+      {showDupes && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={() => setShowDupes(false)}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, padding: 0, width: '100%', maxWidth: 560, maxHeight: '80vh', display: 'flex', flexDirection: 'column', animation: 'scaleIn 0.15s ease both', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Duplicate Transactions</div>
+                <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>Checked items will be deleted. Uncheck to keep.</div>
+              </div>
+              <button onClick={() => setShowDupes(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', fontSize: 20, lineHeight: 1, padding: 4 }}>×</button>
+            </div>
+            <div style={{ overflowY: 'auto', flex: 1, padding: '12px 24px' }}>
+              {dupeGroups.map((group, gi) => (
+                <div key={gi} style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+                    {group[0].date} · {group[0].description} · {group[0].type === 'income' ? '+' : '-'}{fmt(group[0].amount)}
+                  </div>
+                  {group.map((t, ti) => (
+                    <div key={t.id} onClick={() => setSelectedDupes(prev => { const s = new Set(prev); s.has(t.id) ? s.delete(t.id) : s.add(t.id); return s })} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, background: selectedDupes.has(t.id) ? 'rgba(240,80,96,0.08)' : 'var(--surface2)', border: `1px solid ${selectedDupes.has(t.id) ? 'var(--negative)' : 'var(--border)'}`, cursor: 'pointer', marginBottom: 4, transition: 'all 0.12s' }}>
+                      <div style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, border: selectedDupes.has(t.id) ? 'none' : '1.5px solid var(--border)', background: selectedDupes.has(t.id) ? 'var(--negative)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {selectedDupes.has(t.id) && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                      </div>
+                      <span style={{ fontSize: 12, color: 'var(--text)', flex: 1 }}>{t.description}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-dim)', fontFamily: 'DM Mono' }}>{t.notes ?? ''}</span>
+                      {ti === 0 && <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 6, background: 'var(--accent-dim)', color: 'var(--accent)', fontWeight: 600 }}>KEEP</span>}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <div style={{ padding: '14px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{selectedDupes.size} selected for deletion</span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => setShowDupes(false)} style={{ padding: '8px 18px', borderRadius: 10, border: '1px solid var(--border)', background: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 13 }}>Cancel</button>
+                <button disabled={selectedDupes.size === 0} onClick={() => { deleteTxns([...selectedDupes]); setShowDupes(false); showToast(`${selectedDupes.size} duplicate${selectedDupes.size !== 1 ? 's' : ''} removed.`, true) }} style={{ padding: '8px 18px', borderRadius: 10, border: 'none', background: selectedDupes.size > 0 ? 'var(--negative)' : 'var(--border)', color: '#fff', cursor: selectedDupes.size > 0 ? 'pointer' : 'default', fontSize: 13, fontWeight: 600, opacity: selectedDupes.size > 0 ? 1 : 0.5 }}>Delete {selectedDupes.size}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirm delete dialog */}
       {confirmDelete && (

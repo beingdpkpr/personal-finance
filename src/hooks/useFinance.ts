@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   BudgetMap, Category, Currency, Goal, IncomeCat, NetWorthData,
-  RecurringRule, Transaction, UserPrefs, DEFAULT_PREFS, uid,
+  Transaction, UserPrefs, DEFAULT_PREFS, uid,
 } from '../lib/data';
-import { DEFAULT_CATEGORIES, INCOME_CATS } from '../constants/categories';
+import { DEFAULT_CATEGORIES, INCOME_CATS, CAT_TO_GROUP } from '../constants/categories';
 import { storage } from '../lib/storage';
 import { setCurrency } from '../lib/format';
-import { applyRecurring } from '../lib/recurring';
 import {
   saveGoogleSession, getGoogleSession, clearGoogleSession,
   isTokenExpired, hasMigrated, setMigrated, silentTokenRefresh,
@@ -28,7 +27,6 @@ export interface FinanceState {
   budgets:         BudgetMap;
   goals:           Goal[];
   nw:              NetWorthData;
-  recurring:       RecurringRule[];
   currency:        Currency;
   categories:      Category[];
   incomeCats:      IncomeCat[];
@@ -44,7 +42,6 @@ export interface FinanceState {
   setBudgets:      (b: BudgetMap) => void;
   setGoals:        (g: Goal[]) => void;
   setNw:           (n: NetWorthData) => void;
-  setRecurring:    (r: RecurringRule[]) => void;
   setCurrencyPref: (c: Currency) => void;
   setCategories:   (c: Category[]) => void;
   setIncomeCats:   (c: IncomeCat[]) => void;
@@ -62,7 +59,6 @@ export function useFinance(): FinanceState {
   const [budgets, setBudgetsState]       = useState<BudgetMap>({});
   const [goals, setGoalsState]           = useState<Goal[]>([]);
   const [nw, setNwState]                 = useState<NetWorthData>({ assets: [], liabilities: [] });
-  const [recurring, setRecurringState]   = useState<RecurringRule[]>([]);
   const [currency, setCurrencyState]     = useState<Currency>(DEFAULT_CURRENCY);
   const [categories, setCategoriesState]   = useState<Category[]>([]);
   const [incomeCatsState, setIncomeCatsState] = useState<IncomeCat[]>(INCOME_CATS);
@@ -100,10 +96,9 @@ export function useFinance(): FinanceState {
 
   async function loadUser(userId: string, userEmail?: string | null, userName?: string | null, userPicture?: string | null) {
     runMigrationIfNeeded(userId);
-    const [t, b, r, g, n, c, cats, ic, p] = await Promise.all([
+    const [t, b, g, n, c, cats, ic, p] = await Promise.all([
       storage.getTxns(userId),
       storage.getBudgets(userId),
-      storage.getRecurring(userId),
       storage.getGoals(userId),
       storage.getNetWorth(userId),
       storage.getCurrency(userId),
@@ -111,11 +106,19 @@ export function useFinance(): FinanceState {
       storage.getIncomeCats(userId),
       storage.getPrefs(userId),
     ]);
-    const applied = applyRecurring(r, t);
-    // Normalise any DD-MM-YYYY dates stored from old imports → YYYY-MM-DD
+    const applied = t;
+    // Normalise dates + always re-derive group from category (fixes wrong 'needs' fallback from migration)
+    const resolvedCats: Category[] = cats.length > 0 ? cats : DEFAULT_CATEGORIES;
     const normalised = applied.map(txn => {
-      const m = txn.date?.match(/^(\d{2})-(\d{2})-(\d{4})$/);
-      return m ? { ...txn, date: `${m[3]}-${m[2]}-${m[1]}` } : txn;
+      let out = txn;
+      const m = out.date?.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+      if (m) out = { ...out, date: `${m[3]}-${m[2]}-${m[1]}` };
+      if (out.type === 'expense' && out.category) {
+        const cat = resolvedCats.find(c => c.id === out.category);
+        const correctGroup = cat?.group ?? CAT_TO_GROUP[out.category];
+        if (correctGroup && correctGroup !== out.group) out = { ...out, group: correctGroup };
+      }
+      return out;
     });
     setCurrency(c);
     setUser(userId);
@@ -124,7 +127,6 @@ export function useFinance(): FinanceState {
     setPicture(userPicture ?? null);
     setTxnsState(normalised);
     setBudgetsState(b);
-    setRecurringState(r);
     setGoalsState(g);
     setNwState(n);
     setCurrencyState(c);
@@ -144,7 +146,6 @@ export function useFinance(): FinanceState {
 
   useEffect(() => { if (user) { storage.saveTxns(user, txns);             scheduleSync(); } }, [txns,       user, scheduleSync]);
   useEffect(() => { if (user) { storage.saveBudgets(user, budgets);       scheduleSync(); } }, [budgets,    user, scheduleSync]);
-  useEffect(() => { if (user) { storage.saveRecurring(user, recurring);   scheduleSync(); } }, [recurring,  user, scheduleSync]);
   useEffect(() => { if (user) { storage.saveGoals(user, goals);           scheduleSync(); } }, [goals,      user, scheduleSync]);
   useEffect(() => { if (user) { storage.saveNetWorth(user, nw);           scheduleSync(); } }, [nw,         user, scheduleSync]);
   useEffect(() => { if (user) { storage.saveCurrency(user, currency);     scheduleSync(); } }, [currency,   user, scheduleSync]);
@@ -175,14 +176,14 @@ export function useFinance(): FinanceState {
       if (isNew && !migrated) {
         const oldSession = await storage.getSession();
         if (oldSession) {
-          const [t, b, r, g, n, c] = await Promise.all([
+          const [t, b, g, n, c] = await Promise.all([
             storage.getTxns(oldSession), storage.getBudgets(oldSession),
-            storage.getRecurring(oldSession), storage.getGoals(oldSession),
+            storage.getGoals(oldSession),
             storage.getNetWorth(oldSession), storage.getCurrency(oldSession),
           ]);
           await Promise.all([
             storage.saveTxns(info.sub, t), storage.saveBudgets(info.sub, b),
-            storage.saveRecurring(info.sub, r), storage.saveGoals(info.sub, g),
+            storage.saveGoals(info.sub, g),
             storage.saveNetWorth(info.sub, n), storage.saveCurrency(info.sub, c),
           ]);
         }
@@ -223,7 +224,6 @@ export function useFinance(): FinanceState {
     setPicture(null);
     setTxnsState([]);
     setBudgetsState({});
-    setRecurringState([]);
     setGoalsState([]);
     setNwState({ assets: [], liabilities: [] });
     setCurrencyState(DEFAULT_CURRENCY);
@@ -318,7 +318,6 @@ export function useFinance(): FinanceState {
   const setBudgets  = useCallback((b: BudgetMap) => setBudgetsState(b), []);
   const setGoals    = useCallback((g: Goal[]) => setGoalsState(g), []);
   const setNw       = useCallback((n: NetWorthData) => setNwState(n), []);
-  const setRecurring= useCallback((r: RecurringRule[]) => setRecurringState(r), []);
   const setCurrencyPref = useCallback((c: Currency) => { setCurrency(c); setCurrencyState(c); }, []);
   const setCategories   = useCallback((c: Category[]) => setCategoriesState(c), []);
   const setIncomeCats   = useCallback((c: IncomeCat[]) => setIncomeCatsState(c), []);
@@ -450,11 +449,11 @@ export function useFinance(): FinanceState {
   }, []);
 
   return {
-    user, email, name, picture, loading, txns, budgets, goals, nw, recurring, currency, categories, incomeCats: incomeCatsState,
+    user, email, name, picture, loading, txns, budgets, goals, nw, currency, categories, incomeCats: incomeCatsState,
     syncError, sessionNote,
     googleSignIn, logout, loadDemoData, syncNow,
     addTxn, editTxn, editTxns, deleteTxn, deleteTxns,
-    setBudgets, setGoals, setNw, setRecurring, setCurrencyPref, setCategories, setIncomeCats, setPrefs,
+    setBudgets, setGoals, setNw, setCurrencyPref, setCategories, setIncomeCats, setPrefs,
     prefs,
   };
 }
