@@ -99,6 +99,22 @@ export default function Dashboard() {
     return acc
   }, [])
 
+  // Savings rate trend: recent 3 months vs prior 3 months
+  const savingsTrend = (() => {
+    const rates = Array.from({length: 6}, (_, i) => {
+      const d = new Date(ty, tm - 1 - i, 1)
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
+      const mt = txns.filter(t => t.date.startsWith(key))
+      const inc = mt.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0)
+      const exp = mt.filter(t=>t.type==='expense'&&!isTransfer(t)).reduce((s,t)=>s+t.amount,0)
+      return inc > 0 ? (inc - exp) / inc * 100 : null
+    })
+    const recent = rates.slice(0, 3).filter((v): v is number => v !== null)
+    const older  = rates.slice(3, 6).filter((v): v is number => v !== null)
+    if (recent.length < 2 || older.length < 2) return null
+    return Math.round(recent.reduce((s,v)=>s+v,0)/recent.length - older.reduce((s,v)=>s+v,0)/older.length)
+  })()
+
   const recentTxns = [...txns].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6)
   const allAccounts = [
     ...nw.assets.map(a => ({ ...a, isLiability: false })),
@@ -122,7 +138,10 @@ export default function Dashboard() {
         <StatCard label={`Savings · ${monthLabel}`} value={fmt(netSavings)} color="#f59e0b" delay={0.15}
           sub={String(pctChange(netSavings, lastNetSavings))} positive={netSavings >= lastNetSavings}
           rate={savingsRate}
-          note={monthTransfers > 0 ? `${fmt(monthTransfers)} invested` : undefined}
+          note={[
+            savingsTrend !== null && Math.abs(savingsTrend) >= 2 ? `${savingsTrend > 0 ? '↑' : '↓'} ${Math.abs(savingsTrend)}pp vs 3mo ago` : null,
+            monthTransfers > 0 ? `${fmt(monthTransfers)} invested` : null,
+          ].filter(Boolean).join(' · ') || undefined}
           icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3H8l-1 4h10l-1-4z"/><circle cx="12" cy="13" r="2"/></svg>} />
       </div>
 

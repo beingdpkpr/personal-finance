@@ -86,6 +86,20 @@ export default function Monthly() {
     return { group, label: GROUP_LABELS[group], color: GROUP_COLORS[group], amount, cats }
   }).filter(g => g.amount > 0)
 
+  /* 3-month category averages (months before selected month, for anomaly detection) */
+  const catAvg = useMemo(() => {
+    const result: Record<string, number> = {}
+    categories.forEach(c => {
+      const total = Array.from({length: 3}, (_, i) => {
+        const d = new Date(selYear, selMonth - 1 - i, 1)
+        const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
+        return txns.filter(t => t.date.startsWith(k) && t.type==='expense' && t.category===c.id).reduce((s,t)=>s+t.amount,0)
+      }).reduce((s,v)=>s+v,0)
+      result[c.id] = total / 3
+    })
+    return result
+  }, [txns, categories, selMonth, selYear])
+
   /* 6-month summary (last 6 months ending at selected month) */
   const sixMonths = Array.from({length:6}, (_,i) => {
     const d = new Date(selYear, selMonth - 5 + i, 1)
@@ -238,7 +252,16 @@ export default function Monthly() {
                                     <span style={{ width:6, height:6, borderRadius:'50%', background:c.color, flexShrink:0 }}></span>
                                     <span style={{ fontSize:11, color:'var(--text-dim)' }}>{c.label}</span>
                                   </div>
-                                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                                    {catAvg[c.id] >= 200 && (() => {
+                                      const delta = Math.round(((c.amount - catAvg[c.id]) / catAvg[c.id]) * 100)
+                                      if (Math.abs(delta) < 10) return null
+                                      return (
+                                        <span style={{ fontSize: 9, fontWeight: 700, color: delta > 0 ? 'var(--negative)' : 'var(--positive)', background: delta > 0 ? 'oklch(0.22 0.08 25)' : 'oklch(0.22 0.1 145)', borderRadius: 4, padding: '1px 5px', fontFamily: 'DM Mono' }}>
+                                          {delta > 0 ? '↑' : '↓'}{Math.abs(delta)}%
+                                        </span>
+                                      )
+                                    })()}
                                     <span style={{ fontSize:11, fontFamily:'DM Mono', color:'var(--text-dim)' }}>{fmt(c.amount)}</span>
                                     <span style={{ fontSize:10, color:'var(--text-dim)', minWidth:28, textAlign:'right' }}>{Math.round(pct)}%</span>
                                   </div>

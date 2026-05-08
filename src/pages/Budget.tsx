@@ -229,16 +229,30 @@ export default function Budget() {
                       <div style={{ height: '100%', borderRadius: 2, background: arcColor, width: `${Math.min(pct, 100)}%`, transition: 'width 1s ease 0.4s' }} />
                     </div>
                   )}
-                  {/* Projected end-of-month spend */}
+                  {/* Projected end-of-month spend + breach date */}
                   {entry && isCurrentMonth && dayOfMonth > 0 && spent > 0 && (
                     (() => {
                       const projected = Math.round((spent / dayOfMonth) * daysInMonth)
                       const projPct = limit > 0 ? Math.round((projected / limit) * 100) : 0
+                      const dailyBurn = spent / dayOfMonth
+                      const daysToLimit = limit > 0 && dailyBurn > 0 ? (limit - spent) / dailyBurn : null
+                      const breachDay = daysToLimit !== null && daysToLimit > 0 ? Math.round(dayOfMonth + daysToLimit) : null
+                      const breachDate = breachDay !== null && breachDay <= daysInMonth
+                        ? new Date(now.getFullYear(), now.getMonth(), breachDay)
+                        : null
                       return (
-                        <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 6 }}>
-                          Projected: <span style={{ fontFamily: 'DM Mono', color: projected > limit && limit > 0 ? 'var(--negative)' : 'var(--text)', fontWeight: 600 }}>{fmt(projected)}</span>
-                          {limit > 0 && <span style={{ marginLeft: 4, color: projPct > 100 ? 'var(--negative)' : 'var(--text-dim)' }}>({projPct}%)</span>}
-                        </div>
+                        <>
+                          <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: breachDate ? 3 : 6 }}>
+                            Projected: <span style={{ fontFamily: 'DM Mono', color: projected > limit && limit > 0 ? 'var(--negative)' : 'var(--text)', fontWeight: 600 }}>{fmt(projected)}</span>
+                            {limit > 0 && <span style={{ marginLeft: 4, color: projPct > 100 ? 'var(--negative)' : 'var(--text-dim)' }}>({projPct}%)</span>}
+                          </div>
+                          {breachDate && (
+                            <div style={{ fontSize: 11, color: 'var(--negative)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                              Hits limit ~{breachDate.toLocaleDateString('default', { day: 'numeric', month: 'short' })}
+                            </div>
+                          )}
+                        </>
                       )
                     })()
                   )}
