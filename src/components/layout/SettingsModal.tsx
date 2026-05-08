@@ -124,6 +124,23 @@ export default function SettingsModal({ onClose }: Props) {
 
           <div style={{ height:1, background:'var(--border)' }} />
 
+          {/* Donate */}
+          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            <div style={{ fontSize:14, fontWeight:500, color:'var(--text)' }}>Support the App</div>
+            <div style={{ fontSize:12, color:'var(--text-dim)', lineHeight:1.5 }}>If DKP Finance saves you time, a small coffee goes a long way.</div>
+            <a
+              href="upi://pay?pa=deepak.prasad.ai@okicici&pn=DKP%20Finance&cu=INR"
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'10px', borderRadius:10, border:'1px solid var(--border)', background:'var(--surface2)', color:'var(--text)', cursor:'pointer', fontSize:13, fontWeight:600, textDecoration:'none', marginTop:2 }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+              Buy me a coffee via UPI
+            </a>
+          </div>
+
+          <div style={{ height:1, background:'var(--border)' }} />
+
           <button onClick={handleLogout} style={{ padding:'10px', borderRadius:10, border:'1px solid var(--border)', background:'var(--negative-dim)', color:'var(--negative)', cursor:'pointer', fontSize:14, fontWeight:600 }}>
             Sign Out
           </button>
