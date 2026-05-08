@@ -195,7 +195,6 @@ export function useFinance(): FinanceState {
           storage.saveTxns(info.sub, data.txns),
           storage.saveBudgets(info.sub, data.budgets),
           storage.saveGoals(info.sub, data.goals),
-          storage.saveRecurring(info.sub, data.recurring),
           storage.saveNetWorth(info.sub, data.nw),
           storage.saveCurrency(info.sub, data.currency),
           storage.saveCategories(info.sub, data.categories),

@@ -51,17 +51,6 @@ export interface BudgetEntry {
 
 export type BudgetMap = Partial<Record<Group, BudgetEntry>>;
 
-export interface RecurringRule {
-  id:          string;
-  type:        TxnType;
-  amount:      number;
-  group?:      Group;    // set for expense recurring rules
-  category?:   string;  // Category.id or income cat id
-  description: string;
-  dayOfMonth:  number;
-  startMonth?: string;  // 'YYYY-MM' — first month to auto-apply; skips all earlier months
-}
-
 export interface Goal {
   id:        string;
   name:      string;

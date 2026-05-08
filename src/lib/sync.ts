@@ -3,7 +3,7 @@ import { writeTab, readTab, createSpreadsheet, verifySpreadsheet, findSpreadshee
 import { saveSpreadsheetId } from './google-auth';
 import {
   Transaction, BudgetMap, BudgetEntry, Goal, IncomeCat,
-  RecurringRule, NetWorthItem, Currency, Category, Group, UserPrefs, DEFAULT_PREFS,
+  NetWorthItem, Currency, Category, Group, UserPrefs, DEFAULT_PREFS,
 } from './data';
 // ── Serializers ──────────────────────────────────────────────────────────────
 
@@ -88,22 +88,6 @@ function rowToGoal(r: Record<string, string>): Goal {
   };
 }
 
-function recurringToRow(r: RecurringRule): string[] {
-  return [r.id, r.type, String(r.amount), r.group ?? '', r.category ?? '', r.description, String(r.dayOfMonth), r.startMonth ?? ''];
-}
-
-function rowToRecurring(r: Record<string, string>): RecurringRule {
-  return {
-    id:          r.id,
-    type:        r.type as RecurringRule['type'],
-    amount:      Number(r.amount),
-    group:       (r.group || undefined) as Group | undefined,
-    category:    r.category || undefined,
-    description: r.description,
-    dayOfMonth:  Number(r.dayOfMonth),
-    startMonth:  r.startMonth || undefined,
-  };
-}
 
 function nwItemToRow(item: NetWorthItem, type: 'asset' | 'liability'): string[] {
   return [item.id, item.name, type, String(item.value), item.institution ?? '', item.accountNumber ?? '', item.notes ?? '', item.liquid === false ? '0' : '1'];
@@ -154,11 +138,10 @@ export async function pushAll(
   spreadsheetId: string,
   userId: string,
 ): Promise<void> {
-  const [txns, budgets, goals, recurring, nw, currency, cats, incomeCats, prefs] = await Promise.all([
+  const [txns, budgets, goals, nw, currency, cats, incomeCats, prefs] = await Promise.all([
     storage.getTxns(userId),
     storage.getBudgets(userId),
     storage.getGoals(userId),
-    storage.getRecurring(userId),
     storage.getNetWorth(userId),
     storage.getCurrency(userId),
     storage.getCategories(userId),
@@ -178,7 +161,6 @@ export async function pushAll(
     writeTab(accessToken, spreadsheetId, 'Transactions', txns.map(txnToRow)),
     writeTab(accessToken, spreadsheetId, 'Budgets', budgetRows),
     writeTab(accessToken, spreadsheetId, 'Goals', goals.map(goalToRow)),
-    writeTab(accessToken, spreadsheetId, 'Recurring', recurring.map(recurringToRow)),
     writeTab(accessToken, spreadsheetId, 'NetWorth', nwRows),
     writeTab(accessToken, spreadsheetId, 'Categories', cats.map(catToRow)),
     writeTab(accessToken, spreadsheetId, 'IncomeCats', incomeCats.map(incomeCatToRow)),
@@ -200,7 +182,6 @@ export async function pullAll(
   txns:       Transaction[];
   budgets:    BudgetMap;
   goals:      Goal[];
-  recurring:  RecurringRule[];
   nw:         { assets: NetWorthItem[]; liabilities: NetWorthItem[] };
   currency:   Currency;
   categories: Category[];
@@ -210,11 +191,10 @@ export async function pullAll(
 }> {
   const DEFAULT_CURRENCY: Currency = { code: 'INR', symbol: '₹', locale: 'en-IN' };
 
-  const [txnRows, budgetRows, goalRows, recurringRows, nwRows, catRows, incomeCatRows, settingsRows] = await Promise.all([
+  const [txnRows, budgetRows, goalRows, nwRows, catRows, incomeCatRows, settingsRows] = await Promise.all([
     readTab(accessToken, spreadsheetId, 'Transactions'),
     readTab(accessToken, spreadsheetId, 'Budgets'),
     readTab(accessToken, spreadsheetId, 'Goals'),
-    readTab(accessToken, spreadsheetId, 'Recurring'),
     readTab(accessToken, spreadsheetId, 'NetWorth'),
     readTab(accessToken, spreadsheetId, 'Categories'),
     readTab(accessToken, spreadsheetId, 'IncomeCats'),
@@ -243,7 +223,6 @@ export async function pullAll(
     txns:       txnRows.map(rowToTxn),
     budgets:    Object.fromEntries(budgetRows.map(rowToBudget)),
     goals:      goalRows.map(rowToGoal),
-    recurring:  recurringRows.map(rowToRecurring),
     nw: {
       assets:      nwItems.filter(x => x.type === 'asset').map(x => x.item),
       liabilities: nwItems.filter(x => x.type === 'liability').map(x => x.item),
