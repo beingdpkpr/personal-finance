@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useFinanceContext } from '../hooks/FinanceContext'
 import { fmt } from '../lib/format'
 import { Group, GROUPS, GROUP_LABELS, resolveLimit } from '../lib/data'
@@ -99,6 +99,29 @@ export default function Budget() {
     const e = budgets[g]
     return s + (e?.mode === 'pct' ? e.value : 0)
   }, 0)
+
+  // Last 6 completed months (excluding current) violation history per group
+  const violationHistory = useMemo(() => {
+    const months: string[] = []
+    for (let i = 1; i <= 6; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+    }
+    const result: Record<Group, { month: string; over: boolean; hasData: boolean }[]> = {} as never
+    for (const group of GROUPS) {
+      const entry = budgets[group]
+      result[group] = months.map(mk => {
+        const mIncome = txns.filter(t => t.date.startsWith(mk) && t.type === 'income').reduce((s, t) => s + t.amount, 0)
+        const limit = resolveLimit(entry, mIncome)
+        const spent = txns.filter(t => t.date.startsWith(mk) && t.type === 'expense' && t.group === group).reduce((s, t) => s + t.amount, 0)
+        const hasData = txns.some(t => t.date.startsWith(mk))
+        // Skip months where pct budget had no income — limit would be 0, not meaningful
+        const meaningful = entry ? (entry.mode === 'fixed' ? true : mIncome > 0) : false
+        return { month: mk, over: meaningful && limit > 0 && spent > limit, hasData: hasData && meaningful }
+      }).reverse() // oldest → newest left to right
+    }
+    return result
+  }, [txns, budgets, now.getMonth(), now.getFullYear()])
 
   return (
     <div className="page-pad">
@@ -256,6 +279,38 @@ export default function Budget() {
                       )
                     })()
                   )}
+
+                  {/* Violation history — last 6 months */}
+                  {entry && (() => {
+                    const history = violationHistory[group]
+                    const overCount = history.filter(h => h.over).length
+                    const meaningfulCount = history.filter(h => h.hasData).length
+                    if (meaningfulCount === 0) return null
+                    return (
+                      <div style={{ marginBottom: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                          <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>Last 6 months</span>
+                          {overCount > 0
+                            ? <span style={{ fontSize: 10, color: 'var(--negative)', fontWeight: 600 }}>Over budget {overCount}×</span>
+                            : <span style={{ fontSize: 10, color: 'var(--positive)', fontWeight: 600 }}>Always on track</span>
+                          }
+                        </div>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          {history.map((h, idx) => {
+                            const [y, m] = h.month.split('-').map(Number)
+                            const label = new Date(y, m - 1, 1).toLocaleString('default', { month: 'short' })
+                            const dotColor = !h.hasData ? 'var(--border)' : h.over ? 'var(--negative)' : 'var(--positive)'
+                            return (
+                              <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                                <div style={{ width: '100%', height: 6, borderRadius: 3, background: dotColor, transition: 'background 0.2s' }} title={`${label}: ${h.hasData ? (h.over ? 'Over budget' : 'On track') : 'No data'}`} />
+                                <span style={{ fontSize: 9, color: 'var(--text-dim)' }}>{label}</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })()}
 
                   {/* Category breakdown toggle */}
                   {groupCats.length > 0 && (
