@@ -45,7 +45,7 @@ export default function Login() {
         {/* Logo */}
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           <AppLogo size={36} />
-          <span style={{ fontSize:20, fontWeight:800, color:'#0d1030', letterSpacing:'-0.02em' }}>Arya's Finance</span>
+          <span style={{ fontSize:20, fontWeight:800, color:'#0d1030', letterSpacing:'-0.02em' }}>DKP Finance</span>
         </div>
 
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>

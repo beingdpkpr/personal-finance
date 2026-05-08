@@ -9,6 +9,7 @@ const TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard', '/accounts': 'Accounts',
   '/transactions': 'Transactions', '/analytics': 'Analytics',
   '/budget': 'Budget', '/goals': 'Goals', '/monthly': 'Monthly',
+  '/recurring': 'Recurring', '/categories': 'Categories',
 }
 
 interface Props { onToggleSidebar: () => void }
