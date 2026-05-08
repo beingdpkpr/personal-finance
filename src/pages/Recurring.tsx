@@ -55,10 +55,17 @@ export default function Recurring() {
     setShowForm(true)
   }
 
+  function nextMonthKey(): string {
+    const now = new Date()
+    const d = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  }
+
   function save() {
     const amt = parseFloat(form.amount)
     const day = Math.min(Math.max(1, parseInt(form.dayOfMonth) || 1), 28)
     if (!form.description || isNaN(amt) || amt <= 0) return
+    const existing = editId ? recurring.find(r => r.id === editId) : null
     const rule: RecurringRule = {
       id: editId ?? uid(),
       type: form.type,
@@ -67,6 +74,7 @@ export default function Recurring() {
       category: form.category || undefined,
       description: form.description,
       dayOfMonth: day,
+      startMonth: existing?.startMonth ?? nextMonthKey(),
     }
     if (editId) setRecurring(recurring.map(r => r.id === editId ? rule : r))
     else setRecurring([...recurring, rule])

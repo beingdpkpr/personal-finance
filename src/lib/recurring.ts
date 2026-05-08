@@ -13,6 +13,7 @@ export function applyRecurring(
   const added: Transaction[] = [];
 
   for (const r of recurringList) {
+    if (r.startMonth && monthKey < r.startMonth) continue;
     const day = Math.min(r.dayOfMonth || 1, new Date(yr, mo + 1, 0).getDate());
     const date = `${monthKey}-${String(day).padStart(2, '0')}`;
     if (new Date(date) > now) continue;

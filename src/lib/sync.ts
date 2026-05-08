@@ -89,7 +89,7 @@ function rowToGoal(r: Record<string, string>): Goal {
 }
 
 function recurringToRow(r: RecurringRule): string[] {
-  return [r.id, r.type, String(r.amount), r.group ?? '', r.category ?? '', r.description, String(r.dayOfMonth)];
+  return [r.id, r.type, String(r.amount), r.group ?? '', r.category ?? '', r.description, String(r.dayOfMonth), r.startMonth ?? ''];
 }
 
 function rowToRecurring(r: Record<string, string>): RecurringRule {
@@ -101,6 +101,7 @@ function rowToRecurring(r: Record<string, string>): RecurringRule {
     category:    r.category || undefined,
     description: r.description,
     dayOfMonth:  Number(r.dayOfMonth),
+    startMonth:  r.startMonth || undefined,
   };
 }
 

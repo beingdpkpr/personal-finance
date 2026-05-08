@@ -59,6 +59,7 @@ export interface RecurringRule {
   category?:   string;  // Category.id or income cat id
   description: string;
   dayOfMonth:  number;
+  startMonth?: string;  // 'YYYY-MM' — first month to auto-apply; skips all earlier months
 }
 
 export interface Goal {
