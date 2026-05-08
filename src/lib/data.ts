@@ -99,9 +99,6 @@ export const DEFAULT_PREFS: UserPrefs = {
   defaultCashFlowMonths: 12,
 };
 
-export interface UserStore {
-  [username: string]: { password: string };
-}
 
 export function uid(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);

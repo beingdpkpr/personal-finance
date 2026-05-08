@@ -1,6 +1,6 @@
 import {
   BudgetMap, Category, Currency, Goal, IncomeCat, NetWorthData,
-  RecurringRule, Transaction, UserPrefs, UserStore, DEFAULT_PREFS,
+  RecurringRule, Transaction, UserPrefs, DEFAULT_PREFS,
 } from './data';
 
 const DEFAULT_CURRENCY: Currency = { code: 'INR', symbol: '₹', locale: 'en-IN' };
@@ -26,8 +26,6 @@ function remove(key: string): void {
 const p = <T>(v: T): Promise<T> => Promise.resolve(v);
 
 export const storage = {
-  getUsers:       ()                                => p(get<UserStore>('pf_users', {})),
-  saveUsers:      (u: UserStore)                    => p(set('pf_users', u)),
   getSession:     ()                                => p(get<string | null>('pf_session', null)),
   setSession:     (u: string)                       => p(set('pf_session', u)),
   clearSession:   ()                                => p(remove('pf_session')),

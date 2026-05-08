@@ -33,5 +33,3 @@ export function useFinanceContext(): FinanceContextValue {
   if (!ctx) throw new Error('useFinanceContext must be used within FinanceProvider');
   return ctx;
 }
-
-export { useFinanceContext as useFinance };

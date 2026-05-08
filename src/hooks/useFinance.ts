@@ -189,7 +189,7 @@ export function useFinance(): FinanceState {
         await pushAll(accessToken, spreadsheetId, info.sub);
         await setMigrated();
       } else {
-        const data = await pullAll(accessToken, spreadsheetId, info.sub);
+        const data = await pullAll(accessToken, spreadsheetId);
         await Promise.all([
           storage.saveTxns(info.sub, data.txns),
           storage.saveBudgets(info.sub, data.budgets),
