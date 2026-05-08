@@ -10,7 +10,7 @@ import {
   saveGoogleSession, getGoogleSession, clearGoogleSession,
   isTokenExpired, hasMigrated, setMigrated, silentTokenRefresh,
 } from '../lib/google-auth';
-import { ensureSpreadsheet, pushAll, pullAll } from '../lib/sync';
+import { ensureSpreadsheet, pushAll, pullAll, needsSchemaMigration } from '../lib/sync';
 import { runMigrationIfNeeded } from '../lib/migration';
 
 const DEFAULT_CURRENCY: Currency = { code: 'INR', symbol: '₹', locale: 'en-IN' };
@@ -205,6 +205,10 @@ export function useFinance(): FinanceState {
         localStorage.setItem('pf_theme_name', data.prefs.themeName);
         window.dispatchEvent(new CustomEvent('artha:theme-restored'));
         if (!migrated) await setMigrated();
+        // If the sheet schema is older than the current version, push upgraded schema back
+        if (needsSchemaMigration(data.schemaVersion)) {
+          await pushAll(accessToken, spreadsheetId, info.sub);
+        }
       }
 
       await loadUser(info.sub, info.email, info.name, info.picture);

@@ -1,5 +1,5 @@
 import { storage } from './storage';
-import { writeTab, readTab, createSpreadsheet, verifySpreadsheet, findSpreadsheetByName } from './sheets';
+import { writeTab, readTab, createSpreadsheet, verifySpreadsheet, findSpreadsheetByName, SHEET_SCHEMA_VERSION } from './sheets';
 import { saveSpreadsheetId } from './google-auth';
 import {
   Transaction, BudgetMap, BudgetEntry, Goal, IncomeCat,
@@ -170,6 +170,7 @@ export async function pushAll(
         localStorage.getItem('pf_dark_mode') ?? 'true',
         localStorage.getItem('pf_theme_name') ?? 'violet',
         JSON.stringify(prefs),
+        String(SHEET_SCHEMA_VERSION),
       ],
     ]),
   ]);
@@ -186,8 +187,9 @@ export async function pullAll(
   currency:   Currency;
   categories: Category[];
   incomeCats: IncomeCat[];
-  prefs:      { darkMode: boolean; themeName: string };
-  userPrefs:  UserPrefs;
+  prefs:        { darkMode: boolean; themeName: string };
+  userPrefs:    UserPrefs;
+  schemaVersion: number;
 }> {
   const DEFAULT_CURRENCY: Currency = { code: 'INR', symbol: '₹', locale: 'en-IN' };
 
@@ -235,5 +237,21 @@ export async function pullAll(
       themeName,
     },
     userPrefs,
+    schemaVersion: s0?.schema_version ? Number(s0.schema_version) : 0,
   };
+}
+
+// ── Sheet migrations ──────────────────────────────────────────────────────────
+// Call after pullAll when schemaVersion < SHEET_SCHEMA_VERSION.
+// Each case transforms the pulled data in-place and returns it ready to push.
+//
+// How to add a future migration:
+//   1. Bump SHEET_SCHEMA_VERSION in sheets.ts
+//   2. Add a new `case N:` below (fall-through is intentional — runs all
+//      migrations from the sheet's current version up to the latest)
+//   3. In useFinance.ts: after pullAll, if data.schemaVersion < SHEET_SCHEMA_VERSION,
+//      call migrateSheetData(data) then pushAll to write the upgraded schema back.
+
+export function needsSchemaMigration(schemaVersion: number): boolean {
+  return schemaVersion < SHEET_SCHEMA_VERSION;
 }

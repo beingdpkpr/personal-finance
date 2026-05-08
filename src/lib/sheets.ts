@@ -2,15 +2,16 @@ const SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
 const DRIVE_BASE  = 'https://www.googleapis.com/drive/v3/files';
 const FOLDER_NAME = "Arya's Finance";
 
-export type TabName = 'Transactions' | 'Budgets' | 'Goals' | 'Recurring' | 'NetWorth' | 'Settings' | 'Categories' | 'IncomeCats';
+export type TabName = 'Transactions' | 'Budgets' | 'Goals' | 'NetWorth' | 'Settings' | 'Categories' | 'IncomeCats';
+
+export const SHEET_SCHEMA_VERSION = 3;
 
 export const TAB_HEADERS: Record<TabName, string[]> = {
   Transactions: ['id', 'type', 'amount', 'group', 'category', 'description', 'date', 'notes', 'tags', 'recurringId', 'auto', 'sourceAccountId', 'destinationAccountId'],
   Budgets:      ['group', 'mode', 'value'],
   Goals:        ['id', 'name', 'target', 'current', 'deadline'],
-  Recurring:    ['id', 'type', 'amount', 'group', 'category', 'description', 'dayOfMonth', 'startMonth'],
   NetWorth:     ['id', 'name', 'type', 'value', 'institution', 'accountNumber', 'notes', 'liquid'],
-  Settings:     ['currency_code', 'currency_symbol', 'currency_locale', 'lastSyncedAt', 'dark_mode', 'theme_name', 'prefs'],
+  Settings:     ['currency_code', 'currency_symbol', 'currency_locale', 'lastSyncedAt', 'dark_mode', 'theme_name', 'prefs', 'schema_version'],
   Categories:   ['id', 'label', 'group', 'color', 'depositsToAccount'],
   IncomeCats:   ['id', 'label', 'color', 'requiresAccount'],
 };
