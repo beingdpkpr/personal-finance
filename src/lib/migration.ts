@@ -1,4 +1,4 @@
-import { Transaction, RecurringRule, Group } from './data';
+import { Transaction, Group } from './data';
 import { DEFAULT_CATEGORIES, CAT_TO_GROUP } from '../constants/categories';
 
 const VERSION_KEY = 'pf_data_version';
@@ -48,24 +48,8 @@ export function runMigrationIfNeeded(userId: string): void {
   });
   storageSet(`pf_txns_${userId}`, migratedTxns);
 
-  // 2. Migrate recurring rules
-  const rules = storageGet<(RecurringRule & { category?: string })[]>(`pf_recurring_${userId}`, []);
-  const migratedRules: RecurringRule[] = rules.map(r => {
-    if (r.type !== 'expense') {
-      return { id: r.id, type: r.type, amount: r.amount, category: r.category, description: r.description, dayOfMonth: r.dayOfMonth };
-    }
-    const oldCat = r.category ?? '';
-    return {
-      id:          r.id,
-      type:        r.type,
-      amount:      r.amount,
-      group:       CAT_TO_GROUP[oldCat] ?? 'needs',
-      category:    oldCat || undefined,
-      description: r.description,
-      dayOfMonth:  r.dayOfMonth,
-    };
-  });
-  storageSet(`pf_recurring_${userId}`, migratedRules);
+  // 2. Clear legacy recurring rules (feature removed)
+  localStorage.removeItem(`pf_recurring_${userId}`);
 
   // 3. Discard old per-category budgets (incompatible with group-level budgeting)
   storageSet(`pf_budgets_${userId}`, {});
