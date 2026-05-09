@@ -66,7 +66,8 @@ export function useFinance(): FinanceState {
   const [syncError, setSyncError]        = useState<string | null>(null);
   const [sessionNote, setSessionNote]    = useState<string | null>(null);
 
-  const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const syncTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scheduleSync = useCallback(() => {
     if (syncTimer.current) clearTimeout(syncTimer.current);
@@ -92,6 +93,27 @@ export function useFinance(): FinanceState {
         setSyncError(e instanceof Error ? e.message : 'Sync failed. Changes are saved locally.');
       }
     }, 30_000);
+  }, []);
+
+  // Proactively refresh the token 5 minutes before it expires so the user
+  // is never interrupted by an expired-token popup during normal use.
+  const scheduleTokenRefresh = useCallback((expiry: number) => {
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    const msUntilRefresh = expiry - Date.now() - 5 * 60 * 1000; // 5 min before expiry
+    if (msUntilRefresh <= 0) return; // already near expiry — let sync handler deal with it
+    refreshTimer.current = setTimeout(async () => {
+      const session = await getGoogleSession();
+      if (!session) return;
+      try {
+        const { accessToken, expiresIn } = await silentTokenRefresh();
+        await saveGoogleSession(accessToken, expiresIn, session.email, session.userId, session.name, session.picture);
+        // Schedule the next refresh for the new token
+        scheduleTokenRefresh(Date.now() + expiresIn * 1000);
+      } catch {
+        // Silent refresh failed — don't interrupt the user, just note it
+        setSessionNote('Session will expire soon. Open Settings to re-sync when ready.');
+      }
+    }, msUntilRefresh);
   }, []);
 
   async function loadUser(userId: string, userEmail?: string | null, userName?: string | null, userPicture?: string | null) {
@@ -139,10 +161,11 @@ export function useFinance(): FinanceState {
     getGoogleSession().then(async session => {
       if (session && !isTokenExpired(session)) {
         await loadUser(session.userId, session.email, session.name, session.picture);
+        scheduleTokenRefresh(session.expiry);
       }
       setLoading(false);
     });
-  }, []);
+  }, [scheduleTokenRefresh]);
 
   useEffect(() => { if (user) { storage.saveTxns(user, txns);             scheduleSync(); } }, [txns,       user, scheduleSync]);
   useEffect(() => { if (user) { storage.saveBudgets(user, budgets);       scheduleSync(); } }, [budgets,    user, scheduleSync]);
@@ -222,14 +245,16 @@ export function useFinance(): FinanceState {
       }
 
       await loadUser(info.sub, info.email, info.name, info.picture);
+      scheduleTokenRefresh(Date.now() + expiresIn * 1000);
       return null;
     } catch (e) {
       return e instanceof Error ? e.message : 'Sign-in failed.';
     }
-  }, []);
+  }, [scheduleTokenRefresh]);
 
   const logout = useCallback(async () => {
-    if (syncTimer.current) clearTimeout(syncTimer.current);
+    if (syncTimer.current)    clearTimeout(syncTimer.current);
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
     await clearGoogleSession();
     setUser(null);
     setEmail(null);
